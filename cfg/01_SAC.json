@@ -1,0 +1,100 @@
+{
+    "envName":"MobileRobot_v5_linux_long",
+    "unityEnv": "True",
+    "workId":102,
+    "sSize": [1,78],
+     
+    "nAgent": 3,
+    "aSize": 2,
+    "seed": 0,
+  
+    "agent": {
+              
+              "actor": {
+                "netCat": "MLP",
+                "nLayer": 3,
+                "fSize": [256,256,2],
+                "act": ["relu", "relu", "tanh"],
+                "BN": "None",
+                "shorcut":-2
+              },
+              "critic": {
+                "netCat": "MLP",
+                "nLayer": 3,
+                "fSize":[256,256,1],
+                "activation": ["relu", "relu", "linear"],
+                "BN":"None"
+              },
+              "policy":{
+                  "netCat": "MLP",
+                  "nLayer":1,
+                  "fSize":[2],
+                  "act":"linear",
+                  "BN":"None"
+              },
+              "convNet":{
+                "netCat": "CNET",
+                "nLayer":6,
+                "nUnit":[32,32,16],
+                "stride":[1,1,1],
+                "padding":[1,1,1],
+                "fSize":[3,3,3,-1,256,1],
+                "act":"relu",
+                "linear":"True",
+                "BN":"True"
+              }
+  
+    },
+  
+    "tau": 0.005,
+    "updateP":1000,
+    "sMode": "True",
+    "runStep": 300000,
+    "startStep": 10000,
+    "episodeP": 5,
+  
+    "input_normalization": "None",
+  
+    "fixed_temperature": "True",
+    "temperature_parameter": 0.05,
+  
+    "nReplayMemory": 1e6,
+    "bSize": 256,
+    "lrFreq": 1,
+    "rScaling": 1,
+  
+    "optim": {
+      "actor": {
+        "name": "adam",
+        "lr": 3e-4,
+        "decay": 0,
+        "eps": 1e-7,
+        "clipping": "None"
+      },
+      "critic": {
+        "name": "adam",
+        "learning_rate": 3e-4,
+        "weight_decay": 0,
+        "clipping": "None",
+        "eps": 1e-7
+      },
+      "temperature": {
+        "name": "adam",
+        "learning_rate": 1e-2,
+        "weight_decay": 0,
+        "clipping": "None",
+        "eps": 1e-7
+      }
+    },
+    "gamma": 0.99,
+  
+    "sPath": "./save/04_SAC/",
+    "writeTMode":"None",
+    "tPath": "./tensorboard/04_SAC/",
+    "lPath":"None",
+  
+    "device": "cuda:3",
+    "inferMode": "False",
+    "renderMode": "True"
+  }
+  
