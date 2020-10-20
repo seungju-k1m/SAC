@@ -1,11 +1,12 @@
 {
-    "envName":"MobileRobot_v5_linux_long",
-    "unityEnv": "True",
+    "envName":"Humanoid-v2",
+    "unityEnv": "False",
     "workId":102,
-    "sSize": [1,78],
+    "sSize": [1,376],
+    "best" : 2000,
      
-    "nAgent": 3,
-    "aSize": 2,
+    "nAgent": 1,
+    "aSize": 17,
     "seed": 0,
   
     "agent": {
@@ -13,22 +14,22 @@
               "actor": {
                 "netCat": "MLP",
                 "nLayer": 3,
-                "fSize": [256,256,2],
-                "act": ["relu", "relu", "tanh"],
+                "fSize": [256,256,17],
+                "act": ["relu", "relu", "linear"],
                 "BN": "None",
-                "shorcut":-2
+                "shortcut":-2
               },
               "critic": {
                 "netCat": "MLP",
                 "nLayer": 3,
                 "fSize":[256,256,1],
-                "activation": ["relu", "relu", "linear"],
+                "act": ["relu", "relu", "linear"],
                 "BN":"None"
               },
               "policy":{
                   "netCat": "MLP",
                   "nLayer":1,
-                  "fSize":[2],
+                  "fSize":[17],
                   "act":"linear",
                   "BN":"None"
               },
@@ -43,7 +44,6 @@
                 "linear":"True",
                 "BN":"True"
               }
-  
     },
   
     "tau": 0.005,
@@ -51,17 +51,16 @@
     "sMode": "True",
     "runStep": 300000,
     "startStep": 10000,
-    "episodeP": 5,
+    "evalP":5000,
+    "episodeP": 20,
   
-    "input_normalization": "None",
-  
-    "fixed_temperature": "True",
-    "temperature_parameter": 0.05,
+    "fixedTemp": "True",
+    "tempValue": 0.2,
   
     "nReplayMemory": 1e6,
     "bSize": 256,
     "lrFreq": 1,
-    "rScaling": 1,
+    "rScaling": 20,
   
     "optim": {
       "actor": {
@@ -73,28 +72,27 @@
       },
       "critic": {
         "name": "adam",
-        "learning_rate": 3e-4,
-        "weight_decay": 0,
+        "lr": 3e-4,
+        "decay": 0,
         "clipping": "None",
         "eps": 1e-7
       },
       "temperature": {
         "name": "adam",
-        "learning_rate": 1e-2,
-        "weight_decay": 0,
+        "lr": 1e-4,
+        "decay": 0,
         "clipping": "None",
         "eps": 1e-7
       }
     },
     "gamma": 0.99,
   
-    "sPath": "./save/04_SAC/",
-    "writeTMode":"None",
-    "tPath": "./tensorboard/04_SAC/",
+    "sPath": "./save/SAC/",
+    "writeTMode":"True",
+    "tPath": "./tensorboard/SAC/",
     "lPath":"None",
   
-    "device": "cuda:3",
+    "device": "cpu",
     "inferMode": "False",
     "renderMode": "True"
   }
-  
