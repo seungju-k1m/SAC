@@ -152,10 +152,10 @@ class sacTrainer(OFFPolicy):
         if self.sMode:
             with torch.no_grad():
                 for tC1, tC2, C1, C2 in zip(
-                    self.tCritic01.parameters(), 
-                    self.tCritic02.parameters(), 
-                    self.critic01.parameters(), 
-                    self.critic02.parameters()):
+                        self.tCritic01.parameters(), 
+                        self.tCritic02.parameters(), 
+                        self.critic01.parameters(), 
+                        self.critic02.parameters()):
                     temp1 = self.tau * C1 + (1 - self.tau) * tC1
                     temp2 = self.tau * C2 + (1 - self.tau) * tC2
 
@@ -246,7 +246,7 @@ class sacTrainer(OFFPolicy):
                 )
         else:
             lossC1, lossC2, lossP, lossT = self.agent.calLoss(
-                statesT.detach(s), 
+                statesT.detach(), 
                 (target1.detach(), target2.detach()),
                 actionsT.detach()
                 )
