@@ -100,7 +100,7 @@ class sacAgent(baseAgent):
 
         return action, logProb, (critic01, critic02), entropy
 
-    def calLoss(self, state, target, actions,  alpha=0):
+    def calLoss(self, state, target, pastActions,  alpha=0):
         self.actor.train()
         self.critic01.train()
         self.critic02.train()
@@ -109,16 +109,21 @@ class sacAgent(baseAgent):
         state = state.to(self.device)
         state = state.view((state.shape[0], -1)).detach()
 
-        action, logProb, critics, entropy = self.forward(state)
+        
         target1, target2 = target
-        stateAction = torch.cat((state, actions), dim=1).detach()
 
+        # 1. Calculate the loss of the Critics.
+        # state and actions are derived from the replay memory.
+        stateAction = torch.cat((state, pastActions), dim=1).detach()
         critic1 = self.critic01(stateAction)
         critic2 = self.critic02(stateAction)
 
-        lossCritic1 = torch.mean((critic1-target1).pow(2))/2
-        lossCritic2 = torch.mean((critic2-target2).pow(2))/2
+        lossCritic1 = torch.mean((critic1-target1).pow(2)/2)
+        lossCritic2 = torch.mean((critic2-target2).pow(2)/2)
 
+        # 2. Calculate the loss of the Actor.
+        state = state.detach()
+        action, logProb, critics, entropy = self.forward(state)
         critic1_p, critic2_p = critics
         critic_p = torch.min(critic1_p, critic2_p)
 
