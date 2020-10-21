@@ -99,8 +99,51 @@ class sacAgent(baseAgent):
         critic02 = self.critic02(cat)
 
         return action, logProb, (critic01, critic02), entropy
+    
+    def calQLoss(self, state, target, pastActions):
+        self.critic01.train()
+        self.critic02.train()
 
-    def calLoss(self, state, target, actions,  alpha=0):
+        state = state.to(self.device)
+        state = state.view((state.shape[0],-1)).detach()
+
+        target1, target2 = target
+
+        stateAction = torch.cat((state, pastActions), dim=1).detach()
+        critic1 = self.critic01(stateAction)
+        critic2 = self.critic02(stateAction)
+
+        lossCritic1 = torch.mean((critic1-target1).pow(2)/2)
+        lossCritic2 = torch.mean((critic2-target2).pow(2)/2)
+
+        return lossCritic1, lossCritic2
+    
+    def calALoss(self, state, alpha=0):
+        self.actor.train()
+        self.policy.train()
+
+        state = state.to(self.device)
+        state = state.view((state.shape[0], -1)).detach()
+
+        action, logProb, critics, entropy = self.forward(state)
+        critic1, critic2 = critics
+        critic = torch.min(critic1, critic2)
+        
+        if alpha != 0:
+            tempDetached = alpha
+        else:
+            self.temperature.train()
+            tempDetached = self.temperature.exp().detach()
+        lossPolicy = torch.mean(tempDetached * logProb - critic)
+        detachedLogProb = logProb.detach()
+        lossTemp = \
+            torch.mean(
+                self.temperature.exp()*(-detachedLogProb+self.aData['aSize'])
+            )
+
+        return lossPolicy, lossTemp
+
+    def calLoss(self, state, target, pastActions,  alpha=0):
         self.actor.train()
         self.critic01.train()
         self.critic02.train()
@@ -109,16 +152,21 @@ class sacAgent(baseAgent):
         state = state.to(self.device)
         state = state.view((state.shape[0], -1)).detach()
 
-        action, logProb, critics, entropy = self.forward(state)
+        
         target1, target2 = target
-        stateAction = torch.cat((state, actions), dim=1).detach()
 
+        # 1. Calculate the loss of the Critics.
+        # state and actions are derived from the replay memory.
+        stateAction = torch.cat((state, pastActions), dim=1).detach()
         critic1 = self.critic01(stateAction)
         critic2 = self.critic02(stateAction)
 
-        lossCritic1 = torch.mean((critic1-target1).pow(2))/2
-        lossCritic2 = torch.mean((critic2-target2).pow(2))/2
+        lossCritic1 = torch.mean((critic1-target1).pow(2)/2)
+        lossCritic2 = torch.mean((critic2-target2).pow(2)/2)
 
+        # 2. Calculate the loss of the Actor.
+        state = state.detach()
+        action, logProb, critics, entropy = self.forward(state)
         critic1_p, critic2_p = critics
         critic_p = torch.min(critic1_p, critic2_p)
 
