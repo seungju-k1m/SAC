@@ -223,28 +223,21 @@ class sacTrainer(OFFPolicy):
                 self.agent.forward(nStatesT)
             nStatesT = nStatesT.view((nStatesT.shape[0], -1))
             nStateAction = torch.cat((nStatesT, nActionsT), dim=1)
-            target1, target2 = self.tCritic01.forward(nStateAction), self.tCritic02.forward(nStateAction)
+            target1, target2 = \
+                self.tCritic01.forward(nStateAction), self.tCritic02.forward(nStateAction)
+            mintarget = torch.min(target1, target2)
 
         for i in range(self.bSize):
             if dones[i]:
-                target1[i] = rewards[i]
-                target2[i] = rewards[i]
+                mintarget[i] = rewards[i]
             else:
-                target1[i] = \
-                    rewards[i] + self.gamma * (target1[i] - self.tempValue * logProb[i])
+                mintarget[i] = \
+                    rewards[i] + self.gamma * (mintarget[i] - self.tempValue * logProb[i])
 
-                target2[i] = \
-                    rewards[i] + self.gamma * (target2[i] - self.tempValue * logProb[i])
         if self.fixedTemp:
-            # lossC1, lossC2, lossP, lossT = self.agent.calLoss(
-            #     statesT.detach(), 
-            #     (target1.detach(), target2.detach()),
-            #     actionsT.detach(),
-            #     alpha=self.tempValue
-            #     )
             lossC1, lossC2 = self.agent.calQLoss(
                 statesT.detach(),
-                (target1.detach(), target2.detach()),
+                mintarget.detach(),
                 actionsT
             )
             self.zeroGrad()
@@ -261,28 +254,25 @@ class sacTrainer(OFFPolicy):
             self.aOptim.step()
 
         else:
-            lossC1, lossC2, lossP, lossT = self.agent.calLoss(
-                statesT.detach(), 
-                (target1.detach(), target2.detach()),
-                actionsT.detach()
+            lossC1, lossC2 = self.agent.calQLoss(
+                statesT.detach(),
+                mintarget.detach(),
+                actionsT
+            )
+            self.zeroGrad()
+            lossC1.backward()
+            lossC2.backward()
+            self.cOptim1.step()
+            self.cOptim2.step()
+
+            lossP, lossT = self.agent.calALoss(
+                statesT.detach()
                 )
-        
-        # self.zeroGrad()
-        # lossP.backward()
-        # self.critic01.zero_grad()
-        # self.critic02.zero_grad()
-
-        # lossC1.backward()
-        # lossC2.backward()
-
-        # if self.fixedTemp is False:
-        #     lossT.backward()
-        #     self.tOptim.step()
-        
-        # self.cOptim1.step()
-        # self.cOptim2.step()
-        # self.aOptim.step()
-        # self.pOptim.step()
+            
+            lossP.backward()
+            lossT.backward()
+            self.aOptim.step()
+            self.tOptim.step()
         
         normA = calGlobalNorm(self.actor)
         normC1 = calGlobalNorm(self.critic01)

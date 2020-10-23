@@ -107,14 +107,13 @@ class sacAgent(baseAgent):
         state = state.to(self.device)
         state = state.view((state.shape[0],-1)).detach()
 
-        target1, target2 = target
 
         stateAction = torch.cat((state, pastActions), dim=1).detach()
         critic1 = self.critic01(stateAction)
         critic2 = self.critic02(stateAction)
 
-        lossCritic1 = torch.mean((critic1-target1).pow(2)/2)
-        lossCritic2 = torch.mean((critic2-target2).pow(2)/2)
+        lossCritic1 = torch.mean((critic1-target).pow(2)/2)
+        lossCritic2 = torch.mean((critic2-target).pow(2)/2)
 
         return lossCritic1, lossCritic2
     
@@ -152,8 +151,6 @@ class sacAgent(baseAgent):
         state = state.to(self.device)
         state = state.view((state.shape[0], -1)).detach()
 
-        
-        target1, target2 = target
 
         # 1. Calculate the loss of the Critics.
         # state and actions are derived from the replay memory.
@@ -161,8 +158,8 @@ class sacAgent(baseAgent):
         critic1 = self.critic01(stateAction)
         critic2 = self.critic02(stateAction)
 
-        lossCritic1 = torch.mean((critic1-target1).pow(2)/2)
-        lossCritic2 = torch.mean((critic2-target2).pow(2)/2)
+        lossCritic1 = torch.mean((critic1-target).pow(2)/2)
+        lossCritic2 = torch.mean((critic2-target).pow(2)/2)
 
         # 2. Calculate the loss of the Actor.
         state = state.detach()
