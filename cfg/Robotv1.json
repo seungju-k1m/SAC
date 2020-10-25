@@ -1,0 +1,87 @@
+{
+    "envName":"./Env/v1",
+    "unityEnv": "True",
+    "workId":102,
+    "sSize": [1,208],
+    "best" : 100,
+     
+    "nAgent": 7,
+    "aSize": 2,
+    "seed": 0,
+  
+    "agent": {
+              
+              "actor": {
+                "netCat": "MLP",
+                "nLayer": 3,
+                "fSize": [256,256,17],
+                "act": ["relu", "relu", "linear"],
+                "BN": "None",
+                "shortcut":-2
+              },
+              "critic": {
+                "netCat": "MLP",
+                "nLayer": 3,
+                "fSize":[256,256,1],
+                "act": ["relu", "relu", "linear"],
+                "BN":"None"
+              },
+              "policy":{
+                  "netCat": "MLP",
+                  "nLayer":1,
+                  "fSize":[17],
+                  "act":"linear",
+                  "BN":"None"
+              }
+    },
+  
+    "tau": 0.005,
+    "updateP":1000,
+    "sMode": "True",
+    "runStep": 300000,
+    "startStep": 10000,
+    "evalP":5000,
+    "episodeP": 20,
+  
+    "fixedTemp": "True",
+    "tempValue": 0.2,
+  
+    "nReplayMemory": 1e6,
+    "bSize": 256,
+    "lrFreq": 1,
+    "rScaling": 20,
+  
+    "optim": {
+      "actor": {
+        "name": "adam",
+        "lr": 3e-4,
+        "decay": 0,
+        "eps": 1e-7,
+        "clipping": "None"
+      },
+      "critic": {
+        "name": "adam",
+        "lr": 3e-4,
+        "decay": 0,
+        "clipping": "None",
+        "eps": 1e-7
+      },
+      "temperature": {
+        "name": "adam",
+        "lr": 1e-4,
+        "decay": 0,
+        "clipping": "None",
+        "eps": 1e-7
+      }
+    },
+    "gamma": 0.99,
+  
+    "sPath": "./save/SAC/",
+    "writeTMode":"True",
+    "tPath": "./tensorboard/SAC/",
+    "lPath":"None",
+  
+    "device": "cpu",
+    "inferMode": "False",
+    "renderMode": "True"
+  }
