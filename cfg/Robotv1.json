@@ -1,11 +1,11 @@
 {
-    "envName":"./Env/v1",
+    "envName":"./Env/v3",
     "unityEnv": "True",
     "workId":102,
     "sSize": [1,208],
     "best" : 100,
      
-    "nAgent": 7,
+    "nAgent": 11,
     "aSize": 2,
     "seed": 0,
   
@@ -14,7 +14,7 @@
               "actor": {
                 "netCat": "MLP",
                 "nLayer": 3,
-                "fSize": [256,256,17],
+                "fSize": [256,256,2],
                 "act": ["relu", "relu", "linear"],
                 "BN": "None",
                 "shortcut":-2
@@ -29,7 +29,7 @@
               "policy":{
                   "netCat": "MLP",
                   "nLayer":1,
-                  "fSize":[17],
+                  "fSize":[2],
                   "act":"linear",
                   "BN":"None"
               }

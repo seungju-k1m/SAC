@@ -5,6 +5,8 @@ import numpy as np
 
 from baseline.utils import jsonParser
 from mlagents_envs.environment import UnityEnvironment
+from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
+from mlagents_envs.side_channel.environment_parameters_channel import EnvironmentParametersChannel
 from torch.utils.tensorboard import SummaryWriter
 from collections import deque
 
@@ -32,9 +34,17 @@ class OFFPolicy:
         print(name)
         if self.uMode:
             id_ = np.random.randint(10, 100, 1)[0]
-            self.env = UnityEnvironment(name, worker_id=id_)
-
-            self.brain = self.env.brain_names[0]
+            engineChannel = EngineConfigurationChannel()
+            setChannel = EnvironmentParametersChannel()
+            setChannel.set_float_parameter("nAgent", self.data['nAgent'])
+            self.env = UnityEnvironment(
+                name, worker_id=id_, 
+                side_channels=[setChannel, engineChannel])
+            self.env.reset()
+            self.behaviorNames = list(self.env.behavior_specs._dict.keys())
+            self.behaviorNames = self.behaviorNames[0]
+          
+            # engineChannel.set_configuration_parameters()
         else:
             self.env = gym.make(name)
             self.evalEnv = gym.make(name)

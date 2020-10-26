@@ -1,10 +1,11 @@
 {
-    "python.linting.pylintEnabled":false,
+    "python.linting.pylintEnabled": false,
     "python.linting.flake8Enabled":true,
     "python.linting.flake8Args": [
         "--max-line-length=100"
     ],
     "python.formatting.provider":"black",
-    "python.linting.enabled": true
+    "python.linting.enabled": true,
+    "python.autoComplete.extraPaths": ["/Users/seungju/opt/anaconda3/envs/obj_detect/bin/python3"]
 
 }

@@ -79,6 +79,10 @@ class sacTrainer(OFFPolicy):
             for j in range(self.sSize[0]):
                 self.obsSets[i].append(np.zeros(self.sSize[1:]))
     
+    def resetInd(self, id=0):
+        for j in range(self.sSize[0]):
+            self.obsSets[0].append(np.zeros(self.sSize[1:]))
+    
     def ppState(self, obs, id=0):
         state = np.zeros(self.sSize)
 
@@ -300,6 +304,23 @@ class sacTrainer(OFFPolicy):
                 self.writer.add_scalar('Temp Loss', lossT, step)
 
         return loss, entropy
+    
+    def getObs(self, init=False):
+        decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
+        if len(terminalStep) == 0:
+            obs = decisionStep.obs
+            obsRay, obsState = np.array(obs[0]), np.array(obs[1])
+            obs = np.concatenate((obsState, obsRay), axis=1)
+            done = [False for i in range(self.nAgent)]
+        else:
+            obs = decisionStep.obs
+            done = np.array(terminalStep.interrupted)
+
+        if init:
+            return obs
+        else:
+            reward = np.array(decisionStep.reward)
+            return(obs, reward, done)
 
     def run(self):
         step = 0
@@ -311,8 +332,9 @@ class sacTrainer(OFFPolicy):
             self.reset()
 
             if self.uMode:
-                envInfo = self.env.reset(train_mode=~self.inferMode)[self.brain]
-                obs = envInfo.vector_observations[0]
+                self.env.reset()
+                obs = self.getObs(init=True)
+                
             else:
                 obs = [self.env.reset()]
             stateT = []
@@ -322,7 +344,7 @@ class sacTrainer(OFFPolicy):
                 state = self.ppState(ob, id=b)
                 action.append(self.getAction(state))
                 stateT.append(state)
-            
+            action = np.array(action)
             doneT = False
             dones = [False for i in range(self.nAgent)]
             episodeReward = 0
@@ -332,10 +354,9 @@ class sacTrainer(OFFPolicy):
                 rewards = []
 
                 if self.uMode:
-                    envInfo = self.env.step(action)[self.brain]
-                    obs = envInfo.vector_observations
-                    rewards = envInfo.rewards
-                    donesN = envInfo.dones
+                    self.env.set_actions(self.behaviorNames, action)
+                    self.env.step()
+                    obs, rewards, donesN = self.getObs()
                     for b in range(self.nAgent):
                         ob = obs[b]
                         state = self.ppState(ob, id=b)
