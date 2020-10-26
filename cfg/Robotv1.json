@@ -1,5 +1,5 @@
 {
-    "envName":"./Env/v3",
+    "envName":"./Env/MacOs/v3",
     "unityEnv": "True",
     "workId":102,
     "sSize": [1,208],
