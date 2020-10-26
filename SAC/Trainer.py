@@ -306,37 +306,74 @@ class sacTrainer(OFFPolicy):
         return loss, entropy
     
     def getObs(self, init=False):
+        obsRay, obsState = np.zeros((self.nAgent, 202)), np.zeros((self.nAgent, 6))
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
-        if len(terminalStep) == 0:
-            obs = decisionStep.obs
-            obsRay, obsState = np.array(obs[0]), np.array(obs[1])
-            obs = np.concatenate((obsState, obsRay), axis=1)
-            done = [False for i in range(self.nAgent)]
-        else:
-            obs = decisionStep.obs
-            done = np.array(terminalStep.interrupted)
-
+        obs, tobs = decisionStep.obs, terminalStep.obs
+        rewards, treward = decisionStep.reward, terminalStep.reward
+        tAgentId = terminalStep.agent_id
+        agentId = decisionStep.agent_id
+        
+        done = [False for i in range(self.nAgent)]
+        reward = [0 for i in range(self.nAgent)]
+        k = 0
+        
+        for i, ray, state in zip(agentId, obs[0], obs[1]):
+            state, ray = np.array(state), np.array(ray)
+            obsRay[i] = ray
+            obsState[i] = state
+            done[i] = False
+            reward[i] = rewards[k]
+            k += 1
+        k = 0
+        for i, ray, state in zip(tAgentId, tobs[0], tobs[1]):
+            ray, state = np.array(ray), np.array(state)
+            obsRay[i] = ray
+            obsState[i] = state
+            done[i] = True
+            reward[i] = treward[k]
+            k += 1
+        obs = np.concatenate((obsState, obsRay), axis=1)
         if init:
             return obs
         else:
-            reward = np.array(decisionStep.reward)
             return(obs, reward, done)
+    
+    def checkStep(self, action):
+        decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
+        agentId = decisionStep.agent_id
+        tId = terminalStep.agent_id
+        if len(agentId) != self.nAgent:
+            print(1)
+            pass
+        for i, id in enumerate(tId):
+            self.env.set_action_for_agent(self.behaviorNames, id, np.empty((2)))
+        for i, id in enumerate(agentId):
+            self.env.set_action_for_agent(self.behaviorNames, id, action[i])
+        
+        # else:
+        #     self.env.set_actions(self.brainNames, np.empty((0, 2)))
+        # for i, id in enumerate(agentId):
+        #     self.env.set_action_for_agent(self.behaviorNames, id, action[i])
+        # for i, id in enumerate(tagentId):
+        #     if len(agentId) != 0:
+        #         self.env.set_action_for_agent(self.behaviorNames, id, np.empty(2))
+        self.env.step()
 
     def run(self):
         step = 0
         episode = 0
         Loss = []
         episodicReward = []
+        episodeReward = []
+
+        for i in range(self.nAgent):
+            episodeReward.append(0)
         
         while 1:
             self.reset()
+            
+            obs = self.getObs(init=True)
 
-            if self.uMode:
-                self.env.reset()
-                obs = self.getObs(init=True)
-                
-            else:
-                obs = [self.env.reset()]
             stateT = []
             action = []
             for b in range(self.nAgent):
@@ -347,40 +384,29 @@ class sacTrainer(OFFPolicy):
             action = np.array(action)
             doneT = False
             dones = [False for i in range(self.nAgent)]
-            episodeReward = 0
 
             while doneT is False:
                 nState = []
                 rewards = []
 
-                if self.uMode:
-                    self.env.set_actions(self.behaviorNames, action)
-                    self.env.step()
-                    obs, rewards, donesN = self.getObs()
-                    for b in range(self.nAgent):
-                        ob = obs[b]
-                        state = self.ppState(ob, id=b)
-                        nState.append(state)
-                        if dones[b] is False:
-                            self.appendMemory((
-                                stateT[b], action[b], 
-                                rewards[b]*self.rScaling, nState[b], donesN[b]))
-                            episodeReward += rewards[b]
-                        action[b] = self.getAction(state)
-                    dones = donesN
+                self.checkStep(action)
+                obs, rewards, donesN = self.getObs()
+                for b in range(self.nAgent):
+                    ob = obs[b]
+                    state = self.ppState(ob, id=b)
+                    nState.append(state)
+                    self.appendMemory((
+                        stateT[b], action[b], 
+                        rewards[b]*self.rScaling, nState[b], donesN[b]))
+                    episodeReward[b] += rewards[b]
+                    if donesN[b]:
+                        episodicReward.append(episodeReward[b])
+                        episodeReward[b] = 0
 
-                else:
-                    for b in range(self.nAgent):
-                        ob, reward, done, _ = self.env.step(action[b])
-                        state = self.ppState(ob, id=b)
-                        nState.append(state)
-                        episodeReward += reward
-                        dones[b] = done
-                        self.appendMemory((
-                            stateT[b], action[b],
-                            reward*self.rScaling, nState[b], dones[b]))
-                        action[b] = self.getAction(nState[b])
-                step += 1
+                    action[b] = self.getAction(state)
+                dones = donesN
+   
+                step += self.nAgent
                 donesFloat = np.array(dones, dtype=np.float32)
                 if np.sum(donesFloat) == self.nAgent:
                     doneT = True
@@ -400,28 +426,23 @@ class sacTrainer(OFFPolicy):
                 if step % self.evalP == 0 and step > self.startStep and self.uMode is False:
                     self.eval(step)
 
-                if doneT and step > self.startStep:
-                    episode += 1
-                    episodicReward.append(episodeReward)
+                if (doneT or step % 1000 == 0) and step > self.startStep:
+
+                    reward = np.array(episodicReward).mean()
                     if self.writeTMode:
-                        self.writer.add_scalar('Reward', episodeReward, step)
+                        self.writer.add_scalar('Reward', reward, step)
 
                     if self.fixedTemp:
                         alpha = self.tempValue
                     else:
                         alpha = self.tempValue.cpu().detach().numpy()
                     
-                    if episode % self.episodeP == 0:
-                        Loss = np.array(Loss).mean()
-                        episodicReward = np.array(episodicReward).mean()
+                    Loss = np.array(Loss).mean()
                         
-                        print("""
-                        Episode : {:4d} // Step : {:5d} // Loss : {:3f}
-                        Reward : {:3f}  // alpha: {:3f}
-                        """.format(episode, step, Loss, episodicReward, alpha))
-                        Loss = []
-                        episodicReward = []
-                    
-                    if step > self.startStep and episode % 10 == 0 and self.inferMode is False:
-
-                        torch.save(self.agent.state_dict(), self.sPath)
+                    print("""
+                    Step : {:5d} // Loss : {:3f}
+                    Reward : {:3f}  // alpha: {:3f}
+                    """.format(step, Loss, reward, alpha))
+                    Loss = []
+                    episodicReward = []
+                    torch.save(self.agent.state_dict(), self.sPath)

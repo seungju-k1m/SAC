@@ -41,9 +41,7 @@ class OFFPolicy:
                 name, worker_id=id_, 
                 side_channels=[setChannel, engineChannel])
             self.env.reset()
-            self.behaviorNames = list(self.env.behavior_specs._dict.keys())
-            self.behaviorNames = self.behaviorNames[0]
-          
+            self.behaviorNames = list(self.env.behavior_specs._dict.keys())[0]
             # engineChannel.set_configuration_parameters()
         else:
             self.env = gym.make(name)
