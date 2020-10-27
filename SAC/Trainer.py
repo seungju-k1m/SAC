@@ -408,7 +408,6 @@ class sacTrainer(OFFPolicy):
                     obs, rewards, donesN = self.getObs()
                     pass
 
-                
                 dones = donesN
    
                 step += self.nAgent
