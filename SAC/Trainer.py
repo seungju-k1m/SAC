@@ -306,7 +306,7 @@ class sacTrainer(OFFPolicy):
         return loss, entropy
     
     def getObs(self, init=False):
-        obsRay, obsState = np.zeros((self.nAgent, 202)), np.zeros((self.nAgent, 6))
+        obsState = np.zeros((self.nAgent, 150))
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         obs, tobs = decisionStep.obs, terminalStep.obs
         rewards, treward = decisionStep.reward, terminalStep.reward
@@ -317,26 +317,23 @@ class sacTrainer(OFFPolicy):
         reward = [0 for i in range(self.nAgent)]
         k = 0
         
-        for i, ray, state in zip(agentId, obs[0], obs[1]):
-            state, ray = np.array(state), np.array(ray)
-            obsRay[i] = ray
+        for i, state in zip(agentId, obs):
+            state, ray = np.array(state)
             obsState[i] = state
             done[i] = False
             reward[i] = rewards[k]
             k += 1
         k = 0
-        for i, ray, state in zip(tAgentId, tobs[0], tobs[1]):
-            ray, state = np.array(ray), np.array(state)
-            obsRay[i] = ray
+        for i, state in zip(tAgentId, tobs):
+            state = np.array(state)
             obsState[i] = state
             done[i] = True
             reward[i] = treward[k]
             k += 1
-        obs = np.concatenate((obsState, obsRay), axis=1)
         if init:
-            return obs
+            return obsState
         else:
-            return(obs, reward, done)
+            return(obsState, reward, done)
     
     def checkStep(self, action):
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
