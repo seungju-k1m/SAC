@@ -1,11 +1,11 @@
 {
-    "envName":"./Env/Linux/v3",
+    "envName":"./Env/MacOs/v4",
     "unityEnv": "True",
     "workId":102,
-    "sSize": [1,208],
+    "sSize": [1,150],
     "best" : 100,
      
-    "nAgent": 5,
+    "nAgent": 9,
     "aSize": 2,
     "seed": 0,
   
@@ -49,7 +49,7 @@
     "nReplayMemory": 1e6,
     "bSize": 256,
     "lrFreq": 1,
-    "rScaling": 20,
+    "rScaling": 1,
   
     "optim": {
       "actor": {

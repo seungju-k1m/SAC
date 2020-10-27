@@ -253,7 +253,7 @@ class sacTrainer(OFFPolicy):
             lossP, lossT = self.agent.calALoss(
                 statesT.detach(),
                 alpha=self.tempValue)
-            
+            self.zeroGrad()
             lossP.backward()
             self.aOptim.step()
 
@@ -272,7 +272,8 @@ class sacTrainer(OFFPolicy):
             lossP, lossT = self.agent.calALoss(
                 statesT.detach()
                 )
-            
+
+            self.zeroGrad()
             lossP.backward()
             lossT.backward()
             self.aOptim.step()
@@ -308,7 +309,7 @@ class sacTrainer(OFFPolicy):
     def getObs(self, init=False):
         obsState = np.zeros((self.nAgent, 150))
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
-        obs, tobs = decisionStep.obs, terminalStep.obs
+        obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
         rewards, treward = decisionStep.reward, terminalStep.reward
         tAgentId = terminalStep.agent_id
         agentId = decisionStep.agent_id
@@ -318,7 +319,7 @@ class sacTrainer(OFFPolicy):
         k = 0
         
         for i, state in zip(agentId, obs):
-            state, ray = np.array(state)
+            state = np.array(state)
             obsState[i] = state
             done[i] = False
             reward[i] = rewards[k]
@@ -340,12 +341,15 @@ class sacTrainer(OFFPolicy):
         agentId = decisionStep.agent_id
         tId = terminalStep.agent_id
 
+        value = True
+
         if len(agentId) != 0:
             for i, id in enumerate(tId):
                 self.env.set_action_for_agent(self.behaviorNames, id, np.empty((2)))
             for i, id in enumerate(agentId):
                 self.env.set_action_for_agent(self.behaviorNames, id, action[i])
-        
+        else:
+            value = False
         # else:
         #     self.env.set_actions(self.brainNames, np.empty((0, 2)))
         # for i, id in enumerate(agentId):
@@ -354,6 +358,7 @@ class sacTrainer(OFFPolicy):
         #     if len(agentId) != 0:
         #         self.env.set_action_for_agent(self.behaviorNames, id, np.empty(2))
         self.env.step()
+        return value
 
     def run(self):
         step = 0
@@ -384,19 +389,23 @@ class sacTrainer(OFFPolicy):
                 nState = []
                 rewards = []
 
-                self.checkStep(action)
-                obs, rewards, donesN = self.getObs()
-                for b in range(self.nAgent):
-                    ob = obs[b]
-                    state = self.ppState(ob, id=b)
-                    nState.append(state)
-                    self.appendMemory((
-                        stateT[b], action[b], 
-                        rewards[b]*self.rScaling, nState[b], donesN[b]))
-                    episodeReward[b] += rewards[b]
-                    if donesN[b]:
-                        episodicReward.append(episodeReward[b])
-                        episodeReward[b] = 0
+                value = self.checkStep(action)
+                if value:
+                    obs, rewards, donesN = self.getObs()
+                    for b in range(self.nAgent):
+                        ob = obs[b]
+                        state = self.ppState(ob, id=b)
+                        nState.append(state)
+                        self.appendMemory((
+                            stateT[b], action[b], 
+                            rewards[b]*self.rScaling, nState[b], donesN[b]))
+                        episodeReward[b] += rewards[b]
+                        if donesN[b]:
+                            episodicReward.append(episodeReward[b])
+                            episodeReward[b] = 0
+                else:
+                    obs, rewards, donesN = self.getObs()
+                    pass
 
                     action[b] = self.getAction(state)
                 dones = donesN

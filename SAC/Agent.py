@@ -105,8 +105,7 @@ class sacAgent(baseAgent):
         self.critic02.train()
 
         state = state.to(self.device)
-        state = state.view((state.shape[0],-1)).detach()
-
+        state = state.view((state.shape[0], -1)).detach()
 
         stateAction = torch.cat((state, pastActions), dim=1).detach()
         critic1 = self.critic01(stateAction)
@@ -150,7 +149,6 @@ class sacAgent(baseAgent):
 
         state = state.to(self.device)
         state = state.view((state.shape[0], -1)).detach()
-
 
         # 1. Calculate the loss of the Critics.
         # state and actions are derived from the replay memory.
