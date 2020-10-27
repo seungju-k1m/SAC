@@ -400,6 +400,7 @@ class sacTrainer(OFFPolicy):
                             stateT[b], action[b], 
                             rewards[b]*self.rScaling, nState[b], donesN[b]))
                         episodeReward[b] += rewards[b]
+                        action[b] = self.getAction(state)
                         if donesN[b]:
                             episodicReward.append(episodeReward[b])
                             episodeReward[b] = 0
@@ -407,7 +408,7 @@ class sacTrainer(OFFPolicy):
                     obs, rewards, donesN = self.getObs()
                     pass
 
-                    action[b] = self.getAction(state)
+                
                 dones = donesN
    
                 step += self.nAgent
