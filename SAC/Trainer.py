@@ -410,9 +410,11 @@ class sacTrainer(OFFPolicy):
                     doneT = True
                 
                 if step >= self.startStep and self.inferMode is False:
-                    loss, entropy =\
-                        self.train(step)
-                    Loss.append(loss)
+
+                    for _ in range(self.nAgent):
+                        loss, entropy =\
+                            self.train(step)
+                        Loss.append(loss)
                 
                 stateT = nState
                 if self.renderMode and self.uMode is False:
