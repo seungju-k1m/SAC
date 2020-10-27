@@ -7,7 +7,6 @@
     "configurations": [
         
         {
-            "pythonPath": "/Users/seungju/opt/anaconda3/envs/obj_detect/bin/python3",
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",

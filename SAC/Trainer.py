@@ -37,7 +37,7 @@ class sacTrainer(OFFPolicy):
     
         self.initializePolicy()
         self.replayMemory = deque(maxlen=self.nReplayMemory)
-        self.sPath += self.data['envName']+'_'+str(self.bSize) + \
+        self.sPath += str(self.bSize) + \
             '_'+str(~self.fixedTemp)
         if self.fixedTemp:
             self.sPath += '_'+str(int(self.tempValue*100))+'.pth'
@@ -342,13 +342,12 @@ class sacTrainer(OFFPolicy):
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         agentId = decisionStep.agent_id
         tId = terminalStep.agent_id
-        if len(agentId) != self.nAgent:
-            print(1)
-            pass
-        for i, id in enumerate(tId):
-            self.env.set_action_for_agent(self.behaviorNames, id, np.empty((2)))
-        for i, id in enumerate(agentId):
-            self.env.set_action_for_agent(self.behaviorNames, id, action[i])
+
+        if len(agentId) != 0:
+            for i, id in enumerate(tId):
+                self.env.set_action_for_agent(self.behaviorNames, id, np.empty((2)))
+            for i, id in enumerate(agentId):
+                self.env.set_action_for_agent(self.behaviorNames, id, action[i])
         
         # else:
         #     self.env.set_actions(self.brainNames, np.empty((0, 2)))
@@ -361,7 +360,6 @@ class sacTrainer(OFFPolicy):
 
     def run(self):
         step = 0
-        episode = 0
         Loss = []
         episodicReward = []
         episodeReward = []
@@ -426,7 +424,7 @@ class sacTrainer(OFFPolicy):
                 if step % self.evalP == 0 and step > self.startStep and self.uMode is False:
                     self.eval(step)
 
-                if (doneT or step % 1000 == 0) and step > self.startStep:
+                if (step % 1000 == 0) and step > self.startStep:
 
                     reward = np.array(episodicReward).mean()
                     if self.writeTMode:
