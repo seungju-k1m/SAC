@@ -1,11 +1,11 @@
 {
-    "envName":"./Env/MacOs/v4",
+    "envName":"./Env/MacOs/easyv4",
     "unityEnv": "True",
     "workId":102,
-    "sSize": [1,150],
+    "sSize": [1,78],
     "best" : 100,
      
-    "nAgent": 2,
+    "nAgent": 5,
     "aSize": 2,
     "seed": 0,
   

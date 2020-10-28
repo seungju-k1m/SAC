@@ -256,6 +256,7 @@ class sacTrainer(OFFPolicy):
             self.zeroGrad()
             lossP.backward()
             self.aOptim.step()
+            self.pOptim.step()
 
         else:
             lossC1, lossC2 = self.agent.calQLoss(
@@ -277,6 +278,7 @@ class sacTrainer(OFFPolicy):
             lossP.backward()
             lossT.backward()
             self.aOptim.step()
+            self.pOtpim.step()
             self.tOptim.step()
         
         normA = calGlobalNorm(self.actor)
@@ -307,7 +309,7 @@ class sacTrainer(OFFPolicy):
         return loss, entropy
     
     def getObs(self, init=False):
-        obsState = np.zeros((self.nAgent, 150))
+        obsState = np.zeros((self.nAgent, self.sSize[-1]))
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
         rewards, treward = decisionStep.reward, terminalStep.reward
@@ -404,6 +406,7 @@ class sacTrainer(OFFPolicy):
                         if donesN[b]:
                             episodicReward.append(episodeReward[b])
                             episodeReward[b] = 0
+                    stateT = nState
                 else:
                     obs, rewards, donesN = self.getObs()
                     pass
@@ -422,7 +425,6 @@ class sacTrainer(OFFPolicy):
                             self.train(step)
                         Loss.append(loss)
                 
-                stateT = nState
                 if self.renderMode and self.uMode is False:
                     self.env.render()
                 
