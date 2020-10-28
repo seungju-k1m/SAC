@@ -14,10 +14,9 @@
               "actor": {
                 "netCat": "MLP",
                 "nLayer": 3,
-                "fSize": [256,256,17],
+                "fSize": [256,256,34],
                 "act": ["relu", "relu", "linear"],
-                "BN": "None",
-                "shortcut":-2
+                "BN": "None"
               },
               "critic": {
                 "netCat": "MLP",
@@ -25,13 +24,6 @@
                 "fSize":[256,256,1],
                 "act": ["relu", "relu", "linear"],
                 "BN":"None"
-              },
-              "policy":{
-                  "netCat": "MLP",
-                  "nLayer":1,
-                  "fSize":[17],
-                  "act":"linear",
-                  "BN":"None"
               },
               "convNet":{
                 "netCat": "CNET",

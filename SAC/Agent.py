@@ -32,8 +32,6 @@ class sacAgent(baseAgent):
                             WH=self.aData['sSize'][-1])
                 else:
                     RuntimeError("The name of agent is not invalid")
-                self.shortcut = netData['shortcut']
-                inputDim = self.actor.fSize[self.shortcut-1]
                 
             if netName == "critic":
                 netData = self.aData[netName]
@@ -61,17 +59,6 @@ class sacAgent(baseAgent):
                 else:
                     RuntimeError("The name of agent is not invalid")
 
-            if netName == "policy":
-                netData = self.aData[netName]
-                netCat = netData['netCat']
-                if netCat == "MLP":
-                    self.policy = \
-                        MLP(
-                            netData, 
-                            iSize=inputDim)
-                else:
-                    RuntimeError("The name of agent is not invalid")
-
         self.temperature = torch.zeros((1), requires_grad=True, device=self.device)
         
     def forward(self, state):
@@ -82,8 +69,8 @@ class sacAgent(baseAgent):
         state = state.to(self.device)
         state = state.view((state.shape[0], -1))
 
-        aFeature, mean = self.actor.forward(state, shortcut=self.shortcut)
-        log_std = self.policy.forward(aFeature)
+        output = self.actor(state)
+        mean, log_std = output[:, :self.aData['aSize']], output[:, self.aData['aSize']:]
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
 
@@ -105,8 +92,7 @@ class sacAgent(baseAgent):
         self.critic02.train()
 
         state = state.to(self.device)
-        state = state.view((state.shape[0],-1)).detach()
-
+        state = state.view((state.shape[0], -1)).detach()
 
         stateAction = torch.cat((state, pastActions), dim=1).detach()
         critic1 = self.critic01(stateAction)

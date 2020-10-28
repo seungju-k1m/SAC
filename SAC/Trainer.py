@@ -121,14 +121,13 @@ class sacTrainer(OFFPolicy):
 
     def genOptim(self):
         optimKeyList = list(self.optimData.keys())
-        self.actor, self.policy, self.critic01, self.critic02 = \
-            self.agent.actor, self.agent.policy, self.agent.critic01, self.agent.critic02
+        self.actor, self.critic01, self.critic02 = \
+            self.agent.actor, self.agent.critic01, self.agent.critic02
         self.tCritic01, self.tCritic02 = \
             self.tAgent.critic01, self.tAgent.critic02
         for optimKey in optimKeyList:
             if optimKey == 'actor':
                 self.aOptim = getOptim(self.optimData[optimKey], self.actor)
-                self.pOptim = getOptim(self.optimData[optimKey], self.policy)
             if optimKey == 'critic':
                 self.cOptim1 = getOptim(self.optimData[optimKey], self.critic01)
                 self.cOptim2 = getOptim(self.optimData[optimKey], self.critic02)
@@ -142,7 +141,7 @@ class sacTrainer(OFFPolicy):
         
         with torch.no_grad():
             if dMode:
-                action = torch.tanh(self.actor.forward(state))
+                action = torch.tanh(self.actor(state)[:, :self.aSize])
             else:
                 action, logProb, critics, _ = self.agent.forward(state)
 
@@ -169,7 +168,6 @@ class sacTrainer(OFFPolicy):
         self.cOptim1.zero_grad()
         self.cOptim2.zero_grad()
         self.aOptim.zero_grad()
-        self.policy.zero_grad()
         if self.fixedTemp is False:
             self.tOptim.zero_grad()
     
@@ -277,7 +275,6 @@ class sacTrainer(OFFPolicy):
         normA = calGlobalNorm(self.actor)
         normC1 = calGlobalNorm(self.critic01)
         normC2 = calGlobalNorm(self.critic02)
-        normP = calGlobalNorm(self.policy)
 
         norm = normA + normC1 + normC2 + normP
         entropy = entropy.mean().cpu().detach().numpy()
