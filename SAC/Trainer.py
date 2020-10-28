@@ -131,11 +131,11 @@ class sacTrainer(OFFPolicy):
 
     def genOptim(self):
         optimKeyList = list(self.optimData.keys())
-        self.actor, self.policy, self.critic01, self.critic02 = \
-            self.agent.actor, self.agent.policy, self.agent.critic01, self.agent.critic02
+        self.actor, self.critic01, self.critic02 = \
+            self.agent.actor, self.agent.critic01, self.agent.critic02
         self.tCritic01, self.tCritic02 = \
             self.tAgent.critic01, self.tAgent.critic02
-        self.actor, self.policy = self.actor.to(self.device), self.policy.to(self.device)
+        self.actor = self.actor.to(self.device)
         self.critic01, self.critic02 = self.critic01.to(self.device), self.critic02.to(self.device)
         self.tCritic01, self.tCritic02 = self.tCritic01.to(self.device), self.tCritic02.to(self.device)
         for optimKey in optimKeyList:
@@ -268,7 +268,6 @@ class sacTrainer(OFFPolicy):
             self.zeroGrad()
             lossP.backward()
             self.aOptim.step()
-            self.pOptim.step()
 
         else:
             lossC1, lossC2 = self.agent.calQLoss(
@@ -290,7 +289,6 @@ class sacTrainer(OFFPolicy):
             lossP.backward()
             lossT.backward()
             self.aOptim.step()
-            self.pOptim.step()
             self.tOptim.step()
         
         normA = calGlobalNorm(self.actor)

@@ -36,8 +36,8 @@
     "evalP":5000,
     "episodeP": 20,
   
-    "fixedTemp": "True",
-    "tempValue": 0.2,
+    "fixedTemp": "None",
+    "tempValue": 0.05,
   
     "nReplayMemory": 1e6,
     "bSize": 256,

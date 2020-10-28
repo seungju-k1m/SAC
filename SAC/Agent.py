@@ -83,8 +83,8 @@ class sacAgent(baseAgent):
         state = state.to(self.device)
         state = state.view((state.shape[0], -1))
 
-        mean = self.actor(state)
-        log_std = self.policy(state)
+        output = self.actor(state)
+        mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
 
@@ -119,7 +119,6 @@ class sacAgent(baseAgent):
     
     def calALoss(self, state, alpha=0):
         self.actor.train()
-        self.policy.train()
 
         state = state.to(self.device)
         state = state.view((state.shape[0], -1)).detach()
@@ -145,7 +144,6 @@ class sacAgent(baseAgent):
         self.actor.train()
         self.critic01.train()
         self.critic02.train()
-        self.policy.train()
 
         state = state.to(self.device)
         state = state.view((state.shape[0], -1)).detach()
