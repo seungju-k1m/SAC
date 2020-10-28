@@ -1,5 +1,5 @@
 {
-    "envName":"./Env/MacOs/easyv4",
+    "envName":"./Env/Linux/v4/easyv4",
     "unityEnv": "True",
     "workId":102,
     "sSize": [1,78],
@@ -14,15 +14,23 @@
               "actor": {
                 "netCat": "MLP",
                 "nLayer": 3,
-                "fSize": [256,256,4],
+                "fSize": [256,256,2],
                 "act": ["relu", "relu", "linear"],
-                "BN": "None"
+                "BN": "None",
+                "shortcut":-2
               },
               "critic": {
                 "netCat": "MLP",
                 "nLayer": 3,
                 "fSize":[256,256,1],
                 "act": ["relu", "relu", "linear"],
+                "BN":"None"
+              },
+              "policy":{
+                "netCat":"MLP",
+                "nLayer":3,
+                "fSize":[256,256,2],
+                "act":["relu", "relu", "linear"],
                 "BN":"None"
               }
     },
@@ -35,8 +43,8 @@
     "evalP":5000,
     "episodeP": 20,
   
-    "fixedTemp": "None",
-    "tempValue": 0.05,
+    "fixedTemp": "True",
+    "tempValue": 0.2,
   
     "nReplayMemory": 1e6,
     "bSize": 256,
@@ -73,7 +81,7 @@
     "tPath": "./tensorboard/SAC/",
     "lPath":"None",
   
-    "device": "cpu",
+    "device": "cuda:0",
     "inferMode": "False",
     "renderMode": "True"
   }

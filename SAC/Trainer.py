@@ -28,7 +28,12 @@ class sacTrainer(OFFPolicy):
                 self.fixedTemp = False
                 self.tempValue = self.agent.temperature
 
-        self.device = torch.device(self.device)
+        if self.device != "cpu":
+            a = self.device
+            self.device = torch.device(self.device)
+            torch.cuda.set_device(int(a[-1]))
+        else:
+            self.devic = torch.device("cpu")
         self.tAgent.load_state_dict(self.agent.state_dict())
 
         self.obsSets = []
@@ -126,16 +131,21 @@ class sacTrainer(OFFPolicy):
 
     def genOptim(self):
         optimKeyList = list(self.optimData.keys())
-        self.actor, self.critic01, self.critic02 = \
-            self.agent.actor, self.agent.critic01, self.agent.critic02
+        self.actor, self.policy, self.critic01, self.critic02 = \
+            self.agent.actor, self.agent.policy, self.agent.critic01, self.agent.critic02
         self.tCritic01, self.tCritic02 = \
             self.tAgent.critic01, self.tAgent.critic02
+        self.actor, self.policy = self.actor.to(self.device), self.policy.to(self.device)
+        self.critic01, self.critic02 = self.critic01.to(self.device), self.critic02.to(self.device)
+        self.tCritic01, self.tCritic02 = self.tCritic01.to(self.device), self.tCritic02.to(self.device)
         for optimKey in optimKeyList:
             if optimKey == 'actor':
                 self.aOptim = getOptim(self.optimData[optimKey], self.actor)
             if optimKey == 'critic':
                 self.cOptim1 = getOptim(self.optimData[optimKey], self.critic01)
                 self.cOptim2 = getOptim(self.optimData[optimKey], self.critic02)
+            if optimKey == 'policy':
+                self.pOptim = getOptim(self.optimData[optimKey], self.policy)
             if optimKey == 'temperature':
                 if self.fixedTemp is False:
                     self.tOptim = getOptim(self.optimData[optimKey], [self.tempValue], floatV=True)
@@ -258,6 +268,7 @@ class sacTrainer(OFFPolicy):
             self.zeroGrad()
             lossP.backward()
             self.aOptim.step()
+            self.pOptim.step()
 
         else:
             lossC1, lossC2 = self.agent.calQLoss(
@@ -279,6 +290,7 @@ class sacTrainer(OFFPolicy):
             lossP.backward()
             lossT.backward()
             self.aOptim.step()
+            self.pOptim.step()
             self.tOptim.step()
         
         normA = calGlobalNorm(self.actor)

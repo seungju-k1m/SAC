@@ -60,15 +60,8 @@ class MLP(nn.Module):
             iSize = self.fSize[i]
     
     def forward(self, x, shortcut=None):
-        if shortcut is not None:
-            lenNet = len(self.fSize) * 2 - 1
-            shortcut = lenNet + shortcut
         for i, layer in enumerate(self.children()):
             x = layer(x)
-            if shortcut is not None and i == shortcut:
-                middleOutput = x
-        if shortcut is not None:
-            x = (middleOutput, x) 
         return x
 
 

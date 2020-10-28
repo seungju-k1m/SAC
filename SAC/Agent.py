@@ -58,6 +58,20 @@ class sacAgent(baseAgent):
                             WH=self.aData['sSize'][-1])
                 else:
                     RuntimeError("The name of agent is not invalid")
+            if netName == "policy":
+                netData = self.aData[netName]
+                netCat = netData['netCat']
+                if netCat == "MLP":
+                    self.policy = \
+                        MLP(
+                            netData, 
+                            iSize=self.aData['sSize'][-1]*self.aData['sSize'][0])
+                elif netCat == "CNET":
+                    self.policy = \
+                        CNET(
+                            netData, 
+                            iSize=self.aData['sSize'][0], 
+                            WH=self.aData['sSize'][-1])
 
         self.temperature = torch.zeros(1, requires_grad=True, device=self.aData['device'])
         
@@ -69,9 +83,9 @@ class sacAgent(baseAgent):
         state = state.to(self.device)
         state = state.view((state.shape[0], -1))
 
-        output = self.actor(state)
-        mean, log_std = output[:, :self.aData['aSize']], output[:, self.aData['aSize']:]
-        # log_std = torch.clamp(log_std, -20, 2)
+        mean = self.actor(state)
+        log_std = self.policy(state)
+        log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
 
         gaussianDist = torch.distributions.Normal(mean, std)
@@ -105,6 +119,7 @@ class sacAgent(baseAgent):
     
     def calALoss(self, state, alpha=0):
         self.actor.train()
+        self.policy.train()
 
         state = state.to(self.device)
         state = state.view((state.shape[0], -1)).detach()
