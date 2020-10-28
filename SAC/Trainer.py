@@ -264,7 +264,7 @@ class sacTrainer(OFFPolicy):
 
             lossP, lossT = self.agent.calALoss(
                 statesT.detach(),
-                alpha=self.temp)
+                alpha=self.tempValue)
             self.zeroGrad()
             lossP.backward()
             self.aOptim.step()
