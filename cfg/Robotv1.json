@@ -1,5 +1,5 @@
 {
-    "envName":"./Env/MacOs/easyv4",
+    "envName":"./Env/Linux/v4/easyv4",
     "unityEnv": "True",
     "workId":102,
     "sSize": [1,78],
@@ -16,8 +16,7 @@
                 "nLayer": 3,
                 "fSize": [256,256,4],
                 "act": ["relu", "relu", "linear"],
-                "BN": "None",
-                "shortcut":-2
+                "BN": "None"
               },
               "critic": {
                 "netCat": "MLP",
@@ -36,8 +35,8 @@
     "evalP":5000,
     "episodeP": 20,
   
-    "fixedTemp": "True",
-    "tempValue": 0.2,
+    "fixedTemp": "None",
+    "tempValue": 0.05,
   
     "nReplayMemory": 1e6,
     "bSize": 256,

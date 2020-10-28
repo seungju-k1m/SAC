@@ -21,11 +21,12 @@ class sacTrainer(OFFPolicy):
             )
         if 'fixedTemp' in self.keyList:
             self.fixedTemp = self.data['fixedTemp'] == "True"
-            if 'tempValue' in self.keyList:
-                self.tempValue = self.data['tempValue']
-        else:
-            self.fixedTemp = False
-            self.tempValue = self.agent.temperature.exp()
+            if self.fixedTemp:
+                if 'tempValue' in self.keyList:
+                    self.tempValue = self.data['tempValue']
+            else:
+                self.fixedTemp = False
+                self.tempValue = self.agent.temperature
 
         self.device = torch.device(self.device)
         self.tAgent.load_state_dict(self.agent.state_dict())
@@ -137,7 +138,7 @@ class sacTrainer(OFFPolicy):
                 self.cOptim2 = getOptim(self.optimData[optimKey], self.critic02)
             if optimKey == 'temperature':
                 if self.fixedTemp is False:
-                    self.tOptim = getOptim(self.optimData[optimKey], self.tempValue)
+                    self.tOptim = getOptim(self.optimData[optimKey], [self.tempValue], floatV=True)
                  
     def getAction(self, state, dMode=False):
         if torch.is_tensor(state) is False:
@@ -228,13 +229,16 @@ class sacTrainer(OFFPolicy):
             target1, target2 = \
                 self.tCritic01(nStateAction), self.tCritic02(nStateAction)
             mintarget = torch.min(target1, target2)
-
+            if self.fixedTemp:
+                alpha = self.tempValue
+            else:
+                alpha = self.tempValue.exp()
         for i in range(self.bSize):
             if dones[i]:
                 mintarget[i] = rewards[i]
             else:
                 mintarget[i] = \
-                    rewards[i] + self.gamma * (mintarget[i] - self.tempValue * logProb[i])
+                    rewards[i] + self.gamma * (mintarget[i] - alpha * logProb[i])
 
         if self.fixedTemp:
             lossC1, lossC2 = self.agent.calQLoss(
@@ -250,7 +254,7 @@ class sacTrainer(OFFPolicy):
 
             lossP, lossT = self.agent.calALoss(
                 statesT.detach(),
-                alpha=self.tempValue)
+                alpha=self.temp)
             self.zeroGrad()
             lossP.backward()
             self.aOptim.step()
@@ -435,7 +439,7 @@ class sacTrainer(OFFPolicy):
                     if self.fixedTemp:
                         alpha = self.tempValue
                     else:
-                        alpha = self.tempValue.cpu().detach().numpy()
+                        alpha = self.tempValue.exp().cpu().detach().numpy()[0]
                     
                     Loss = np.array(Loss).mean()
                         

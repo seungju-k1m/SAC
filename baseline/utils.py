@@ -18,7 +18,7 @@ def clipByGN(agent, maxNorm):
         p.grad *= factor
 
 
-def getOptim(optimData, agent):
+def getOptim(optimData, agent, floatV=False):
     
     keyList = list(optimData.keys())
 
@@ -27,10 +27,13 @@ def getOptim(optimData, agent):
         lr = optimData['lr']
         decay = 0 if 'decay' not in keyList else optimData['decay']
         eps = 1e-5 if 'eps' not in keyList else optimData['eps']
-        
+        if floatV:
+            inputD = agent
+        else:
+            inputD = agent.parameters()
         if name == 'adam':
             optim = torch.optim.Adam(
-                agent.parameters(),
+                inputD,
                 lr=lr,
                 weight_decay=decay,
                 eps=eps
@@ -39,14 +42,14 @@ def getOptim(optimData, agent):
             momentum = 0 if 'momentum' not in keyList else optimData['momentum']
 
             optim = torch.optim.SGD(
-                agent.parameters(),
+                inputD,
                 lr=lr,
                 weight_decay=decay,
                 momentum=momentum
             )
         if name == 'rmsprop':
             optim = torch.optim.RMSprop(
-                agent.parameters(),
+                inputD,
                 lr=lr,
                 weight_decay=decay,
                 eps=eps

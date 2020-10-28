@@ -59,7 +59,7 @@ class sacAgent(baseAgent):
                 else:
                     RuntimeError("The name of agent is not invalid")
 
-        self.temperature = torch.zeros((1), requires_grad=True, device=self.device)
+        self.temperature = torch.zeros(1, requires_grad=True, device=self.aData['device'])
         
     def forward(self, state):
 
@@ -71,7 +71,7 @@ class sacAgent(baseAgent):
 
         output = self.actor(state)
         mean, log_std = output[:, :self.aData['aSize']], output[:, self.aData['aSize']:]
-        log_std = torch.clamp(log_std, -20, 2)
+        # log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
 
         gaussianDist = torch.distributions.Normal(mean, std)
@@ -116,7 +116,6 @@ class sacAgent(baseAgent):
         if alpha != 0:
             tempDetached = alpha
         else:
-            self.temperature.train()
             tempDetached = self.temperature.exp().detach()
         lossPolicy = torch.mean(tempDetached * logProb - critic)
         detachedLogProb = logProb.detach()
