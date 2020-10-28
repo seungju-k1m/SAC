@@ -66,6 +66,13 @@
         "clipping": "None",
         "eps": 1e-7
       },
+      "policy":{
+        "name":"adam",
+        "decay":0,
+        "clipping":"None",
+        "eps":1e-7,
+        "lr":3e-4
+      },
       "temperature": {
         "name": "adam",
         "lr": 1e-4,
