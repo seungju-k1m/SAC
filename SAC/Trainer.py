@@ -276,7 +276,7 @@ class sacTrainer(OFFPolicy):
         normC1 = calGlobalNorm(self.critic01)
         normC2 = calGlobalNorm(self.critic02)
 
-        norm = normA + normC1 + normC2 + normP
+        norm = normA + normC1 + normC2
         entropy = entropy.mean().cpu().detach().numpy()
         lossP = lossP.cpu().sum().detach().numpy()
         lossC1 = lossC1.cpu().sum().detach().numpy()
