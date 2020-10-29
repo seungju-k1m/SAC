@@ -252,45 +252,44 @@ class sacTrainer(OFFPolicy):
                     rewards[i] + self.gamma * (mintarget[i] - alpha * logProb[i])
 
         if self.fixedTemp:
-            lossC1, lossC2, lossP, lossT = self.agent.calLoss(
-                statesT.detach(),
-                mintarget.detach(),
-                actionsT,
-                alpha=alpha
-            )
-            self.zeroGrad()
-            lossP.backward()
-
-            self.critic01.zero_grad()
-            self.critic02.zero_grad()
-
-            lossC1.backward()
-            lossC2.backward()
-
-            self.cOptim1.step()
-            self.cOptim2.step()
-            self.aOptim.step()
-        else:
-            lossC1, lossC2, lossP, lossT = self.agent.calLoss(
+            lossC1, lossC2 = self.agent.calQLoss(
                 statesT.detach(),
                 mintarget.detach(),
                 actionsT
             )
-
             self.zeroGrad()
-            lossP.backward()
-
-            self.critic01.zero_grad()
-            self.critic02.zero_grad()
-
             lossC1.backward()
             lossC2.backward()
-            lossT.backward()
-
-            self.tOptim.step()
             self.cOptim1.step()
             self.cOptim2.step()
+
+            lossP, lossT = self.agent.calALoss(
+                statesT.detach(),
+                alpha=self.tempValue)
+            
+            lossP.backward()
             self.aOptim.step()
+
+        else:
+            lossC1, lossC2 = self.agent.calQLoss(
+                statesT.detach(),
+                mintarget.detach(),
+                actionsT
+            )
+            self.zeroGrad()
+            lossC1.backward()
+            lossC2.backward()
+            self.cOptim1.step()
+            self.cOptim2.step()
+
+            lossP, lossT = self.agent.calALoss(
+                statesT.detach()
+                )
+            
+            lossP.backward()
+            lossT.backward()
+            self.aOptim.step()
+            self.tOptim.step()
 
         normA = calGlobalNorm(self.actor)
         normC1 = calGlobalNorm(self.critic01)
@@ -351,15 +350,17 @@ class sacTrainer(OFFPolicy):
     def checkStep(self, action):
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         agentId = decisionStep.agent_id
-        tId = terminalStep.agent_id
+        # tId = terminalStep.agent_id
 
         value = True
 
+        # if len(agentId) != 0:
+        #     for i, id in enumerate(tId):
+        #         self.env.set_action_for_agent(self.behaviorNames, id, np.empty((2)))
+        #     for i, id in enumerate(agentId):
+        #         self.env.set_action_for_agent(self.behaviorNames, id, action[i])
         if len(agentId) != 0:
-            for i, id in enumerate(tId):
-                self.env.set_action_for_agent(self.behaviorNames, id, np.empty((2)))
-            for i, id in enumerate(agentId):
-                self.env.set_action_for_agent(self.behaviorNames, id, action[i])
+            self.env.set_actions(self.behaviorNames, action)
         else:
             value = False
         # else:
@@ -380,84 +381,66 @@ class sacTrainer(OFFPolicy):
 
         for i in range(self.nAgent):
             episodeReward.append(0)
-        
+
+        self.reset()
+        obs = self.getObs(init=True)
+        stateT = []
+        action = []
+        for b in range(self.nAgent):
+            ob = obs[b]
+            state = self.ppState(ob, id=b)
+            action.append(self.getAction(state))
+            stateT.append(state)
+        action = np.array(action)
+
         while 1:
-            self.reset()
+            nState = []
+            rewards = []
+            value = self.checkStep(action)
+            if value:
+                obs, rewards, donesN = self.getObs()
+                for b in range(self.nAgent):
+                    ob = obs[b]
+                    state = self.ppState(ob, id=b)
+                    nState.append(state)
+                    self.appendMemory((
+                        stateT[b], action[b], 
+                        rewards[b]*self.rScaling, nState[b], donesN[b]))
+                    episodeReward[b] += rewards[b]
+                    action[b] = self.getAction(state)
+                    if donesN[b]:
+                        episodicReward.append(episodeReward[b])
+                        episodeReward[b] = 0
+                stateT = nState
+            else:
+                obs, rewards, donesN = self.getObs()
+
+            step += self.nAgent
             
-            obs = self.getObs(init=True)
+            if step >= self.startStep and self.inferMode is False:
+                for _ in range(self.nAgent):
+                    loss, entropy =\
+                        self.train(step)
+                    Loss.append(loss)
+                    self.targetNetUpdate() 
 
-            stateT = []
-            action = []
-            for b in range(self.nAgent):
-                ob = obs[b]
-                state = self.ppState(ob, id=b)
-                action.append(self.getAction(state))
-                stateT.append(state)
-            action = np.array(action)
-            doneT = False
-            dones = [False for i in range(self.nAgent)]
+            if (step % 1000 == 0) and step > self.startStep:
 
-            while doneT is False:
-                nState = []
-                rewards = []
+                reward = np.array(episodicReward).mean()
+                if self.writeTMode:
+                    self.writer.add_scalar('Reward', reward, step)
 
-                value = self.checkStep(action)
-                if value:
-                    obs, rewards, donesN = self.getObs()
-                    for b in range(self.nAgent):
-                        ob = obs[b]
-                        state = self.ppState(ob, id=b)
-                        nState.append(state)
-                        self.appendMemory((
-                            stateT[b], action[b], 
-                            rewards[b]*self.rScaling, nState[b], donesN[b]))
-                        episodeReward[b] += rewards[b]
-                        action[b] = self.getAction(state)
-                        if donesN[b]:
-                            episodicReward.append(episodeReward[b])
-                            episodeReward[b] = 0
-                    stateT = nState
+                if self.fixedTemp:
+                    alpha = self.tempValue
                 else:
-                    obs, rewards, donesN = self.getObs()
-                    pass
-
-                dones = donesN
-   
-                step += self.nAgent
-                donesFloat = np.array(dones, dtype=np.float32)
-                if np.sum(donesFloat) == self.nAgent:
-                    doneT = True
+                    alpha = self.tempValue.exp().cpu().detach().numpy()[0]
                 
-                if step >= self.startStep and self.inferMode is False:
-
-                    for _ in range(self.nAgent):
-                        loss, entropy =\
-                            self.train(step)
-                        Loss.append(loss)
-                        self.targetNetUpdate() 
-                if self.renderMode and self.uMode is False:
-                    self.env.render()
-                
-                if step % self.evalP == 0 and step > self.startStep and self.uMode is False:
-                    self.eval(step)
-
-                if (step % 1000 == 0) and step > self.startStep:
-
-                    reward = np.array(episodicReward).mean()
-                    if self.writeTMode:
-                        self.writer.add_scalar('Reward', reward, step)
-
-                    if self.fixedTemp:
-                        alpha = self.tempValue
-                    else:
-                        alpha = self.tempValue.exp().cpu().detach().numpy()[0]
+                Loss = np.array(Loss).mean()
                     
-                    Loss = np.array(Loss).mean()
-                        
-                    print("""
-                    Step : {:5d} // Loss : {:3f}
-                    Reward : {:3f}  // alpha: {:3f}
-                    """.format(step, Loss, reward, alpha))
-                    Loss = []
-                    episodicReward = []
-                    torch.save(self.agent.state_dict(), self.sPath)
+                print("""
+                Step : {:5d} // Loss : {:3f}
+                Reward : {:3f}  // alpha: {:3f}
+                """.format(step, Loss, reward, alpha))
+                Loss = []
+                episodicReward = []
+                torch.save(self.agent.state_dict(), self.sPath)
