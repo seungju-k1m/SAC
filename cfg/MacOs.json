@@ -1,5 +1,5 @@
 {
-    "envName":"./Env/MacOs/v4",
+    "envName":"./Env/MacOs/easyv4",
     "unityEnv": "True",
     "workId":102,
     "sSize": [1,78],
@@ -74,7 +74,7 @@
     "tPath": "./tensorboard/SAC/",
     "lPath":"None",
   
-    "device": "cuda:0",
+    "device": "cpu",
     "inferMode": "False",
     "renderMode": "True"
   }
