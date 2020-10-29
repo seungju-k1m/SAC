@@ -137,7 +137,8 @@ class sacTrainer(OFFPolicy):
             self.tAgent.critic01, self.tAgent.critic02
         self.actor = self.actor.to(self.device)
         self.critic01, self.critic02 = self.critic01.to(self.device), self.critic02.to(self.device)
-        self.tCritic01, self.tCritic02 = self.tCritic01.to(self.device), self.tCritic02.to(self.device)
+        self.tCritic01, self.tCritic02 = \
+            self.tCritic01.to(self.device), self.tCritic02.to(self.device)
         for optimKey in optimKeyList:
             if optimKey == 'actor':
                 self.aOptim = getOptim(self.optimData[optimKey], self.actor)
@@ -251,46 +252,46 @@ class sacTrainer(OFFPolicy):
                     rewards[i] + self.gamma * (mintarget[i] - alpha * logProb[i])
 
         if self.fixedTemp:
-            lossC1, lossC2 = self.agent.calQLoss(
+            lossC1, lossC2, lossP, lossT = self.agent.calLoss(
                 statesT.detach(),
                 mintarget.detach(),
-                actionsT
+                actionsT,
+                alpha=alpha
             )
             self.zeroGrad()
+            lossP.backward()
+
+            self.critic01.zero_grad()
+            self.critic02.zero_grad()
+
             lossC1.backward()
             lossC2.backward()
+
             self.cOptim1.step()
             self.cOptim2.step()
-
-            lossP, lossT = self.agent.calALoss(
-                statesT.detach(),
-                alpha=self.tempValue)
-            self.zeroGrad()
-            lossP.backward()
             self.aOptim.step()
-
         else:
-            lossC1, lossC2 = self.agent.calQLoss(
+            lossC1, lossC2, lossP, lossT = self.agent.calLoss(
                 statesT.detach(),
                 mintarget.detach(),
                 actionsT
             )
-            self.zeroGrad()
-            lossC1.backward()
-            lossC2.backward()
-            self.cOptim1.step()
-            self.cOptim2.step()
-
-            lossP, lossT = self.agent.calALoss(
-                statesT.detach()
-                )
 
             self.zeroGrad()
             lossP.backward()
+
+            self.critic01.zero_grad()
+            self.critic02.zero_grad()
+
+            lossC1.backward()
+            lossC2.backward()
             lossT.backward()
-            self.aOptim.step()
+
             self.tOptim.step()
-        
+            self.cOptim1.step()
+            self.cOptim2.step()
+            self.aOptim.step()
+
         normA = calGlobalNorm(self.actor)
         normC1 = calGlobalNorm(self.critic01)
         normC2 = calGlobalNorm(self.critic02)
