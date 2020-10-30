@@ -385,8 +385,6 @@ class sacTrainer(OFFPolicy):
             value = self.checkStep(np.array(action))
             if value:
                 obs, rewards, donesN_ = self.getObs()
-                if donesN_[0]:
-                    print(1)
                 
                 for b in range(self.nAgent):
                     ob = obs[b]
