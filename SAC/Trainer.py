@@ -411,18 +411,16 @@ class sacTrainer(OFFPolicy):
                     if donesN[b]:
                         episodicReward.append(episodeReward[b])
                         episodeReward[b] = 0
+                    if step >= self.startStep and self.inferMode is False:
+                        loss, entropy =\
+                            self.train(step)
+                        Loss.append(loss)
+                        self.targetNetUpdate() 
                 stateT = nState
             else:
                 obs, rewards, donesN = self.getObs()
 
             step += self.nAgent
-            
-            if step >= self.startStep and self.inferMode is False:
-                for _ in range(self.nAgent):
-                    loss, entropy =\
-                        self.train(step)
-                    Loss.append(loss)
-                    self.targetNetUpdate() 
 
             if (step % 1000 == 0) and step > self.startStep:
 
