@@ -382,7 +382,7 @@ class sacTrainer(OFFPolicy):
         while 1:
             nState = []
             rewards = []
-            value = self.checkStep(np.array([[1.0, 0.0]]))
+            value = self.checkStep(np.array(action))
             if value:
                 obs, rewards, donesN_ = self.getObs()
                 if donesN_[0]:
