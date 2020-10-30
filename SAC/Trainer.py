@@ -350,26 +350,11 @@ class sacTrainer(OFFPolicy):
     def checkStep(self, action):
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         agentId = decisionStep.agent_id
-        # tId = terminalStep.agent_id
-
         value = True
-
-        # if len(agentId) != 0:
-        #     for i, id in enumerate(tId):
-        #         self.env.set_action_for_agent(self.behaviorNames, id, np.empty((2)))
-        #     for i, id in enumerate(agentId):
-        #         self.env.set_action_for_agent(self.behaviorNames, id, action[i])
         if len(agentId) != 0:
             self.env.set_actions(self.behaviorNames, action)
         else:
             value = False
-        # else:
-        #     self.env.set_actions(self.brainNames, np.empty((0, 2)))
-        # for i, id in enumerate(agentId):
-        #     self.env.set_action_for_agent(self.behaviorNames, id, action[i])
-        # for i, id in enumerate(tagentId):
-        #     if len(agentId) != 0:
-        #         self.env.set_action_for_agent(self.behaviorNames, id, np.empty(2))
         self.env.step()
         return value
 
@@ -392,30 +377,34 @@ class sacTrainer(OFFPolicy):
             action.append(self.getAction(state))
             stateT.append(state)
         action = np.array(action)
+        donesN = [False for i in range(self.nAgent)]
 
         while 1:
             nState = []
             rewards = []
             value = self.checkStep(action)
             if value:
-                obs, rewards, donesN = self.getObs()
+                obs, rewards, donesN_ = self.getObs()
                 for b in range(self.nAgent):
                     ob = obs[b]
                     state = self.ppState(ob, id=b)
                     nState.append(state)
-                    self.appendMemory((
-                        stateT[b], action[b], 
-                        rewards[b]*self.rScaling, nState[b], donesN[b]))
+                    if donesN[b] is False:
+                        self.appendMemory((
+                            stateT[b], action[b], 
+                            rewards[b]*self.rScaling, nState[b], donesN_[b]))
                     episodeReward[b] += rewards[b]
                     action[b] = self.getAction(state)
                     if donesN[b]:
+                        self.resetInd(id=b)
                         episodicReward.append(episodeReward[b])
                         episodeReward[b] = 0
                     if step >= self.startStep and self.inferMode is False:
                         loss, entropy =\
                             self.train(step)
                         Loss.append(loss)
-                        self.targetNetUpdate() 
+                        self.targetNetUpdate()
+                donesN = donesN_
                 stateT = nState
             else:
                 obs, rewards, donesN = self.getObs()
