@@ -407,7 +407,7 @@ class sacTrainer(OFFPolicy):
                 donesN = donesN_
                 stateT = nState
             else:
-                obs, rewards, donesN = self.getObs()
+                obs, rewards, donesN_ = self.getObs()
 
             step += self.nAgent
 
