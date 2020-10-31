@@ -2,7 +2,7 @@
     "envName":"./Env/Linux/v4/easyv4",
     "unityEnv": "True",
     "workId":102,
-    "sSize": [1,78],
+    "sSize": [1,366],
     "best" : 100,
      
     "nAgent": 5,

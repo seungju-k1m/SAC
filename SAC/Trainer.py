@@ -385,12 +385,13 @@ class sacTrainer(OFFPolicy):
             value = self.checkStep(np.array(action))
             if value:
                 obs, rewards, donesN_ = self.getObs()
-                for z in rewards:
-                    if z > 9:
-                        print(1)
                 
                 for b in range(self.nAgent):
                     ob = obs[b]
+                    temp = ob[6:]
+                    if temp.min() < 0.001 and temp.min() > 0:
+                        print(1)
+                        pass 
                     state = self.ppState(ob, id=b)
                     nState.append(state)
                     if donesN[b] is False:

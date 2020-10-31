@@ -2,7 +2,7 @@
     "envName":"./Env/MacOs/easyv4",
     "unityEnv": "True",
     "workId":102,
-    "sSize": [1,78],
+    "sSize": [1,366],
     "best" : 100,
      
     "nAgent": 5,
@@ -70,7 +70,7 @@
     "gamma": 0.99,
   
     "sPath": "./save/SAC/",
-    "writeTMode":"None",
+    "writeTMode":"True",
     "tPath": "./tensorboard/SAC/",
     "lPath":"None",
   
