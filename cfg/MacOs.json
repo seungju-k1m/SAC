@@ -2,7 +2,7 @@
     "envName":"./Env/MacOs/easyv4",
     "unityEnv": "True",
     "workId":102,
-    "sSize": [1,77],
+    "sSize": [1,78],
     "best" : 100,
      
     "nAgent": 5,
