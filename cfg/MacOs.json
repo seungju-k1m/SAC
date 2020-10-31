@@ -70,7 +70,7 @@
     "gamma": 0.99,
   
     "sPath": "./save/SAC/",
-    "writeTMode":"True",
+    "writeTMode":"None",
     "tPath": "./tensorboard/SAC/",
     "lPath":"None",
   

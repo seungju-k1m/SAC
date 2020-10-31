@@ -390,12 +390,13 @@ class sacTrainer(OFFPolicy):
                     ob = obs[b]
                     state = self.ppState(ob, id=b)
                     nState.append(state)
-                    if donesN[b] is False:
-                        self.appendMemory((
+                    self.appendMemory((
                             stateT[b], action[b], 
                             rewards[b]*self.rScaling, nState[b], donesN_[b]))
+                    if donesN_[b] is False:
                         episodeReward[b] += rewards[b]
                         action[b] = self.getAction(state)
+                        stateT[b] = state
                     else:
                         action[b] = np.zeros((self.aSize))
                         self.resetInd(id=b)
@@ -407,7 +408,6 @@ class sacTrainer(OFFPolicy):
                         Loss.append(loss)
                         self.targetNetUpdate()
                 donesN = donesN_
-                stateT = nState
             else:
                 obs, rewards, donesN_ = self.getObs()
 
