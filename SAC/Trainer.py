@@ -391,7 +391,6 @@ class sacTrainer(OFFPolicy):
                     temp = ob[6:]
                     if temp.min() < 0.001 and temp.min() > 0:
                         print(1)
-                        pass 
                     state = self.ppState(ob, id=b)
                     nState.append(state)
                     if donesN[b] is False:
