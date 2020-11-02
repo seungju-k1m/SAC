@@ -389,7 +389,7 @@ class sacTrainer(OFFPolicy):
                 for b in range(self.nAgent):
                     ob = obs[b]
                     temp = ob[6:]
-                    if temp.min() < 0.001 and temp.min() > 0:
+                    if temp.min() < 0.005 and temp.min() > 0:
                         print(1)
                     state = self.ppState(ob, id=b)
                     nState.append(state)
