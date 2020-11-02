@@ -5,7 +5,7 @@
     "sSize": [1,366],
     "best" : 100,
      
-    "nAgent": 5,
+    "nAgent": 1,
     "aSize": 2,
     "seed": 0,
   
