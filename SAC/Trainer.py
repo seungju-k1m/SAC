@@ -347,16 +347,22 @@ class sacTrainer(OFFPolicy):
         else:
             return(obsState, reward, done)
     
+    # def checkStep(self, action):
+    #     decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
+    #     agentId = decisionStep.agent_id
+    #     value = True
+    #     if len(agentId) != 0:
+    #         self.env.set_actions(self.behaviorNames, action)
+    #     else:
+    #         value = False
+    #     self.env.step()
+    #     return value
+
     def checkStep(self, action):
-        decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
-        agentId = decisionStep.agent_id
-        value = True
-        if len(agentId) != 0:
-            self.env.set_actions(self.behaviorNames, action)
-        else:
-            value = False
+
+        self.env.set_actions(self.behaviorNames, action)
         self.env.step()
-        return value
+        return True
 
     def run(self):
         step = 0
