@@ -2,7 +2,7 @@
     "envName":"./Env/MacOs/easyv4",
     "unityEnv": "True",
     "workId":102,
-    "sSize": [1,366],
+    "sSize": [1,78],
     "best" : 100,
      
     "nAgent": 1,
@@ -14,15 +14,14 @@
               "actor": {
                 "netCat": "MLP",
                 "nLayer": 3,
-                "fSize": [256,256,4],
+                "fSize": [256, 256, 4],
                 "act": ["relu", "relu", "linear"],
-                "BN": "None",
-                "shortcut":-2
+                "BN": "None"
               },
               "critic": {
                 "netCat": "MLP",
                 "nLayer": 3,
-                "fSize":[256,256,1],
+                "fSize":[256, 256, 1],
                 "act": ["relu", "relu", "linear"],
                 "BN":"None"
               }

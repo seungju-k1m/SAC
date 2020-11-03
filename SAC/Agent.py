@@ -83,7 +83,7 @@ class sacAgent(baseAgent):
         state = state.to(self.device)
         state = state.view((state.shape[0], -1))
 
-        output = self.actor(state)
+        output = self.actor.forward(state)
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
@@ -96,8 +96,8 @@ class sacAgent(baseAgent):
         entropy = (torch.log(std * (2 * 3.14)**0.5)+0.5).sum(1, keepdim=True)
 
         cat = torch.cat((state, action), dim=1)
-        critic01 = self.critic01(cat)
-        critic02 = self.critic02(cat)
+        critic01 = self.critic01.forward(cat)
+        critic02 = self.critic02.forward(cat)
 
         return action, logProb, (critic01, critic02), entropy
     
