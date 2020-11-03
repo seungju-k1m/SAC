@@ -380,7 +380,6 @@ class sacTrainer(OFFPolicy):
 
         while 1:
             nState = []
-            rewards = []
             self.checkStep(np.array(action))
             obs, rewards, donesN_ = self.getObs()
             
@@ -388,8 +387,6 @@ class sacTrainer(OFFPolicy):
                 ob = obs[b]
                 state = self.ppState(ob, id=b)
                 nState.append(state)
-                if (rewards[b] > 6):
-                    print(1)
                 self.appendMemory((
                     stateT[b], action[b], 
                     rewards[b]*self.rScaling, nState[b], donesN_[b]))

@@ -57,13 +57,6 @@
         "decay": 0,
         "clipping": "None",
         "eps": 1e-7
-      },
-      "temperature": {
-        "name": "adam",
-        "lr": 1e-4,
-        "decay": 0,
-        "clipping": "None",
-        "eps": 1e-7
       }
     },
     "gamma": 0.99,
