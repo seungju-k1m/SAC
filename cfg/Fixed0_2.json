@@ -1,11 +1,11 @@
 {
-    "envName":"./Env/Linux/v4/easyv4",
+    "envName":"./Env/Linux/v4/v4",
     "unityEnv": "True",
     "workId":102,
-    "sSize": [1,78],
+    "sSize": [1,366],
     "best" : 100,
      
-    "nAgent": 5,
+    "nAgent": 10,
     "aSize": 2,
     "seed": 0,
   

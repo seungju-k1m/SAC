@@ -32,21 +32,7 @@ class OFFPolicy:
         
         name = self.data['envName']
         print(name)
-        if self.uMode:
-            id_ = np.random.randint(10, 100, 1)[0]
-            engineChannel = EngineConfigurationChannel()
-            engineChannel.set_configuration_parameters(time_scale=4)
-            setChannel = EnvironmentParametersChannel()
-            setChannel.set_float_parameter("nAgent", self.data['nAgent'])
-            self.env = UnityEnvironment(
-                name, worker_id=id_, 
-                side_channels=[setChannel, engineChannel])
-            self.env.reset()
-            self.behaviorNames = list(self.env.behavior_specs._dict.keys())[0]
-            # engineChannel.set_configuration_parameters()
-        else:
-            self.env = gym.make(name)
-            self.evalEnv = gym.make(name)
+        
         
         self.nReplayMemory = int(self.data['nReplayMemory'])
         self.gamma = self.data['gamma']
@@ -78,6 +64,23 @@ class OFFPolicy:
         self.best = self.data['best']
         self.evalP = self.data['evalP']
         assert ~(self.uMode is False and self.nAgent > 1), "nAgent must be 1,"
+
+        if self.uMode:
+            id_ = np.random.randint(10, 100, 1)[0]
+            engineChannel = EngineConfigurationChannel()
+            engineChannel.set_configuration_parameters(time_scale=4)
+            setChannel = EnvironmentParametersChannel()
+            if self.inferMode is False:
+                setChannel.set_float_parameter("nAgent", self.data['nAgent'])
+            self.env = UnityEnvironment(
+                name, worker_id=id_, 
+                side_channels=[setChannel, engineChannel])
+            self.env.reset()
+            self.behaviorNames = list(self.env.behavior_specs._dict.keys())[0]
+            # engineChannel.set_configuration_parameters()
+        else:
+            self.env = gym.make(name)
+            self.evalEnv = gym.make(name)
 
     def reset(self):
         pass

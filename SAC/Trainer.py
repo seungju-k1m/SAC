@@ -391,7 +391,10 @@ class sacTrainer(OFFPolicy):
                     stateT[b], action[b].copy(), 
                     rewards[b]*self.rScaling, nState[b], donesN_[b]))
                 episodeReward[b] += rewards[b]
-                action[b] = self.getAction(state)
+                if self.inferMode:
+                    action[b] = self.getAction(state, dMode=True)
+                else:
+                    action[b] = self.getAction(state)
 
                 if donesN_[b]:
                     self.resetInd(id=b)
