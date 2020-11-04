@@ -112,8 +112,8 @@ class sacAgent(baseAgent):
         lidarImg = lidarImg.to(self.device)
 
         actorFeature = self.actorFeature(lidarImg)
-        state = torch.cat((state, actorFeature), dim=1)
-        output = self.actor(state)
+        ss = torch.cat((state, actorFeature), dim=1)
+        output = self.actor(ss)
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
@@ -125,18 +125,18 @@ class sacAgent(baseAgent):
         logProb -= torch.log(1-action.pow(2)+1e-6).sum(1, keepdim=True)
         entropy = (torch.log(std * (2 * 3.14)**0.5)+0.5).sum(1, keepdim=True)
 
-        cat = torch.cat((state, action), dim=1)
-        critic01 = self.critic01.forward(cat)
-        critic02 = self.critic02.forward(cat)
+        cSS1 = self.criticFeature01(lidarImg)
+        cSS2 = self.criticFeature02(lidarImg)
+        cat1 = torch.cat((action, state, cSS1), dim=1)
+        cat2 = torch.cat((action, state, cSS2), dim=1)
+        critic01 = self.critic01.forward(cat1)
+        critic02 = self.critic02.forward(cat2)
 
         return action, logProb, (critic01, critic02), entropy
     
     def calQLoss(self, state, target, pastActions):
-        self.critic01.train()
-        self.critic02.train()
 
-        state = state.to(self.device)
-        state = state.view((state.shape[0], -1)).detach()
+        
 
         stateAction = torch.cat((state, pastActions), dim=1).detach()
         critic1 = self.critic01(stateAction)

@@ -1,6 +1,12 @@
 import torch
 import numpy as np
 import json
+import torchvision.transforms.functional as TF
+
+
+def showLidarImg(img):
+    img = TF.to_pil_image(img)
+    img.show()
 
 
 def calGlobalNorm(agent):

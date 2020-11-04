@@ -5,7 +5,7 @@ import numpy as np
 
 from baseline.baseTrainer import OFFPolicy
 from SAC.Agent import sacAgent
-from baseline.utils import getOptim, calGlobalNorm
+from baseline.utils import getOptim, calGlobalNorm, showLidarImg
 from collections import deque
 
 
@@ -45,8 +45,9 @@ class sacTrainer(OFFPolicy):
         self.replayMemory = deque(maxlen=self.nReplayMemory)
         self.sPath += str(self.bSize) + \
             '_'+str(~self.fixedTemp)
+        
         if self.fixedTemp:
-            self.sPath += str(self.n+self.data['envName']+'_'+str(int(self.tempValue*100))+'.pth'
+            self.sPath += str(self.nAgent)+self.data['envName']+'_'+str(int(self.tempValue*100))+'.pth'
         else:
             self.sPath += '.pth'
         
@@ -90,24 +91,20 @@ class sacTrainer(OFFPolicy):
             self.obsSets[0].append(np.zeros(self.sSize[1:]))
     
     def ppState(self, obs, id=0):
-        state = np.zeros(self.sSize)
+        rState, lidarPt = obs[:6], obs[6:]
+        rState = torch.tensor(rState).to(self.device)
+        lidarPt = lidarPt[np.abs(lidarPt) > 0]
+        lidarPt = np.reshape(lidarPt, (-1, 2))
+        lidarImg = torch.zeros(self.sSize)
+        for pt in lidarPt:
+            locX = int(((pt[0]+7) / 14)*self.sSize[-1])
+            locY = int(((pt[1]+7) / 14)*self.sSize[-1])
 
-        if state.ndim > 2:
-            obs = cv2.resize(obs, (self.sSize[1:]))
-            obs = np.uint8(obs)
-            obs = cv2.cvtColor(obs, cv2.COLOR_BGR2GRAY)
-            obs = np.reshape(
-                obs, 
-                (self.sSize[1:])
-                )
-        self.obsSets[id].append(obs)
-        
-        for i in range(self.sSize[0]):
-            state[i] = self.obsSets[id][i]
-        
-        if state.ndim > 2:
-            state = np.uint8(state)
-        return state
+            lidarImg[0, locY, locX] = 1.0
+        lidarImg = lidarImg.to(self.device)
+        # showLidarImg(lidarImg)
+
+        return (rState, lidarImg)
     
     def ppEvalState(self, obs):
         state = np.zeros(self.sSize)
@@ -131,29 +128,37 @@ class sacTrainer(OFFPolicy):
 
     def genOptim(self):
         optimKeyList = list(self.optimData.keys())
-        self.actor, self.critic01, self.critic02 = \
-            self.agent.actor, self.agent.critic01, self.agent.critic02
+        self.actor, self.actorFeature, self.critic01, self.critic02 = \
+            self.agent.actor, self.agent.actorFeature,  self.agent.critic01, self.agent.critic02
         self.tCritic01, self.tCritic02 = \
             self.tAgent.critic01, self.tAgent.critic02
+        self.tCriticFeature01, self.tCriticFeature02 = \
+            self.tAgent.criticFeature01, self.tAgent.criticFeature02
+
         self.actor = self.actor.to(self.device)
         self.critic01, self.critic02 = self.critic01.to(self.device), self.critic02.to(self.device)
         self.tCritic01, self.tCritic02 = \
             self.tCritic01.to(self.device), self.tCritic02.to(self.device)
+        self.actorFeature = self.actorFeature.to(self.device)
+        self.criticFeature01, self.criticFeature02 = \
+            self.criticFeature01.to(self.device), self.criticFeature02.to(self.device)
+        self.tCritic01Feature01, self.tCritic01Feature02 = \
+            self.tCriticFeature01.to(self.device), self.tCriticFeature02.to(self.device)
+
         for optimKey in optimKeyList:
             if optimKey == 'actor':
                 self.aOptim = getOptim(self.optimData[optimKey], self.actor)
+                self.aFOptim = getOptim(self.optimData[optimKey], self.actorFeature)
             if optimKey == 'critic':
                 self.cOptim1 = getOptim(self.optimData[optimKey], self.critic01)
+                self.cFOptim1 = getOptim(self.optimData[optimKey, self.criticFeature01])
                 self.cOptim2 = getOptim(self.optimData[optimKey], self.critic02)
-            if optimKey == 'policy':
-                self.pOptim = getOptim(self.optimData[optimKey], self.policy)
+                self.cFOptim2 = getOptim(self.optimData[optimKey, self.criticFeature02])
             if optimKey == 'temperature':
                 if self.fixedTemp is False:
                     self.tOptim = getOptim(self.optimData[optimKey], [self.tempValue], floatV=True)
                  
     def getAction(self, state, dMode=False):
-        if torch.is_tensor(state) is False:
-            state = torch.tensor(state).to(self.device).float()
         
         with torch.no_grad():
             if dMode:
@@ -166,24 +171,35 @@ class sacTrainer(OFFPolicy):
     def targetNetUpdate(self):
         if self.sMode:
             with torch.no_grad():
-                for tC1, tC2, C1, C2 in zip(
+                for tC1, tC2, C1, C2, tFC1, tFC2, FC1, FC2 in zip(
                         self.tCritic01.parameters(), 
                         self.tCritic02.parameters(), 
                         self.critic01.parameters(), 
-                        self.critic02.parameters()):
+                        self.critic02.parameters(),
+                        self.tCriticFeature01.parameters(),
+                        self.tCriticFeature02.parameters(),
+                        self.criticFeature01.parameters(),
+                        self.criticFeature02.parameters()):
                     temp1 = self.tau * C1 + (1 - self.tau) * tC1
                     temp2 = self.tau * C2 + (1 - self.tau) * tC2
+                    temp3 = self.tau * FC1 + (1 - self.tau) * tFC1
+                    temp4 = self.tau * FC2 + (1 - self.tau) * tFC2
 
                     tC1.copy_(temp1)
                     tC2.copy_(temp2)
+                    tFC1.copy_(temp3)
+                    tFC2.copy_(temp4)
 
     def appendMemory(self, data):
         return self.replayMemory.append(data)
     
     def zeroGrad(self):
         self.cOptim1.zero_grad()
+        self.cFOptim1.zero_grad()
         self.cOptim2.zero_grad()
+        self.cFOptim2.zero_grad()
         self.aOptim.zero_grad()
+        self.aFOptim.zero_grad()
         if self.fixedTemp is False:
             self.tOptim.zero_grad()
     
@@ -318,7 +334,7 @@ class sacTrainer(OFFPolicy):
         return loss, entropy
     
     def getObs(self, init=False):
-        obsState = np.zeros((self.nAgent, self.sSize[-1]))
+        obsState = np.zeros((self.nAgent, 1000))
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
         rewards, treward = decisionStep.reward, terminalStep.reward
