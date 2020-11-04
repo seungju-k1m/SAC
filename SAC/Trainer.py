@@ -388,7 +388,7 @@ class sacTrainer(OFFPolicy):
                 state = self.ppState(ob, id=b)
                 nState.append(state)
                 self.appendMemory((
-                    stateT[b], action[b], 
+                    stateT[b], action[b].copy(), 
                     rewards[b]*self.rScaling, nState[b], donesN_[b]))
                 episodeReward[b] += rewards[b]
                 action[b] = self.getAction(state)
