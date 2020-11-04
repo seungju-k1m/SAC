@@ -35,6 +35,7 @@ class OFFPolicy:
         if self.uMode:
             id_ = np.random.randint(10, 100, 1)[0]
             engineChannel = EngineConfigurationChannel()
+            engineChannel.set_configuration_parameters(time_scale=4)
             setChannel = EnvironmentParametersChannel()
             setChannel.set_float_parameter("nAgent", self.data['nAgent'])
             self.env = UnityEnvironment(
