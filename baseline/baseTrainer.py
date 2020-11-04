@@ -33,7 +33,6 @@ class OFFPolicy:
         name = self.data['envName']
         print(name)
         
-        
         self.nReplayMemory = int(self.data['nReplayMemory'])
         self.gamma = self.data['gamma']
         self.bSize = self.data['bSize']

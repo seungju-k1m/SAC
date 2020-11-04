@@ -46,7 +46,7 @@ class sacTrainer(OFFPolicy):
         self.sPath += str(self.bSize) + \
             '_'+str(~self.fixedTemp)
         if self.fixedTemp:
-            self.sPath += '_'+str(int(self.tempValue*100))+'.pth'
+            self.sPath += str(self.nAgent)+'_'+self.data['envName']+'_'+str(int(self.tempValue*100))+'.pth'
         else:
             self.sPath += '.pth'
         
