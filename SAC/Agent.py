@@ -23,9 +23,28 @@ class sacAgent(baseAgent):
                     self.actor = \
                         MLP(
                             netData, 
-                            iSize=self.aData['sSize'][-1]*self.aData['sSize'][0])
+                            iSize=int((self.aData['sSize'][-1]/16)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6)
+                        
+                    print(int((self.aData['sSize'][-1]/16)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6)
                 elif netCat == "CNET":
                     self.actor = \
+                        CNET(
+                            netData, 
+                            iSize=self.aData['sSize'][0], 
+                            WH=self.aData['sSize'][-1])
+                else:
+                    RuntimeError("The name of agent is not invalid")
+            
+            if netName == "actorFeature":
+                netData = self.aData[netName]
+                netCat = netData['netCat']
+                if netCat == "MLP":
+                    self.actorFeature = \
+                        MLP(
+                            netData, 
+                            iSize=self.aData['sSize'][-1]/16 + 6)
+                elif netCat == "CNET":
+                    self.actorFeature = \
                         CNET(
                             netData, 
                             iSize=self.aData['sSize'][0], 
@@ -40,11 +59,11 @@ class sacAgent(baseAgent):
                     self.critic01 = \
                         MLP(
                             netData, 
-                            iSize=self.aData['sSize'][-1]*self.aData['sSize'][0]+self.aData['aSize'])
+                            iSize=int((self.aData['sSize'][-1]/16)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6 + self.aData['aSize'])
                     self.critic02 = \
                         MLP(
                             netData, 
-                            iSize=self.aData['sSize'][-1]*self.aData['sSize'][0]+self.aData['aSize'])
+                            iSize=int((self.aData['sSize'][-1]/16)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6 + self.aData['aSize'])
                 elif netCat == "CNET":
                     self.critic01 = \
                         CNET(
@@ -58,32 +77,43 @@ class sacAgent(baseAgent):
                             WH=self.aData['sSize'][-1])
                 else:
                     RuntimeError("The name of agent is not invalid")
-            if netName == "policy":
+            if netName == "criticFeature":
                 netData = self.aData[netName]
                 netCat = netData['netCat']
                 if netCat == "MLP":
-                    self.policy = \
+                    self.criticFeature01 = \
                         MLP(
                             netData, 
-                            iSize=self.aData['sSize'][-1]*self.aData['sSize'][0])
+                            iSize=int(self.aData['sSize'][-1]/16 * netData['fSize'][-1]) + 6 + self.aData['aSize'])
+                    self.criticFeature02 = \
+                        MLP(
+                            netData, 
+                            iSize=int(self.aData['sSize'][-1]/16 * netData['fSize'][-1]) + 6 + self.aData['aSize'])
                 elif netCat == "CNET":
-                    self.policy = \
+                    self.criticFeature01 = \
                         CNET(
                             netData, 
                             iSize=self.aData['sSize'][0], 
                             WH=self.aData['sSize'][-1])
+                    self.criticFeature02 = \
+                        CNET(
+                            netData, 
+                            iSize=self.aData['sSize'][0], 
+                            WH=self.aData['sSize'][-1])
+                else:
+                    RuntimeError("The name of agent is not invalid")
 
         self.temperature = torch.zeros(1, requires_grad=True, device=self.aData['device'])
-        
+    
     def forward(self, state):
-
-        if torch.is_tensor(state) is False:
-            state = torch.tensor(state).float()
         
+        lidarImg, state = state
         state = state.to(self.device)
-        state = state.view((state.shape[0], -1))
+        lidarImg = lidarImg.to(self.device)
 
-        output = self.actor.forward(state)
+        actorFeature = self.actorFeature(lidarImg)
+        state = torch.cat((state, actorFeature), dim=1)
+        output = self.actor(state)
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
