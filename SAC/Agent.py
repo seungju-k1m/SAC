@@ -25,7 +25,6 @@ class sacAgent(baseAgent):
                             netData, 
                             iSize=int((self.aData['sSize'][-1]/16)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6)
                         
-                    print(int((self.aData['sSize'][-1]/16)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6)
                 elif netCat == "CNET":
                     self.actor = \
                         CNET(
@@ -107,9 +106,13 @@ class sacAgent(baseAgent):
     
     def forward(self, state):
         
-        lidarImg, state = state
-        state = state.to(self.device)
-        lidarImg = lidarImg.to(self.device)
+        state, lidarImg = state
+        state = state.to(self.device).float()
+        lidarImg = lidarImg.to(self.device).float()
+
+        if lidarImg.dim() == 3:
+            lidarImg = torch.unsqueeze(lidarImg, 0)
+            state = torch.unsqueeze(state, 0)
 
         actorFeature = self.actorFeature(lidarImg)
         ss = torch.cat((state, actorFeature), dim=1)
@@ -134,24 +137,28 @@ class sacAgent(baseAgent):
 
         return action, logProb, (critic01, critic02), entropy
     
+    def criticForward(self, state, action):
+        rState, lState = state
+
+        cSS1 = self.criticFeature01(lState)
+        cSS2 = self.criticFeature02(lState)
+
+        cat1 = torch.cat((action, rState, cSS1), dim=1)
+        cat2 = torch.cat((action, rState, cSS2), dim=1)
+        critic01 = self.critic01.forward(cat1)
+        critic02 = self.critic02.forward(cat2) 
+    
+        return critic01, critic02
+
     def calQLoss(self, state, target, pastActions):
 
-        
-
-        stateAction = torch.cat((state, pastActions), dim=1).detach()
-        critic1 = self.critic01(stateAction)
-        critic2 = self.critic02(stateAction)
-
+        critic1, critic2 = self.criticForward(state, pastActions)
         lossCritic1 = torch.mean((critic1-target).pow(2)/2)
         lossCritic2 = torch.mean((critic2-target).pow(2)/2)
 
         return lossCritic1, lossCritic2
     
     def calALoss(self, state, alpha=0):
-        self.actor.train()
-
-        state = state.to(self.device)
-        state = state.view((state.shape[0], -1)).detach()
 
         action, logProb, critics, entropy = self.forward(state)
         critic1, critic2 = critics

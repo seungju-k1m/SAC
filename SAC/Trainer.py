@@ -93,7 +93,8 @@ class sacTrainer(OFFPolicy):
     def ppState(self, obs, id=0):
         rState, lidarPt = obs[:6], obs[6:]
         rState = torch.tensor(rState).to(self.device)
-        lidarPt = lidarPt[np.abs(lidarPt) > 0]
+        lidarPt = lidarPt[lidarPt != 0]
+        lidarPt -= 1000
         lidarPt = np.reshape(lidarPt, (-1, 2))
         lidarImg = torch.zeros(self.sSize)
         for pt in lidarPt:
@@ -134,6 +135,8 @@ class sacTrainer(OFFPolicy):
             self.tAgent.critic01, self.tAgent.critic02
         self.tCriticFeature01, self.tCriticFeature02 = \
             self.tAgent.criticFeature01, self.tAgent.criticFeature02
+        self.criticFeature01, self.criticFeature02 = \
+            self.agent.criticFeature01, self.agent.criticFeature02
 
         self.actor = self.actor.to(self.device)
         self.critic01, self.critic02 = self.critic01.to(self.device), self.critic02.to(self.device)
@@ -151,9 +154,9 @@ class sacTrainer(OFFPolicy):
                 self.aFOptim = getOptim(self.optimData[optimKey], self.actorFeature)
             if optimKey == 'critic':
                 self.cOptim1 = getOptim(self.optimData[optimKey], self.critic01)
-                self.cFOptim1 = getOptim(self.optimData[optimKey, self.criticFeature01])
+                self.cFOptim1 = getOptim(self.optimData[optimKey], self.criticFeature01)
                 self.cOptim2 = getOptim(self.optimData[optimKey], self.critic02)
-                self.cFOptim2 = getOptim(self.optimData[optimKey, self.criticFeature02])
+                self.cFOptim2 = getOptim(self.optimData[optimKey], self.criticFeature02)
             if optimKey == 'temperature':
                 if self.fixedTemp is False:
                     self.tOptim = getOptim(self.optimData[optimKey], [self.tempValue], floatV=True)
@@ -235,26 +238,40 @@ class sacTrainer(OFFPolicy):
     def train(self, step):
         miniBatch = random.sample(self.replayMemory, self.bSize)
         
-        states, actions, rewards, nStates, dones = \
-            [], [], [], [], []
+        rStates, lStates, actions, rewards, nRStates, nLStates, dones = \
+            [], [], [], [], [], [], []
         
         for i in range(self.bSize):
-            states.append(miniBatch[i][0])
+            rStates.append(miniBatch[i][0][0])
+            lStates.append(miniBatch[i][0][1])
             actions.append(miniBatch[i][1])
             rewards.append(miniBatch[i][2])
-            nStates.append(miniBatch[i][3])
+            nRStates.append(miniBatch[i][3][0])
+            nLStates.append(miniBatch[i][3][1])
             dones.append(miniBatch[i][4])
 
+        nRStatesT = torch.stack(nRStates, 0).to(self.device).float()
+        rStatesT = torch.stack(rStates, 0).to(self.device).float()
+        lStatesT = torch.stack(lStates, 0).to(self.device).float()
+        nLStatesT = torch.stack(nLStates, 0).to(self.device).float()
         actionsT = torch.tensor(actions).to(self.device).float()
-        nStatesT = torch.tensor(nStates).to(self.device).float()
-        statesT = torch.tensor(states).to(self.device).float()
+        # nRStatesT = torch.tensor(nRStates).to(self.device).float()
+        # nLStatesT = torch.tensor(nLStates).to(self.device).float()
+        # rStatesT = torch.tensor(rStates).to(self.device).float()
+        # lStatesT = torch.tensor(lStates).to(self.device).float()
+
         with torch.no_grad():
             nActionsT, logProb, __, entropy = \
-                self.agent.forward(nStatesT)
-            nStatesT = nStatesT.view((nStatesT.shape[0], -1))
-            nStateAction = torch.cat((nStatesT, nActionsT), dim=1)
+                self.agent.forward((nRStatesT, nLStatesT))
+            
+            tCT01 = self.tCriticFeature01(nLStatesT)
+            tCT02 = self.tCriticFeature02(nLStatesT)
+
+            cat1 = torch.cat((nActionsT, nRStatesT, tCT01), dim=1)
+            cat2 = torch.cat((nActionsT, nRStatesT, tCT02), dim=1)
+
             target1, target2 = \
-                self.tCritic01.forward(nStateAction), self.tCritic02.forward(nStateAction)
+                self.tCritic01.forward(cat1), self.tCritic02.forward(cat2)
             mintarget = torch.min(target1, target2)
             if self.fixedTemp:
                 alpha = self.tempValue
@@ -269,7 +286,7 @@ class sacTrainer(OFFPolicy):
 
         if self.fixedTemp:
             lossC1, lossC2 = self.agent.calQLoss(
-                statesT.detach(),
+                (rStatesT.detach(), lStatesT.detach()),
                 mintarget.detach(),
                 actionsT
             )
@@ -280,7 +297,7 @@ class sacTrainer(OFFPolicy):
             self.cOptim2.step()
 
             lossP, lossT = self.agent.calALoss(
-                statesT.detach(),
+                (rStatesT.detach(), lStatesT.detach()),
                 alpha=self.tempValue)
             
             lossP.backward()
@@ -288,7 +305,7 @@ class sacTrainer(OFFPolicy):
 
         else:
             lossC1, lossC2 = self.agent.calQLoss(
-                statesT.detach(),
+                (rStatesT.detach(), lStatesT.detach()),
                 mintarget.detach(),
                 actionsT
             )
@@ -299,7 +316,7 @@ class sacTrainer(OFFPolicy):
             self.cOptim2.step()
 
             lossP, lossT = self.agent.calALoss(
-                statesT.detach()
+                (rStatesT.detach(), lStatesT.detach())
                 )
             
             lossP.backward()
@@ -334,7 +351,7 @@ class sacTrainer(OFFPolicy):
         return loss, entropy
     
     def getObs(self, init=False):
-        obsState = np.zeros((self.nAgent, 1000))
+        obsState = np.zeros((self.nAgent, 1446))
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
         rewards, treward = decisionStep.reward, terminalStep.reward
