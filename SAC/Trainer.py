@@ -103,7 +103,8 @@ class sacTrainer(OFFPolicy):
 
             lidarImg[0, locY, locX] = 1.0
         lidarImg = lidarImg.to(self.device)
-        # showLidarImg(lidarImg)
+        if (id % 100 == 0):
+            showLidarImg(lidarImg)
 
         return (rState, lidarImg)
     
@@ -418,7 +419,7 @@ class sacTrainer(OFFPolicy):
             
             for b in range(self.nAgent):
                 ob = obs[b]
-                state = self.ppState(ob, id=b)
+                state = self.ppState(ob, id=step)
                 nState.append(state)
                 self.appendMemory((
                     stateT[b], action[b].copy(), 
