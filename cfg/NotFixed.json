@@ -40,7 +40,7 @@
     "tempValue": 0.05,
   
     "nReplayMemory": 1e6,
-    "bSize": 256,
+    "bSize": 64,
     "lrFreq": 1,
     "rScaling": 1,
   
