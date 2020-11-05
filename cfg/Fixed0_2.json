@@ -16,7 +16,7 @@
               "nLayer": 4,
               "nUnit": [32, 32, 16],
               "stride": [2, 2, 2],
-              "fSize" : [1, 1, 1, -1],
+              "fSize" : [3, 3, 3, -1],
               "padding" : [1, 1, 1],
               "act": "relu",
               "BN": "None"
