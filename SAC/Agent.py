@@ -23,7 +23,7 @@ class sacAgent(baseAgent):
                     self.actor = \
                         MLP(
                             netData, 
-                            iSize=int((self.aData['sSize'][-1]/16)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6)
+                            iSize=int((self.aData['sSize'][-1]/8)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6)
                         
                 elif netCat == "CNET":
                     self.actor = \
@@ -58,11 +58,11 @@ class sacAgent(baseAgent):
                     self.critic01 = \
                         MLP(
                             netData, 
-                            iSize=int((self.aData['sSize'][-1]/16)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6 + self.aData['aSize'])
+                            iSize=int((self.aData['sSize'][-1]/8)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6 + self.aData['aSize'])
                     self.critic02 = \
                         MLP(
                             netData, 
-                            iSize=int((self.aData['sSize'][-1]/16)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6 + self.aData['aSize'])
+                            iSize=int((self.aData['sSize'][-1]/8)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6 + self.aData['aSize'])
                 elif netCat == "CNET":
                     self.critic01 = \
                         CNET(
@@ -83,11 +83,11 @@ class sacAgent(baseAgent):
                     self.criticFeature01 = \
                         MLP(
                             netData, 
-                            iSize=int(self.aData['sSize'][-1]/16 * netData['fSize'][-1]) + 6 + self.aData['aSize'])
+                            iSize=int(self.aData['sSize'][-1]/8 * netData['fSize'][-1]) + 6 + self.aData['aSize'])
                     self.criticFeature02 = \
                         MLP(
                             netData, 
-                            iSize=int(self.aData['sSize'][-1]/16 * netData['fSize'][-1]) + 6 + self.aData['aSize'])
+                            iSize=int(self.aData['sSize'][-1]/8 * netData['fSize'][-1]) + 6 + self.aData['aSize'])
                 elif netCat == "CNET":
                     self.criticFeature01 = \
                         CNET(
