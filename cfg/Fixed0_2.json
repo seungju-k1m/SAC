@@ -2,7 +2,7 @@
   "envName":"./Env/Linux/v4/imgv4_1",
   "unityEnv": "True",
   "workId":102,
-  "sSize": [1, 192, 192],
+  "sSize": [1, 96, 96],
   "best" : 100,
    
   "nAgent": 1,
