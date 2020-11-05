@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from baseline.baseNetwork import MLP, CNET, baseAgent
 
 
@@ -19,11 +20,12 @@ class sacAgent(baseAgent):
             if netName == "actor":
                 netData = self.aData[netName]
                 netCat = netData['netCat']
+                totlaDiv = np.array(netData['stride']).sum()
                 if netCat == "MLP":
                     self.actor = \
                         MLP(
                             netData, 
-                            iSize=int((self.aData['sSize'][-1]/8)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6)
+                            iSize=int((self.aData['sSize'][-1]/totlaDiv)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6)
                         
                 elif netCat == "CNET":
                     self.actor = \
@@ -37,11 +39,12 @@ class sacAgent(baseAgent):
             if netName == "actorFeature":
                 netData = self.aData[netName]
                 netCat = netData['netCat']
+                totlaDiv = np.array(netData['stride']).sum()
                 if netCat == "MLP":
                     self.actorFeature = \
                         MLP(
                             netData, 
-                            iSize=self.aData['sSize'][-1]/16 + 6)
+                            iSize=self.aData['sSize'][-1]/totlaDiv + 6)
                 elif netCat == "CNET":
                     self.actorFeature = \
                         CNET(
@@ -55,14 +58,15 @@ class sacAgent(baseAgent):
                 netData = self.aData[netName]
                 netCat = netData['netCat']
                 if netCat == "MLP":
+                    totlaDiv = np.array(netData['stride']).sum()
                     self.critic01 = \
                         MLP(
                             netData, 
-                            iSize=int((self.aData['sSize'][-1]/8)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6 + self.aData['aSize'])
+                            iSize=int((self.aData['sSize'][-1]/totlaDiv)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6 + self.aData['aSize'])
                     self.critic02 = \
                         MLP(
                             netData, 
-                            iSize=int((self.aData['sSize'][-1]/8)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6 + self.aData['aSize'])
+                            iSize=int((self.aData['sSize'][-1]/totlaDiv)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6 + self.aData['aSize'])
                 elif netCat == "CNET":
                     self.critic01 = \
                         CNET(
@@ -80,14 +84,15 @@ class sacAgent(baseAgent):
                 netData = self.aData[netName]
                 netCat = netData['netCat']
                 if netCat == "MLP":
+                    totlaDiv = np.array(netData['stride']).sum()
                     self.criticFeature01 = \
                         MLP(
                             netData, 
-                            iSize=int(self.aData['sSize'][-1]/8 * netData['fSize'][-1]) + 6 + self.aData['aSize'])
+                            iSize=int(self.aData['sSize'][-1]/totlaDiv * netData['fSize'][-1]) + 6 + self.aData['aSize'])
                     self.criticFeature02 = \
                         MLP(
                             netData, 
-                            iSize=int(self.aData['sSize'][-1]/8 * netData['fSize'][-1]) + 6 + self.aData['aSize'])
+                            iSize=int(self.aData['sSize'][-1]/totlaDiv * netData['fSize'][-1]) + 6 + self.aData['aSize'])
                 elif netCat == "CNET":
                     self.criticFeature01 = \
                         CNET(
