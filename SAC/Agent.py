@@ -20,7 +20,7 @@ class sacAgent(baseAgent):
             if netName == "actor":
                 netData = self.aData[netName]
                 netCat = netData['netCat']
-                totlaDiv = np.array(netData['stride']).sum()
+                
                 if netCat == "MLP":
                     self.actor = \
                         MLP(
@@ -39,7 +39,11 @@ class sacAgent(baseAgent):
             if netName == "actorFeature":
                 netData = self.aData[netName]
                 netCat = netData['netCat']
-                totlaDiv = np.array(netData['stride']).sum()
+                totla = np.array(netData['stride'])
+                totlaDiv = 1
+                for k in totla:
+                    totlaDiv *= k
+                
                 if netCat == "MLP":
                     self.actorFeature = \
                         MLP(
@@ -58,7 +62,6 @@ class sacAgent(baseAgent):
                 netData = self.aData[netName]
                 netCat = netData['netCat']
                 if netCat == "MLP":
-                    totlaDiv = np.array(netData['stride']).sum()
                     self.critic01 = \
                         MLP(
                             netData, 
@@ -84,7 +87,6 @@ class sacAgent(baseAgent):
                 netData = self.aData[netName]
                 netCat = netData['netCat']
                 if netCat == "MLP":
-                    totlaDiv = np.array(netData['stride']).sum()
                     self.criticFeature01 = \
                         MLP(
                             netData, 
