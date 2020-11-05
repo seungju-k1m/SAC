@@ -56,7 +56,7 @@
   "updateP":1000,
   "sMode": "True",
   "runStep": 300000,
-  "startStep": 500,
+  "startStep": 10000,
   "evalP":5000,
   "episodeP": 20,
 
