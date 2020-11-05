@@ -1,6 +1,7 @@
 import cv2
 import torch
 import random
+import math
 import numpy as np
 
 from baseline.baseTrainer import OFFPolicy
@@ -91,17 +92,29 @@ class sacTrainer(OFFPolicy):
             self.obsSets[0].append(np.zeros(self.sSize[1:]))
     
     def ppState(self, obs, id=0):
-        rState, lidarPt = obs[:6], obs[6:]
+        rState, targetOn, lidarPt = obs[:6], obs[6], obs[7:]
+        targetPos = np.reshape(rState[:2], (1, 2))
         rState = torch.tensor(rState).to(self.device)
         lidarPt = lidarPt[lidarPt != 0]
         lidarPt -= 1000
         lidarPt = np.reshape(lidarPt, (-1, 2))
         lidarImg = torch.zeros(self.sSize)
+        R = [[math.cos(rState[-1]), -math.sin(rState[-1])], [math.sin(rState[-1]), math.cos(rState[-1])]]
+        R = np.array(R)
+        lidarPt = np.dot(lidarPt, R)
         for pt in lidarPt:
+            
             locX = int(((pt[0]+7) / 14)*self.sSize[-1])
             locY = int(((pt[1]+7) / 14)*self.sSize[-1])
 
             lidarImg[0, locY, locX] = 1.0
+        if targetOn == 1:
+            pt = np.dot(targetPos, R)[0]
+            locX = int(((pt[0]+7) / 14)*self.sSize[-1])
+            locY = int(((pt[1]+7) / 14)*self.sSize[-1])
+
+            lidarImg[0, locY, locX] = 10
+            # showLidarImg(lidarImg)
         lidarImg = lidarImg.to(self.device)
         # if (id % 100 == 0):
         #     showLidarImg(lidarImg)
@@ -352,7 +365,7 @@ class sacTrainer(OFFPolicy):
         return loss, entropy
     
     def getObs(self, init=False):
-        obsState = np.zeros((self.nAgent, 1446))
+        obsState = np.zeros((self.nAgent, 1447))
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
         rewards, treward = decisionStep.reward, terminalStep.reward
