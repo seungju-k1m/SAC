@@ -430,6 +430,7 @@ class sacTrainer(OFFPolicy):
                     action[b] = self.getAction(state)
 
                 if donesN_[b]:
+                    # showLidarImg(state[1])
                     self.resetInd(id=b)
                     episodicReward.append(episodeReward[b])
                     episodeReward[b] = 0
