@@ -2,7 +2,7 @@
   "envName":"./Env/MacOs/imgv4_1",
   "unityEnv": "True",
   "workId":102,
-  "sSize": [1, 192, 192],
+  "sSize": [1, 96, 96],
   "best" : 100,
    
   "nAgent": 1,
@@ -87,9 +87,9 @@
   "sPath": "./save/SAC/",
   "writeTMode":"True",
   "tPath": "./tensorboard/SAC/",
-  "lPath":"None",
+  "lPath":"./save/SAC/test1.pth",
 
   "device": "cpu",
-  "inferMode": "False",
+  "inferMode": "None",
   "renderMode": "True"
 }
