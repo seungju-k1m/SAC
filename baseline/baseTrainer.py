@@ -138,3 +138,13 @@ class OFFPolicy:
                 self.info += """
                 {}:{}
                 """.format(data, self.optimData[key][data])
+        networkKeyList = list(self.aData.keys())[:4]
+        for key in networkKeyList:
+            self.info += """
+        network_{}:
+        """.format(key)
+            netList = list(self.aData[key].keys())
+            for data in netList:
+                self.info += """
+                {}:{}
+                """.format(data, self.aData[key][data])
