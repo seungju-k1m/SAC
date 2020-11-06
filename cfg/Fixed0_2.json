@@ -89,7 +89,7 @@
   "tPath": "./tensorboard/SAC/",
   "lPath":"None",
 
-  "device": "cpu",
+  "device": "cuda:0",
   "inferMode": "False",
   "renderMode": "True"
 }
