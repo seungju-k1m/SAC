@@ -67,7 +67,7 @@ class OFFPolicy:
         if self.uMode:
             id_ = np.random.randint(10, 100, 1)[0]
             engineChannel = EngineConfigurationChannel()
-            engineChannel.set_configuration_parameters(time_scale=4)
+            engineChannel.set_configuration_parameters(time_scale=2)
             setChannel = EnvironmentParametersChannel()
             if self.inferMode is False:
                 setChannel.set_float_parameter("nAgent", self.data['nAgent'])

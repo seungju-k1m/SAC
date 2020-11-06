@@ -107,15 +107,24 @@ class sacTrainer(OFFPolicy):
             locX = int(((pt[0]+7) / 14)*self.sSize[-1])
             locY = int(((pt[1]+7) / 14)*self.sSize[-1])
 
+            if locX == self.sSize[-1]:
+                locX -= 1
+            if locY == self.sSize[-1]:
+                locY -= 1
+
             lidarImg[0, locY, locX] = 1.0
         if targetOn == 1:
             pt = np.dot(targetPos, R)[0]
             locX = int(((pt[0]+7) / 14)*self.sSize[-1])
             locY = int(((pt[1]+7) / 14)*self.sSize[-1])
-
+            if locX == self.sSize[-1]:
+                locX -= 1
+            if locY == self.sSize[-1]:
+                locY -= 1
             lidarImg[0, locY, locX] = 10
             # showLidarImg(lidarImg)
         lidarImg = lidarImg.to(self.device)
+        lidarImg = lidarImg.type(torch.uint8)
         # if (id % 100 == 0):
         #     showLidarImg(lidarImg)
 
