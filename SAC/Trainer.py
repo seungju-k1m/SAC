@@ -100,7 +100,7 @@ class sacTrainer(OFFPolicy):
         targetPos = np.reshape(rState[:2], (1, 2))
         if self.gpuOverload:
             rState = torch.tensor(rState)
-            lidarImg = torch.zeros(self.sSize)
+            lidarImg = torch.zeros(self.sSize).to(self.device)
         else:
             lidarImg = np.zeros(self.sSize)
         lidarPt = lidarPt[lidarPt != 0]
