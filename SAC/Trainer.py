@@ -36,7 +36,7 @@ class sacTrainer(OFFPolicy):
         else:
             self.devic = torch.device("cpu")
         self.tAgent.load_state_dict(self.agent.state_dict())
-        if 'gpuOverLoad' in self.data.keys():
+        if 'gpuOverload' in self.data.keys():
             self.gpuOverload = self.data['gpuOverload'] == 'True'
         else:
             self.gpuOverload = False
