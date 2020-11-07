@@ -36,6 +36,10 @@ class sacTrainer(OFFPolicy):
         else:
             self.devic = torch.device("cpu")
         self.tAgent.load_state_dict(self.agent.state_dict())
+        if 'gpuOverLoad' in self.data.keys():
+            self.gpuOverload = self.data['gpuOverload'] == 'True'
+        else:
+            self.gpuOverload = False
 
         self.obsSets = []
         for i in range(self.nAgent):
@@ -94,10 +98,14 @@ class sacTrainer(OFFPolicy):
     def ppState(self, obs, id=0):
         rState, targetOn, lidarPt = obs[:6], obs[6], obs[7:]
         targetPos = np.reshape(rState[:2], (1, 2))
+        if self.gpuOverload:
+            rState = torch.tensor(rState)
+            lidarImg = torch.zeros(self.sSize)
+        else:
+            lidarImg = np.zeros(self.sSize)
         lidarPt = lidarPt[lidarPt != 0]
         lidarPt -= 1000
         lidarPt = np.reshape(lidarPt, (-1, 2))
-        lidarImg = np.zeros(self.sSize)
         R = [[math.cos(rState[-1]), -math.sin(rState[-1])], [math.sin(rState[-1]), math.cos(rState[-1])]]
         R = np.array(R)
         lidarPt = np.dot(lidarPt, R)
@@ -125,6 +133,10 @@ class sacTrainer(OFFPolicy):
         # lidarImg = lidarImg.type(torch.uint8)
         # if (id % 100 == 0):
         #     showLidarImg(lidarImg)
+        if self.gpuOverload:
+            lidarImg = lidarImg.type(torch.uint8)
+        else:
+            lidarImg = np.uint8(lidarImg)
 
         return (rState, lidarImg)
     
@@ -270,11 +282,17 @@ class sacTrainer(OFFPolicy):
             nRStates.append(miniBatch[i][3][0])
             nLStates.append(miniBatch[i][3][1])
             dones.append(miniBatch[i][4])
-
-        nRStatesT = torch.tensor(nRStates).to(self.device).float()
-        rStatesT = torch.tensor(rStates).to(self.device).float()
-        lStatesT = torch.tensor(lStates).to(self.device).float()
-        nLStatesT = torch.tensor(nLStates).to(self.device).float()
+        
+        if self.gpuOverload:
+            nRStatesT = torch.stack(nRStates, 0).to(self.device).float()
+            rStatesT = torch.stack(rStates, 0).to(self.device).float()
+            lStatesT = torch.stack(lStates, 0).to(self.device).float()
+            nLStatesT = torch.stack(nLStates, 0).to(self.device).float()
+        else:
+            nRStatesT = torch.tensor(nRStates).to(self.device).float()
+            rStatesT = torch.tensor(rStates).to(self.device).float()
+            lStatesT = torch.tensor(lStates).to(self.device).float()
+            nLStatesT = torch.tensor(nLStates).to(self.device).float()
         actionsT = torch.tensor(actions).to(self.device).float()
         # nRStatesT = torch.tensor(nRStates).to(self.device).float()
         # nLStatesT = torch.tensor(nLStates).to(self.device).float()
