@@ -94,11 +94,10 @@ class sacTrainer(OFFPolicy):
     def ppState(self, obs, id=0):
         rState, targetOn, lidarPt = obs[:6], obs[6], obs[7:]
         targetPos = np.reshape(rState[:2], (1, 2))
-        rState = torch.tensor(rState).to(self.device)
         lidarPt = lidarPt[lidarPt != 0]
         lidarPt -= 1000
         lidarPt = np.reshape(lidarPt, (-1, 2))
-        lidarImg = torch.zeros(self.sSize)
+        lidarImg = np.zeros(self.sSize)
         R = [[math.cos(rState[-1]), -math.sin(rState[-1])], [math.sin(rState[-1]), math.cos(rState[-1])]]
         R = np.array(R)
         lidarPt = np.dot(lidarPt, R)
@@ -123,10 +122,9 @@ class sacTrainer(OFFPolicy):
                 locY -= 1
             lidarImg[0, locY, locX] = 10
             # showLidarImg(lidarImg)
-        lidarImg = lidarImg.to(self.device)
         # lidarImg = lidarImg.type(torch.uint8)
-        if (id % 100 == 0):
-            showLidarImg(lidarImg)
+        # if (id % 100 == 0):
+        #     showLidarImg(lidarImg)
 
         return (rState, lidarImg)
     
@@ -273,10 +271,10 @@ class sacTrainer(OFFPolicy):
             nLStates.append(miniBatch[i][3][1])
             dones.append(miniBatch[i][4])
 
-        nRStatesT = torch.stack(nRStates, 0).to(self.device).float()
-        rStatesT = torch.stack(rStates, 0).to(self.device).float()
-        lStatesT = torch.stack(lStates, 0).to(self.device).float()
-        nLStatesT = torch.stack(nLStates, 0).to(self.device).float()
+        nRStatesT = torch.tensor(nRStates).to(self.device).float()
+        rStatesT = torch.tensor(rStates).to(self.device).float()
+        lStatesT = torch.tensor(lStates).to(self.device).float()
+        nLStatesT = torch.tensor(nLStates).to(self.device).float()
         actionsT = torch.tensor(actions).to(self.device).float()
         # nRStatesT = torch.tensor(nRStates).to(self.device).float()
         # nLStatesT = torch.tensor(nLStates).to(self.device).float()

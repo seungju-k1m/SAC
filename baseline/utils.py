@@ -5,6 +5,7 @@ import torchvision.transforms.functional as TF
 
 
 def showLidarImg(img):
+    img = torch.tensor(img).float()
     img = TF.to_pil_image(img)
     img.show()
     

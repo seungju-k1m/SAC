@@ -114,8 +114,14 @@ class sacAgent(baseAgent):
     def forward(self, state):
         
         state, lidarImg = state
-        state = state.to(self.device).float()
-        lidarImg = lidarImg.to(self.device).float()
+
+        if torch.is_tensor(state):
+
+            state = state.to(self.device).float()
+            lidarImg = lidarImg.to(self.device).float()
+        else:
+            state = torch.tensor(state).to(self.device).float()
+            lidarImg = torch.tensor(lidarImg).to(self.device).float()
 
         if lidarImg.dim() == 3:
             lidarImg = torch.unsqueeze(lidarImg, 0)
