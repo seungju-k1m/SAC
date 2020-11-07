@@ -125,8 +125,8 @@ class sacTrainer(OFFPolicy):
             # showLidarImg(lidarImg)
         lidarImg = lidarImg.to(self.device)
         # lidarImg = lidarImg.type(torch.uint8)
-        # if (id % 100 == 0):
-        #     showLidarImg(lidarImg)
+        if (id % 100 == 0):
+            showLidarImg(lidarImg)
 
         return (rState, lidarImg)
     
