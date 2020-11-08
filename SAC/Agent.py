@@ -1,15 +1,15 @@
 import torch
-import numpy as np
-from baseline.baseNetwork import MLP, CNET, baseAgent
-from baseline.utils import constructNet
+from baseline.baseNetwork import baseAgent
+from baseline.utils import constructNet, getOptim
 
 
 class sacAgent(baseAgent):
 
-    def __init__(self, aData):
+    def __init__(self, aData, oData):
         super(sacAgent, self).__init__()
         
         self.aData = aData
+        self.optimData = oData
         self.keyList = list(self.aData.keys())
         device = self.aData['device']
         self.device = torch.device(device)
@@ -21,6 +21,33 @@ class sacAgent(baseAgent):
         self.iFeature02 = 100
         self.iFeature03 = 30
         self.offset = 10
+    
+    def criticStep(self):
+        pass
+    
+    def actorStep(self):
+        pass
+
+    def calculateNorm(self):
+        pass
+    
+    def genOptim(self):
+        optimKeyList = list(self.optimData.keys())
+        for optimKey in optimKeyList:
+            if optimKey == 'actor':
+                self.aOptim = getOptim(self.optimData[optimKey], self.actor)
+                self.aFOptim01 = getOptim(self.optimData[optimKey], self.actorFeature01)
+                self.aFOptim02 = getOptim(self.optimData[optimKey], self.actorFeature02)
+            if optimKey == 'critic':
+                self.cOptim1 = getOptim(self.optimData[optimKey], self.critic01)
+                self.cFOptim1_1 = getOptim(self.optimData[optimKey], self.criticFeature01_1)
+                self.cFOptim2_1 = getOptim(self.optimData[optimKey], self.criticFeature02_1)
+                self.cOptim2 = getOptim(self.optimData[optimKey], self.critic02)
+                self.cFOptim1_2 = getOptim(self.optimData[optimKey], self.criticFeature01_2)
+                self.cFOptim2_2 = getOptim(self.optimData[optimKey], self.criticFeature02_2)
+            if optimKey == 'temperature':
+                if self.fixedTemp is False:
+                    self.tOptim = getOptim(self.optimData[optimKey], [self.tempValue], floatV=True)
 
     def buildModel(self):
         for netName in self.keyList:

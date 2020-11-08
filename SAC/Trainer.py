@@ -509,13 +509,12 @@ class sacOnPolicyTrainer(ONPolicy):
     def __init__(self, cfg):
         super(sacOnPolicyTrainer, self).__init__(cfg)
         
-        self.agent = sacAgent(self.aData)
-        self.tAgent = sacAgent(self.aData)
+        self.agents = [sacAgent(self.aData) for i in range(self.nAgent)]
         if self.lPath != "None":
             self.agent.load_state_dict(
                 torch.load(self.lPath, map_location=self.device)
             )
-        if 'fixedTemp' in self.keyList:
+        if 'fixedTemp' in self.keyLis:
             self.fixedTemp = self.data['fixedTemp'] == "True"
             if self.fixedTemp:
                 if 'tempValue' in self.keyList:
@@ -537,7 +536,7 @@ class sacOnPolicyTrainer(ONPolicy):
         
         pureEnv = self.data['envName'].split('/')
         name = pureEnv[-1]
-        self.sPath += name +'_' + str(self.nAgent)
+        self.sPath += name + '_' + str(self.nAgent)
         if self.fixedTemp:
             self.sPath += str(int(self.tempValue * 100)) +'.pth'
         else:
@@ -589,67 +588,110 @@ class sacOnPolicyTrainer(ONPolicy):
             lidarImg = np.uint8(lidarImg)
 
         return (rState, lidarImg)
-    
-    def genOptim(self):
-        optimKeyList = list(self.optimData.keys())
-        self.agent = self.agent.to(self.device)
-        self.tAgent = self.tAgent.to(self.device)
-        self.actor, self.actorFeature01, self.actorFeature02 = \
-            self.agent.actor, self.agent.actorFeature01, self.agent.actorFeature02
-        
-        self.critic01, self.criticFeature01_1, self.criticFeature02_1 = \
-            self.agent.critic01, self.agent.criticFeature01_1, self.agent.criticFeature02_1
-        
-        self.critic02, self.criticFeature01_2, self.criticFeature02_2 = \
-            self.agent.critic02, self.agent.criticFeature01_2, self.agent.criticFeature02_2
-        
-        self.tCritic01, self.tCritic02 = \
-            self.tAgent.critic01, self.tAgent.critic02
-        self.tCriticFeature01_1, self.tCriticFeature02_1 = \
-            self.tAgent.criticFeature01_1, self.tAgent.criticFeature02_1
-        self.criticFeature01_2, self.criticFeature02_2 = \
-            self.agent.criticFeature01_2, self.agent.criticFeature02_2
-
-        for optimKey in optimKeyList:
-            if optimKey == 'actor':
-                self.aOptim = getOptim(self.optimData[optimKey], self.actor)
-                self.aFOptim01 = getOptim(self.optimData[optimKey], self.actorFeature01)
-                self.aFOptim02 = getOptim(self.optimData[optimKey], self.actorFeature02)
-            if optimKey == 'critic':
-                self.cOptim1 = getOptim(self.optimData[optimKey], self.critic01)
-                self.cFOptim1_1 = getOptim(self.optimData[optimKey], self.criticFeature01_1)
-                self.cFOptim2_1 = getOptim(self.optimData[optimKey], self.criticFeature02_1)
-                self.cOptim2 = getOptim(self.optimData[optimKey], self.critic02)
-                self.cFOptim1_2 = getOptim(self.optimData[optimKey], self.criticFeature01_2)
-                self.cFOptim2_2 = getOptim(self.optimData[optimKey], self.criticFeature02_2)
-            if optimKey == 'temperature':
-                if self.fixedTemp is False:
-                    self.tOptim = getOptim(self.optimData[optimKey], [self.tempValue], floatV=True)
                  
-    def getAction(self, state, lstmInput=None):
+    def getAction(self, states, lstmInput=None):
         if lstmInput is None:
-            cState, hState = (
+            cStates, hStates = (
                 torch.zeros(self.hiddenSize).to(self.device).float(),
                 torch.zeros(self.hiddenSize).to(self.device).float() 
             )
         else:
-            cState, hState = lstmInput
+            cStates, hStates = lstmInput
+        actions, c0s, h0s =[], [], []
+        with torch.no_grad():
+            for agent, state, cState, hState in zip(self.agents, states, cStates, hStates):
+                action, (c0, h0) = agent.getAction(state, (cState, hState))
+                actions.append(action)
+                c0s.append(c0)
+                h0s.append(h0)
+            actions = torch.stack(actions, dim=0).cpu().numpy()
+            c0s = torch.stack(c0s, dim=0).cpu().numpy()
+            h0s = torch.stack(h0s, dim=0).cpu().numpy()
+
+        return actions, (c0s, h0s)
+
+    def train(self, step, idx=0):
+        state, action, reward, nextState, dones = \
+            [], [], [], [], []
+        for data in self.replayMemory:
+            state.append(data[0])
+            action.append(data[1])
+            reward.append(data[2])
+            nextState.append(data[3])
+            dones.append(data[4])
         
-        action, (c0, h0) = self.agent.getAction(state, (cState, hState))
+        reward = reward[::-1]
+        nAction, target, _, entropy = self.agents[idx].forward(state)
+        target = target[::-1]
 
-        return action, (c0, h0)
+        if dones[-1]:
+            target[0] += reward[0]
+        else:
+            target[0] += self.agents[idx].criticForward(nextState[-1], nAction[-1])
+        i = 1
+        for rw, done in zip(reward, dones):
+            target[i] += rw + self.gamma * target[i-1]
+            i += 1
+        target = target[::-1]
+        
+        if self.fixedTemp:
+            lossC1, lossC2 = self.agents[idx].calQLoss(
+                state,
+                target,
+                action
+            )
+            lossC1.backward()
+            lossC2.backward()
+            self.agents[idx].criticStep()
 
-    def zeroGrad(self):
-        pass
-
-    def train(self, step):
-        pass
-
-    def checkStep(self, action):
-        pass
-
+            lossP, lossT = self.agents[idx].calALoss(
+                state
+            )
+            lossP.backward()
+            self.agents[idx].actorStep()
+        
+        normA, normC, normT = self.agents[idx].calculateNorm()
+            
     def getObs(self, init=False):
-        pass
+        obsState = np.zeros((self.nAgent, self.obsShape))
+        decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
+        obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
+        rewards, treward = decisionStep.reward, terminalStep.reward
+        tAgentId = terminalStep.agent_id
+        agentId = decisionStep.agent_id
+        
+        done = [False for i in range(self.nAgent)]
+        reward = [0 for i in range(self.nAgent)]
+        k = 0
+        
+        for i, state in zip(agentId, obs):
+            state = np.array(state)
+            obsState[i] = state
+            done[i] = False
+            reward[i] = rewards[k]
+            k += 1
+        k = 0
+        for i, state in zip(tAgentId, tobs):
+            state = np.array(state)
+            obsState[i] = state
+            done[i] = True
+            reward[i] = treward[k]
+            k += 1
+        if init:
+            return obsState
+        else:
+            return(obsState, reward, done)
+    
+    def checkStep(self, action):
+        decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
+        agentId = decisionStep.agent_id
+        value = True
+        if len(agentId) != 0:
+            self.env.set_actions(self.behaviorNames, action)
+        else:
+            value = False
+        self.env.step()
+        return value
 
     def run(self):
         pass
