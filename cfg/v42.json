@@ -61,8 +61,8 @@
     "fixedTemp": "True",
     "tempValue": 0.2,
   
-    "nReplayMemory": 1e6,
-    "bSize": 64,
+    "nReplayMemory": 5e5,
+    "bSize": 256,
     "lrFreq": 1,
     "rScaling": 1,
   
