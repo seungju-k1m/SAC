@@ -509,6 +509,7 @@ class sacOnPolicyTrainer(ONPolicy):
     def __init__(self, cfg):
         super(sacOnPolicyTrainer, self).__init__(cfg)
         
+        self.globalAgent = sacAgent(self.aData)
         self.agents = [sacAgent(self.aData) for i in range(self.nAgent)]
         if self.lPath != "None":
             self.agent.load_state_dict(
@@ -597,7 +598,7 @@ class sacOnPolicyTrainer(ONPolicy):
             )
         else:
             cStates, hStates = lstmInput
-        actions, c0s, h0s =[], [], []
+        actions, c0s, h0s = [], [], []
         with torch.no_grad():
             for agent, state, cState, hState in zip(self.agents, states, cStates, hStates):
                 action, (c0, h0) = agent.getAction(state, (cState, hState))
@@ -609,6 +610,9 @@ class sacOnPolicyTrainer(ONPolicy):
             h0s = torch.stack(h0s, dim=0).cpu().numpy()
 
         return actions, (c0s, h0s)
+
+    def update(self, idx=0):
+        pass
 
     def train(self, step, idx=0):
         state, action, reward, nextState, dones = \
@@ -642,15 +646,17 @@ class sacOnPolicyTrainer(ONPolicy):
             )
             lossC1.backward()
             lossC2.backward()
-            self.agents[idx].criticStep()
+            self.agents[idx].criticStep(self.globalAgent)
 
             lossP, lossT = self.agents[idx].calALoss(
                 state
             )
             lossP.backward()
-            self.agents[idx].actorStep()
+            self.agents[idx].actorStep(self.globalAgent)
         
         normA, normC, normT = self.agents[idx].calculateNorm()
+
+        self.update(idx)
             
     def getObs(self, init=False):
         obsState = np.zeros((self.nAgent, self.obsShape))

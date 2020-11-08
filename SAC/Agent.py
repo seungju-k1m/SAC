@@ -22,33 +22,27 @@ class sacAgent(baseAgent):
         self.iFeature03 = 30
         self.offset = 10
     
-    def criticStep(self):
-        pass
+    def criticStep(self, globalAgent):
+        cF1_1, cF2_1, c1, cF1_2, cF2_2, c2 = (
+            globalAgent.criticFeature01_1,
+            globalAgent.criticFeature02_1,
+            globalAgent.critic01,
+
+            globalAgent.criticFeature01_2,
+            globalAgent.criticFeature02_2,
+            globalAgent.critic02,
+        )
+        
+        cF1_1.grad = self.criticFeature01_1.grad
     
     def actorStep(self):
-        pass
+        self.aOptim.step()
+        self.aFOptim01.step()
+        self.aFOptim02.step()
 
     def calculateNorm(self):
         pass
     
-    def genOptim(self):
-        optimKeyList = list(self.optimData.keys())
-        for optimKey in optimKeyList:
-            if optimKey == 'actor':
-                self.aOptim = getOptim(self.optimData[optimKey], self.actor)
-                self.aFOptim01 = getOptim(self.optimData[optimKey], self.actorFeature01)
-                self.aFOptim02 = getOptim(self.optimData[optimKey], self.actorFeature02)
-            if optimKey == 'critic':
-                self.cOptim1 = getOptim(self.optimData[optimKey], self.critic01)
-                self.cFOptim1_1 = getOptim(self.optimData[optimKey], self.criticFeature01_1)
-                self.cFOptim2_1 = getOptim(self.optimData[optimKey], self.criticFeature02_1)
-                self.cOptim2 = getOptim(self.optimData[optimKey], self.critic02)
-                self.cFOptim1_2 = getOptim(self.optimData[optimKey], self.criticFeature01_2)
-                self.cFOptim2_2 = getOptim(self.optimData[optimKey], self.criticFeature02_2)
-            if optimKey == 'temperature':
-                if self.fixedTemp is False:
-                    self.tOptim = getOptim(self.optimData[optimKey], [self.tempValue], floatV=True)
-
     def buildModel(self):
         for netName in self.keyList:
             netData = self.aData[netName]
@@ -71,13 +65,25 @@ class sacAgent(baseAgent):
     
     def forward(self, state):
         
-        lidarImg, rState, (hState, cState) = state
+        if type(state) == list:
+            lidarImg, rState, hState, cState = [], [], [], []
+            for s in state:
+                lidarImg.append(s[0])
+                rState.append(s[1])
+                hState.append(s[2])
+                cState.append(s[3])
+            lidarImg = torch.stack(lidarImg, dim=0).to(self.device).float()
+            rState = torch.stack(rState, dim=0).to(self.device).float()
+            hState = torch.stack(hState, dim=0).to(self.device).float()
+            cState = torch.stack(cState, dim=0).to(self.device).float() 
+        else:
+            lidarImg, rState, (hState, cState) = state
 
-        if torch.is_tensor(lidarImg) is False:
-            lidarImg = torch.tensor(lidarImg).to(self.device)
-            rState = torch.tensor(rState).to(self.device)
-            hState, cState =\
-                torch.tensor(hState).to(self.device), torch.tensor(cState).to(self.device)
+            if torch.is_tensor(lidarImg) is False:
+                lidarImg = torch.tensor(lidarImg).to(self.device)
+                rState = torch.tensor(rState).to(self.device)
+                hState, cState =\
+                    torch.tensor(hState).to(self.device), torch.tensor(cState).to(self.device)
 
         aF1 = self.actorFeature01(lidarImg)
         aF1 = torch.cat((rState, aF1), dim=1)
@@ -105,15 +111,37 @@ class sacAgent(baseAgent):
         return action, logProb, (critic01, critic02), entropy
     
     def criticForward(self, state, action):
-        lidarImg, rState, (hState, cState) = state
+        if type(state) == list:
+            lidarImg, rState, hState, cState = [], [], [], []
+            for s in state:
+                lidarImg.append(s[0])
+                rState.append(s[1])
+                hState.append(s[2])
+                cState.append(s[3])
+            lidarImg = torch.stack(lidarImg, dim=0).to(self.device).float()
+            rState = torch.stack(rState, dim=0).to(self.device).float()
+            hState = torch.stack(hState, dim=0).to(self.device).float()
+            cState = torch.stack(cState, dim=0).to(self.device).float() 
+        else:
+            lidarImg, rState, (hState, cState) = state
 
-        if torch.is_tensor(lidarImg) is False:
-            lidarImg = torch.tensor(lidarImg).to(self.device)
-            rState = torch.tensor(rState).to(self.device)
-            hState, cState =\
-                torch.tensor(hState).to(self.device), torch.tensor(cState).to(self.device)
+            if torch.is_tensor(lidarImg) is False:
+                lidarImg = torch.tensor(lidarImg).to(self.device)
+                rState = torch.tensor(rState).to(self.device)
+                hState, cState =\
+                    torch.tensor(hState).to(self.device), torch.tensor(cState).to(self.device)
+
+        cF1_1 = self.criticFeature01_1.forward(lidarImg)
+        cat1 = torch.cat((rState, cF1_1), dim=1)
+        cF2_1 = self.criticFeature02_1.forward(cat1)
+        c1 = self.critic01.forward(cF2_1)
+
+        cF1_2 = self.criticFeature01_2.forward(lidarImg)
+        cat2 = torch.cat((rState, cF1_2), dim=1)
+        cF2_2 = self.criticFeature02_2.forward(cat2)
+        c2 = self.critic01.forward(cF2_2)
  
-        return critic01, critic02
+        return c1, c2
 
     def calQLoss(self, state, target, pastActions):
 
