@@ -4,7 +4,7 @@ import random
 import math
 import numpy as np
 
-from baseline.baseTrainer import OFFPolicy
+from baseline.baseTrainer import OFFPolicy, ONPolicy
 from SAC.Agent import sacAgent
 from baseline.utils import getOptim, calGlobalNorm, showLidarImg
 from collections import deque
@@ -32,7 +32,7 @@ class sacTrainer(OFFPolicy):
         if self.device != "cpu":
             a = self.device
             self.device = torch.device(self.device)
-            torch.cuda.set_device(int(a[-1]))
+
         else:
             self.devic = torch.device("cpu")
         self.tAgent.load_state_dict(self.agent.state_dict())
@@ -502,3 +502,154 @@ class sacTrainer(OFFPolicy):
                 Loss = []
                 episodicReward = []
                 torch.save(self.agent.state_dict(), self.sPath)
+
+
+class sacOnPolicyTrainer(ONPolicy):
+
+    def __init__(self, cfg):
+        super(sacOnPolicyTrainer, self).__init__(cfg)
+        
+        self.agent = sacAgent(self.aData)
+        self.tAgent = sacAgent(self.aData)
+        if self.lPath != "None":
+            self.agent.load_state_dict(
+                torch.load(self.lPath, map_location=self.device)
+            )
+        if 'fixedTemp' in self.keyList:
+            self.fixedTemp = self.data['fixedTemp'] == "True"
+            if self.fixedTemp:
+                if 'tempValue' in self.keyList:
+                    self.tempValue = self.data['tempValue']
+            else:
+                self.fixedTemp = False
+                self.tempValue = self.agent.temperature
+
+        if self.device != "cpu":
+            self.device = torch.device(self.device)
+            
+        else:
+            self.device = torch.device("cpu")
+        self.tAgent.load_state_dict(self.agent.state_dict())
+        if 'gpuOverload' in self.data.keys():
+            self.gpuOverload = self.data['gpuOverload'] == 'True'
+        else:
+            self.gpuOverload = False
+        
+        pureEnv = self.data['envName'].split('/')
+        name = pureEnv[-1]
+        self.sPath += name +'_' + str(self.nAgent)
+        if self.fixedTemp:
+            self.sPath += str(int(self.tempValue * 100)) +'.pth'
+        else:
+            self.sPath += '.pth'
+        
+        self.hiddenSize = self.aData['actorFeature02']['hiddenSize']
+
+    def ppState(self, obs, id=0):
+        rState, targetOn, lidarPt = obs[:6], obs[6], obs[7:]
+        targetPos = np.reshape(rState[:2], (1, 2))
+        if self.gpuOverload:
+            rState = torch.tensor(rState)
+            lidarImg = torch.zeros(self.sSize).to(self.device)
+        else:
+            lidarImg = np.zeros(self.sSize)
+        lidarPt = lidarPt[lidarPt != 0]
+        lidarPt -= 1000
+        lidarPt = np.reshape(lidarPt, (-1, 2))
+        R = [[math.cos(rState[-1]), -math.sin(rState[-1])], [math.sin(rState[-1]), math.cos(rState[-1])]]
+        R = np.array(R)
+        lidarPt = np.dot(lidarPt, R)
+        for pt in lidarPt:
+            
+            locX = int(((pt[0]+7) / 14)*self.sSize[-1])
+            locY = int(((pt[1]+7) / 14)*self.sSize[-1])
+
+            if locX == self.sSize[-1]:
+                locX -= 1
+            if locY == self.sSize[-1]:
+                locY -= 1
+
+            lidarImg[0, locY, locX] = 1.0
+        if targetOn == 1:
+            pt = np.dot(targetPos, R)[0]
+            locX = int(((pt[0]+7) / 14)*self.sSize[-1])
+            locY = int(((pt[1]+7) / 14)*self.sSize[-1])
+            if locX == self.sSize[-1]:
+                locX -= 1
+            if locY == self.sSize[-1]:
+                locY -= 1
+            lidarImg[0, locY, locX] = 10
+            # showLidarImg(lidarImg)
+        # lidarImg = lidarImg.type(torch.uint8)
+        # if (id % 100 == 0):
+        #     showLidarImg(lidarImg)
+        if self.gpuOverload:
+            lidarImg = lidarImg.type(torch.uint8)
+        else:
+            lidarImg = np.uint8(lidarImg)
+
+        return (rState, lidarImg)
+    
+    def genOptim(self):
+        optimKeyList = list(self.optimData.keys())
+        self.agent = self.agent.to(self.device)
+        self.tAgent = self.tAgent.to(self.device)
+        self.actor, self.actorFeature01, self.actorFeature02 = \
+            self.agent.actor, self.agent.actorFeature01, self.agent.actorFeature02
+        
+        self.critic01, self.criticFeature01_1, self.criticFeature02_1 = \
+            self.agent.critic01, self.agent.criticFeature01_1, self.agent.criticFeature02_1
+        
+        self.critic02, self.criticFeature01_2, self.criticFeature02_2 = \
+            self.agent.critic02, self.agent.criticFeature01_2, self.agent.criticFeature02_2
+        
+        self.tCritic01, self.tCritic02 = \
+            self.tAgent.critic01, self.tAgent.critic02
+        self.tCriticFeature01_1, self.tCriticFeature02_1 = \
+            self.tAgent.criticFeature01_1, self.tAgent.criticFeature02_1
+        self.criticFeature01_2, self.criticFeature02_2 = \
+            self.agent.criticFeature01_2, self.agent.criticFeature02_2
+
+        for optimKey in optimKeyList:
+            if optimKey == 'actor':
+                self.aOptim = getOptim(self.optimData[optimKey], self.actor)
+                self.aFOptim01 = getOptim(self.optimData[optimKey], self.actorFeature01)
+                self.aFOptim02 = getOptim(self.optimData[optimKey], self.actorFeature02)
+            if optimKey == 'critic':
+                self.cOptim1 = getOptim(self.optimData[optimKey], self.critic01)
+                self.cFOptim1_1 = getOptim(self.optimData[optimKey], self.criticFeature01_1)
+                self.cFOptim2_1 = getOptim(self.optimData[optimKey], self.criticFeature02_1)
+                self.cOptim2 = getOptim(self.optimData[optimKey], self.critic02)
+                self.cFOptim1_2 = getOptim(self.optimData[optimKey], self.criticFeature01_2)
+                self.cFOptim2_2 = getOptim(self.optimData[optimKey], self.criticFeature02_2)
+            if optimKey == 'temperature':
+                if self.fixedTemp is False:
+                    self.tOptim = getOptim(self.optimData[optimKey], [self.tempValue], floatV=True)
+                 
+    def getAction(self, state, lstmInput=None):
+        if lstmInput is None:
+            cState, hState = (
+                torch.zeros(self.hiddenSize).to(self.device).float(),
+                torch.zeros(self.hiddenSize).to(self.device).float() 
+            )
+        else:
+            cState, hState = lstmInput
+        
+        action, (c0, h0) = self.agent.getAction(state, (cState, hState))
+
+        return action, (c0, h0)
+
+    def zeroGrad(self):
+        pass
+
+    def train(self, step):
+        pass
+
+    def checkStep(self, action):
+        pass
+
+    def getObs(self, init=False):
+        pass
+
+    def run(self):
+        pass

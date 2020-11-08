@@ -3,6 +3,8 @@ import numpy as np
 import json
 import torchvision.transforms.functional as TF
 
+from baseline.baseNetwork import MLP, CNET, LSTMNET
+
 
 def showLidarImg(img):
     img = torch.tensor(img).float()
@@ -79,6 +81,22 @@ def getActivation(actName, **kwargs):
         act = None
     
     return act
+
+
+def constructNet(netData, iSize=1):
+    netCat = netData['netCat']
+    Net = [MLP, CNET, LSTMNET]
+    netName = ["MLP", "CNET", "LSTMNET"]
+    ind = netName.index(netCat)
+
+    baseNet = Net[ind]
+
+    network = baseNet(
+        netData,
+        iSize=iSize
+    )
+
+    return network
 
 
 class jsonParser:

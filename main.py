@@ -1,5 +1,4 @@
-from SAC.Trainer import sacTrainer
+from SAC.Trainer import sacOnPolicyTrainer
 
 if __name__ == '__main__':
-    trainer = sacTrainer('./cfg/Robotv1.json')
-    trainer.run()
+    trainer = sacOnPolicyTrainer('./cfg/LSTM.json')

@@ -1,6 +1,21 @@
 import torch
 import torch.nn as nn
-from baseline.utils import getActivation
+
+
+def getActivation(actName, **kwargs):
+    if actName == 'relu':
+        act = torch.nn.ReLU()
+    if actName == 'leakyRelu':
+        nSlope = 1e-2 if 'slope' not in kwargs.keys() else kwargs['slope']
+        act = torch.nn.LeakyReLU(negative_slope=nSlope)
+    if actName == 'sigmoid':
+        act = torch.nn.Sigmoid()
+    if actName == 'tanh':
+        act = torch.nn.Tanh()
+    if actName == 'linear':
+        act = None
+    
+    return act
 
 
 class baseAgent(nn.Module):
@@ -67,13 +82,12 @@ class MLP(nn.Module):
 
 class CNET(nn.Module):
 
-    def __init__(self, netData, iSize=3, WH=80):
+    def __init__(self, netData, iSize=3):
         super(CNET, self).__init__()
 
         self.netData = netData
         self.iSize = iSize
         keyList = list(netData.keys())
-        self.WH = WH
 
         if "BN" in keyList:
             self.BN = netData['BN'] == "True"
@@ -154,3 +168,20 @@ class CNET(nn.Module):
         for layer in self.children():
             x = layer(x)
         return x
+
+
+class LSTMNET(nn.Module):
+
+    def __init__(self, netData, iSize=1):
+        super(self, LSTMNET).__init__()
+        self.netData = netData
+        self.hiddenSize = netData['hiddenSize']
+        self.nLayer = netData['nLayer']
+        self.rnn = nn.LSTM(iSize, self.hiddenSize, self.nLayer)
+
+    def forward(self, states):
+        state, pastHidden, pastCell = states
+        
+        output = self.rnn(state, (pastHidden, pastCell))
+        # output consists of output, hidden, cell state
+        return output
