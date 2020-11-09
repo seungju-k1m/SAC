@@ -679,7 +679,7 @@ class sacOnPolicyTrainer(ONPolicy):
         with torch.no_grad():
             nAction, logProb, _, entropy, _ = \
                 self.agent.forward(states, lstmState=lstmState)
-            c1, c2 = self.agent.criticForward(nstates, nAction)
+            c1, c2 = self.agent.criticForward(nstates, nAction, nlstmState)
             minc = torch.min(c1, c2)
         gT = self.getReturn(rewards, dones, minc)
         gT -= self.tempValue * logProb
