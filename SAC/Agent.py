@@ -40,23 +40,6 @@ class sacAgent(baseAgent):
         self.iFeature02 = int((self.iFeature01/div)**2) * nUnit
         self.iFeature03 = self.hiddenSize
         self.sSize = self.aData['sSize']
-    def criticStep(self, globalAgent):
-        cF1_1, cF2_1, c1, cF1_2, cF2_2, c2 = (
-            globalAgent.criticFeature01_1,
-            globalAgent.criticFeature02_1,
-            globalAgent.critic01,
-
-            globalAgent.criticFeature01_2,
-            globalAgent.criticFeature02_2,
-            globalAgent.critic02,
-        )
-        
-        cF1_1.grad = self.criticFeature01_1.grad
-    
-    def actorStep(self):
-        self.aOptim.step()
-        self.aFOptim01.step()
-        self.aFOptim02.step()
 
     def calculateNorm(self):
         pass
@@ -127,10 +110,10 @@ class sacAgent(baseAgent):
             hCState02, cCState02 = hCState02.to(self.device), cCState02.to(self.device)
        
         aF1 = self.actorFeature01(state)
-        aF1 = torch.unsqueeze(aF1, dim=1)
+        aF1 = torch.unsqueeze(aF1, dim=0)
         aL1, (hA, cA) = self.actorFeature02(aF1, (hAState, cAState))
         output = self.actor(aL1)
-        output = torch.squeeze(output, dim=1)
+        output = torch.squeeze(output, dim=0)
 
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
@@ -144,15 +127,17 @@ class sacAgent(baseAgent):
         entropy = (torch.log(std * (2 * 3.14)**0.5)+0.5).sum(1, keepdim=True)
 
         stateAction = state
-        stateAction[:, :, :, 6:8] = action
+        stateAction[:, 0, 0, 6:8] = action
 
-        cSS1_1 = torch.unsqueeze(self.criticFeature01_1(stateAction), dim=1)
-        cSS1_2 = torch.unsqueeze(self.criticFeature01_2(stateAction), dim=1)
+        cSS1_1 = torch.unsqueeze(self.criticFeature01_1(stateAction), dim=0)
+        cSS1_2 = torch.unsqueeze(self.criticFeature01_2(stateAction), dim=0)
 
         cSS2_1, (hC1, cC1) = self.criticFeature02_1(cSS1_1, (hCState01, cCState01))
         cSS2_2, (hC2, cC2) = self.criticFeature02_1(cSS1_2, (hCState02, cCState02))
 
         critic01, critic02 = self.critic01(cSS2_1), self.critic02(cSS2_2)
+        critic01 = torch.squeeze(critic01, dim=0)
+        critic02 = torch.squeeze(critic02, dim=0)
 
         return action, logProb, (critic01, critic02), entropy, ((hA, cA), (hC1, cC1), (hC2, cC2))
     
@@ -184,17 +169,20 @@ class sacAgent(baseAgent):
             hCState01, cCState01 = hCState01.to(self.device), cCState01.to(self.device)
             hCState02, cCState02 = hCState02.to(self.device), cCState02.to(self.device)
        
-        state[:, :, :, 6:8] = action
+        state[:, 0, 0, 6:8] = action
 
-        cF1_1 = self.criticFeature01_1.forward(state)
-        cF2_1 = self.criticFeature02_1.forward(cF1_1, (hCState01, cCState01))
-        c1 = self.critic01.forward(cF2_1)
+        cSS1_1 = torch.unsqueeze(self.criticFeature01_1(state), dim=0)
+        cSS1_2 = torch.unsqueeze(self.criticFeature01_2(state), dim=0)
 
-        cF1_2 = self.criticFeature01_2.forward(state)
-        cF2_2 = self.criticFeature02_2.forward(cF1_2, (hCState02, cCState02))
-        c2 = self.critic01.forward(cF2_2)
+        cSS2_1, (hC1, cC1) = self.criticFeature02_1(cSS1_1, (hCState01, cCState01))
+        cSS2_2, (hC2, cC2) = self.criticFeature02_1(cSS1_2, (hCState02, cCState02))
+
+        critic01, critic02 = self.critic01(cSS2_1), self.critic02(cSS2_2)
+        critic01 = torch.squeeze(critic01, dim=0)
+        critic02 = torch.squeeze(critic02, dim=0)
+
  
-        return c1, c2
+        return critic01, critic02
 
     def actorForward(self, state, lstmState=None):
         """
@@ -234,9 +222,9 @@ class sacAgent(baseAgent):
 
         return action, (hA, cA)
 
-    def calQLoss(self, state, target, pastActions):
+    def calQLoss(self, state, target, pastActions, lstmState):
 
-        critic1, critic2 = self.criticForward(state, pastActions)
+        critic1, critic2 = self.criticForward(state, pastActions, lstmState=lstmState)
         lossCritic1 = torch.mean((critic1-target).pow(2)/2)
         lossCritic2 = torch.mean((critic2-target).pow(2)/2)
 

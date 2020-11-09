@@ -203,11 +203,10 @@ class ONPolicy:
         self.nAgent = self.data['nAgent']
 
         # replay memory for each agent
-
-        self.replayMemory = [deque(maxlen=self.updateStep) for i in range(self.nAgent)]
+        self.replayMemory = deque(maxlen=30 * 100)
 
     def reset(self, id):
-        self.replayMemory[id].clear()
+        self.replayMemory.clear()
 
     def genOptim(self):
         pass
@@ -218,8 +217,8 @@ class ONPolicy:
     def ppState(self, obs):
         pass
 
-    def appendMemory(self, data, id):
-        self.replayMemory[id].append(data)
+    def appendMemory(self, data):
+        self.replayMemory.append(data)
 
     def getAction(self, state):
         pass

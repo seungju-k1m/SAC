@@ -1,7 +1,7 @@
 {
     "envName":"./Env/Linux/v4/4SimpleEnv_1440",
     "sSize": [1, 96, 96],
-    "nAgent": 24,
+    "nAgent": 30,
     "aSize": 2,
     "seed": 0,
   
@@ -53,7 +53,7 @@
               }
     },
     "episodeP": 20,
-    "updateStep":200,
+    "updateStep":30,
   
     "fixedTemp": "True",
     "tempValue": 0.2,
