@@ -10,12 +10,14 @@ class sacAgent(baseAgent):
         
         self.aData = aData
         self.optimData = oData
+        self.hiddenSize = self.aData['actorFeature02']['hiddenSize']
         self.keyList = list(self.aData.keys())
         self.device = torch.device(device)
         self.getISize()
         self.buildModel()
     
     def to(self, device):
+        self.device = device
         self.actorFeature01 = self.actorFeature01.to(device)
         self.actorFeature02 = self.actorFeature02.to(device)
         self.actor = self.actor.to(device)
@@ -29,11 +31,15 @@ class sacAgent(baseAgent):
         self.critic02 = self.critic02.to(device)
 
     def getISize(self):
-        self.iFeature01 = 80
-        self.iFeature02 = 100
-        self.iFeature03 = 30
-        self.offset = 10
-    
+        self.iFeature01 = self.aData['sSize'][-1]
+        temp = self.aData['actorFeature01']['stride']
+        div = 1
+        for t in temp:
+            div *= t
+        nUnit = self.aData['actorFeature01']['nUnit'][-1]
+        self.iFeature02 = int((self.iFeature/div)**2) * nUnit
+        self.iFeature03 = self.hiddenSize
+
     def criticStep(self, globalAgent):
         cF1_1, cF2_1, c1, cF1_2, cF2_2, c2 = (
             globalAgent.criticFeature01_1,
@@ -68,38 +74,58 @@ class sacAgent(baseAgent):
                 self.criticFeature01_1 = constructNet(netData, iSize=self.iFeature01)
                 self.criticFeature01_2 = constructNet(netData, iSize=self.iFeature01)
             elif netName == 'ciriticFeature02':
-                self.criticFeature02_1 = constructNet(netData, iSize=self.iFeature02 + self.offset)
-                self.criticFeature02_1 = constructNet(netData, iSize=self.iFeature02 + self.offset)
+                self.criticFeature02_1 = constructNet(netData, iSize=self.iFeature02)
+                self.criticFeature02_1 = constructNet(netData, iSize=self.iFeature02)
             elif netName == 'critic':
                 self.critic01 = constructNet(netData, iSize=self.iFeature03)
                 self.critic02 = constructNet(netData, iSize=self.iFeature03)
         self.temperature = torch.zeros(1, requires_grad=True, device=self.aData['device'])
     
-    def forward(self, state):
-        
-        if type(state) == list:
-            lidarImg, rState, hState, cState = [], [], [], []
-            for s in state:
-                lidarImg.append(s[0])
-                rState.append(s[1])
-                hState.append(s[2])
-                cState.append(s[3])
-            lidarImg = torch.stack(lidarImg, dim=0).to(self.device).float()
-            rState = torch.stack(rState, dim=0).to(self.device).float()
-            hState = torch.stack(hState, dim=0).to(self.device).float()
-            cState = torch.stack(cState, dim=0).to(self.device).float() 
+    def forward(self, state, lstmState=None):
+        """
+        input:
+            state:[tensor]
+                shape : [batch, 1, 96, 96]
+            lstmState:[tuple]
+                dtype : ((hAState, cAState), (hCSTate01, cCState01),(hCSTate02, cCState02)), each state is tensor
+                shape : [1, batch, 512] for each state
+                default : None
+                if default is None, the lstm State is padded.
+            stateAction:[tensor]
+                shape : [batch, 1, 96, 96]
+        output:
+            action:[tensor]
+                shape : [batch, actionSize]
+            logProb:[tensor]
+                shape : [batch, 1]
+            critics:[tuple]
+                dtype : (critic01, critic02)
+                shape : [batch, 1] for each state
+            entropy:[tensor]
+                shape : [batch, 1]
+            lstmState:[tuple]
+                dtype : ((hA, cA), (hC1, cC1), (hC2, cC2))
+                shape : [1, batch, hiddenSize] for each state
+        """
+        bSize = state.shape[0]
+        state = state.to(self.device)
+        if lstmState is None:
+            hAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
+            cAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
+            hCState01 = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
+            cCState01 = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
+            hCState02 = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
+            cCState02 = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
         else:
-            lidarImg, rState, (hState, cState) = state
-
-            if torch.is_tensor(lidarImg) is False:
-                lidarImg = torch.tensor(lidarImg).to(self.device)
-                rState = torch.tensor(rState).to(self.device)
-                hState, cState =\
-                    torch.tensor(hState).to(self.device), torch.tensor(cState).to(self.device)
-
-        aF1 = self.actorFeature01(lidarImg)
-        aF1 = torch.cat((rState, aF1), dim=1)
-        aL1, (h0, c0) = self.actorFeature02(aF1)
+            hAState, cAState = lstmState[0]
+            hCState01, cCState01 = lstmState[1]
+            hCState02, cCState02 = lstmState[2]
+            hAState, cAState = hAState.to(self.device), cAState.to(self.device)
+            hCState01, cCState01 = hCState01.to(self.device), cCState01.to(self.device)
+            hCState02, cCState02 = hCState02.to(self.device), cCState02.to(self.device)
+       
+        aF1 = self.actorFeature01(state)
+        aL1, (hA, cA) = self.actorFeature02(aF1, (hAState, cAState))
         output = self.actor(aL1)
 
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
@@ -113,47 +139,96 @@ class sacAgent(baseAgent):
         logProb -= torch.log(1-action.pow(2)+1e-6).sum(1, keepdim=True)
         entropy = (torch.log(std * (2 * 3.14)**0.5)+0.5).sum(1, keepdim=True)
 
-        cSS1 = self.criticFeature01(lidarImg)
-        cSS2 = self.criticFeature02(lidarImg)
-        cat1 = torch.cat((action, state, cSS1), dim=1)
-        cat2 = torch.cat((action, state, cSS2), dim=1)
-        critic01 = self.critic01.forward(cat1)
-        critic02 = self.critic02.forward(cat2)
+        stateAction = state
+        stateAction[:, :, :, 6:8] = action
 
-        return action, logProb, (critic01, critic02), entropy
+        cSS1_1 = self.criticFeature01_1(stateAction)
+        cSS1_2 = self.criticFeature01_2(stateAction)
+
+        cSS2_1, (hC1, cC1) = self.criticFeature02_1(cSS1_1, (hCState01, cCState01))
+        cSS2_2, (hC2, cC2) = self.criticFeature02_1(cSS1_2, (hCState02, cCState02))
+
+        critic01, critic02 = self.critic01(cSS2_1), self.critic02(cSS2_2)
+
+        return action, logProb, (critic01, critic02), entropy, ((hA, cA), (hC1, cC1), (hC2, cC2))
     
-    def criticForward(self, state, action):
-        if type(state) == list:
-            lidarImg, rState, hState, cState = [], [], [], []
-            for s in state:
-                lidarImg.append(s[0])
-                rState.append(s[1])
-                hState.append(s[2])
-                cState.append(s[3])
-            lidarImg = torch.stack(lidarImg, dim=0).to(self.device).float()
-            rState = torch.stack(rState, dim=0).to(self.device).float()
-            hState = torch.stack(hState, dim=0).to(self.device).float()
-            cState = torch.stack(cState, dim=0).to(self.device).float() 
+    def criticForward(self, state, action, lstmState=None):
+        """
+        input:
+            state:[tensor]
+                shape:[batch, 1, 96, 96]
+            action:[tensor]
+                shape:[batch, 2]
+            lstmState:[tuple]
+                dtype:((hs1, cs1), (hs2, cs2))
+                shape :[1, bath, 512] for each state
+        output:
+            critics:[tuple]
+                dtype:(critic01, critic02)
+                shape:[batch, 1] for each state
+        """
+        state = state.to(self.device)
+        bSize = state.shape[0]
+        if lstmState is None:
+            hCState01 = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
+            cCState01 = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
+            hCState02 = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
+            cCState02 = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
         else:
-            lidarImg, rState, (hState, cState) = state
+            hCState01, cCState01 = lstmState[1]
+            hCState02, cCState02 = lstmState[2]
+            hCState01, cCState01 = hCState01.to(self.device), cCState01.to(self.device)
+            hCState02, cCState02 = hCState02.to(self.device), cCState02.to(self.device)
+       
+        state[:, :, :, 6:8] = action
 
-            if torch.is_tensor(lidarImg) is False:
-                lidarImg = torch.tensor(lidarImg).to(self.device)
-                rState = torch.tensor(rState).to(self.device)
-                hState, cState =\
-                    torch.tensor(hState).to(self.device), torch.tensor(cState).to(self.device)
-
-        cF1_1 = self.criticFeature01_1.forward(lidarImg)
-        cat1 = torch.cat((rState, cF1_1), dim=1)
-        cF2_1 = self.criticFeature02_1.forward(cat1)
+        cF1_1 = self.criticFeature01_1.forward(state)
+        cF2_1 = self.criticFeature02_1.forward(cF1_1, (hCState01, cCState01))
         c1 = self.critic01.forward(cF2_1)
 
-        cF1_2 = self.criticFeature01_2.forward(lidarImg)
-        cat2 = torch.cat((rState, cF1_2), dim=1)
-        cF2_2 = self.criticFeature02_2.forward(cat2)
+        cF1_2 = self.criticFeature01_2.forward(state)
+        cF2_2 = self.criticFeature02_2.forward(cF1_2, (hCState02, cCState02))
         c2 = self.critic01.forward(cF2_2)
  
         return c1, c2
+
+    def actorForward(self, state, lstmState=None):
+        """
+        input:
+            state:[tensor]
+                shape:[batch, 1, 96, 96]
+            lstmState:[tuple]
+                dtype:(hs1, cs1)
+                shape :[1, bath, 512] for each state
+        output:
+            action:[tensor]
+                shape:[batch, 2]
+            lstmState:[tuple]
+                dtype:(hs1, cs1)
+                shape :[1, bath, 512] for each state
+        """
+        state = state.to(self.device)
+        bSize = state.shape[0]
+        if lstmState is None:
+            hAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
+            cAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
+        else:
+            hAState, cAState = lstmState
+            hAState, cAState = hAState.to(self.device), cAState.to(self.device)
+     
+        aF1 = self.actorFeature01(state)
+        aL1, (hA, cA) = self.actorFeature02(aF1, (hAState, cAState))
+        output = self.actor(aL1)
+
+        mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
+        log_std = torch.clamp(log_std, -20, 2)
+        std = log_std.exp()
+
+        gaussianDist = torch.distributions.Normal(mean, std)
+        x_t = gaussianDist.rsample()
+        action = torch.tanh(x_t)
+
+        return action, (hA, cA)
 
     def calQLoss(self, state, target, pastActions):
 
@@ -165,7 +240,7 @@ class sacAgent(baseAgent):
     
     def calALoss(self, state, alpha=0):
 
-        action, logProb, critics, entropy = self.forward(state)
+        action, logProb, critics, entropy, _ = self.forward(state)
         critic1, critic2 = critics
         critic = torch.min(critic1, critic2)
         
@@ -183,10 +258,6 @@ class sacAgent(baseAgent):
         return lossPolicy, lossTemp
 
     def calLoss(self, state, target, pastActions,  alpha=0):
-        self.actor.train()
-        self.critic01.train()
-        self.critic02.train()
-
         state = state.to(self.device)
         state = state.view((state.shape[0], -1)).detach()
 

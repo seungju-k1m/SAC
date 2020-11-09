@@ -6,7 +6,7 @@ import numpy as np
 
 from baseline.baseTrainer import OFFPolicy, ONPolicy
 from SAC.Agent import sacAgent
-from baseline.utils import getOptim, calGlobalNorm, showLidarImg
+from baseline.utils import getOptim, calGlobalNorm
 from collections import deque
 
 
@@ -509,7 +509,7 @@ class sacOnPolicyTrainer(ONPolicy):
     def __init__(self, cfg):
         super(sacOnPolicyTrainer, self).__init__(cfg)
         
-        self.agents = [sacAgent(self.aData) for i in range(self.nAgent)]
+        self.agents = [sacAgent(self.aData, self.optimData) for i in range(self.nAgent)]
         if self.lPath != "None":
             self.agent.load_state_dict(
                 torch.load(self.lPath, map_location=self.device)
@@ -528,7 +528,7 @@ class sacOnPolicyTrainer(ONPolicy):
             
         else:
             self.device = torch.device("cpu")
-        self.globalAgent = sacAgent(self.aData)
+        self.globalAgent = sacAgent(self.aData, self.optimData)
         self.globalAgent.to(self.device)
  
         pureEnv = self.data['envName'].split('/')
@@ -542,10 +542,18 @@ class sacOnPolicyTrainer(ONPolicy):
         self.hiddenSize = self.aData['actorFeature02']['hiddenSize']
 
     def ppState(self, obs, id=0):
+        """
+        input:
+            obs:[np.array]
+                shpae:[1, 1447]
+        output:
+            lidarImg:[tensor.cpu]
+                shape[1, 96, 96]
+        """
         rState, targetOn, lidarPt = obs[:6], obs[6], obs[7:]
         targetPos = np.reshape(rState[:2], (1, 2))
-        rState = torch.tensor(rState).to(self.device)
-        lidarImg = torch.zeros(self.sSize).to(self.device)
+        rState = torch.tensor(rState).cpu()
+        lidarImg = torch.zeros(self.sSize).cpu()
         lidarPt = lidarPt[lidarPt != 0]
         lidarPt -= 1000
         lidarPt = np.reshape(lidarPt, (-1, 2))
@@ -554,52 +562,66 @@ class sacOnPolicyTrainer(ONPolicy):
         lidarPt = np.dot(lidarPt, R)
         for pt in lidarPt:
             
-            locX = int(((pt[0]+7) / 14)*self.sSize[-1])
-            locY = int(((pt[1]+7) / 14)*self.sSize[-1])
+            locX = int(((pt[0]+7) / 14)*self.sSize[-1]-1)
+            locY = int(((pt[1]+7) / 14)*self.sSize[-1]-1)
 
-            if locX == self.sSize[-1]:
+            if locX == (self.sSize[-1]-1):
                 locX -= 1
-            if locY == self.sSize[-1]:
+            if locY == (self.sSize[-1]-1):
                 locY -= 1
 
-            lidarImg[0, locY, locX] = 1.0
+            lidarImg[0, locY+1, locX+1] = 1.0
         if targetOn == 1:
             pt = np.dot(targetPos, R)[0]
             locX = int(((pt[0]+7) / 14)*self.sSize[-1])
             locY = int(((pt[1]+7) / 14)*self.sSize[-1])
-            if locX == self.sSize[-1]:
+            if locX == (self.sSize[-1]-1):
                 locX -= 1
-            if locY == self.sSize[-1]:
+            if locY == (self.sSize[-1]-1):
                 locY -= 1
-            lidarImg[0, locY, locX] = 10
-            # showLidarImg(lidarImg)
-        # lidarImg = lidarImg.type(torch.uint8)
-        # if (id % 100 == 0):
-        #     showLidarImg(lidarImg)
-        lidarImg = lidarImg.type(torch.uint8)
+            lidarImg[0, locY+1, locX+1] = 10
+        lidarImg[0, 0, :6] = rState
 
-        return (rState, lidarImg)
+        return lidarImg
                  
-    def getAction(self, states, lstmInput=None):
-        if lstmInput is None:
-            cStates, hStates = (
-                torch.zeros(self.hiddenSize).float(),
-                torch.zeros(self.hiddenSize).float() 
-            )
-        else:
-            cStates, hStates = lstmInput
-        actions, c0s, h0s = [], [], []
-        with torch.no_grad():
-            for agent, state, cState, hState in zip(self.agents, states, cStates, hStates):
-                action, (c0, h0) = agent.getAction(state, (cState, hState))
-                actions.append(action)
-                c0s.append(c0)
-                h0s.append(h0)
-            actions = torch.stack(actions, dim=0).cpu().numpy()
-            c0s = torch.stack(c0s, dim=0).cpu().numpy()
-            h0s = torch.stack(h0s, dim=0).cpu().numpy()
+    def getAction(self, state, lstmState=None, id=0, dMode=False):
+        """
+        input:
+            state:
+                dtype:tensor
+                shape:[1, 96, 96]
+            lstmState:
+                dtype:tuple, ((hA, cA), (hC1, cC1), (hC2, cC2))
+                shape:[1, 1, hiddenSize] for each state
+        output:
+            action:
+                dtype:np.array
+                shape[2,]
+            lstmState:
+                dtype:tuple ((tensor, tensor), (tensor, tensor), (tensor, tensor))
+                shape:[1, 1, 512] for each state
+        """
+        state = torch.unsqueeze(state, dim=0).cpu()
+        bSize = 1
 
-        return actions, (c0s, h0s)
+        if lstmState is None:
+            hAState = torch.zeros(1, bSize, self.hiddenSize).cpu()
+            cAState = torch.zeros(1, bSize, self.hiddenSize).cpu()
+            hCState01 = torch.zeros(1, bSize, self.hiddenSize).cpu()
+            cCState01 = torch.zeros(1, bSize, self.hiddenSize).cpu()
+            hCState02 = torch.zeros(1, bSize, self.hiddenSize).cpu()
+            cCState02 = torch.zeros(1, bSize, self.hiddenSize).cpu()
+            lstmState = ((hAState, cAState), (hCState01, cCState01), (hCState02, cCState02))
+
+        agent = self.agents[id]
+        with torch.no_grad():
+            if dMode:
+                pass
+            else:
+                action, _, __, ___, lstmState = \
+                    agent.forward(state, lstmState=lstmState)
+            action = action.cpu().numpy()[0]
+        return action, lstmState
 
     def update(self, idx=0):
         pass
@@ -649,6 +671,20 @@ class sacOnPolicyTrainer(ONPolicy):
         self.update(idx)
             
     def getObs(self, init=False):
+        """
+        this method is for receiving messages from unity environment.
+
+        args:
+            init:[bool]
+                :if init is true, the output only includes the observation.
+        output:
+            obsState:[np.array]
+                shape:[nAgnet, 1447]
+            reward:[np.array]
+                shape:[nAgent, 1]
+            done:[np.array]
+                shape[:nAgent, 1]
+        """
         obsState = np.zeros((self.nAgent, self.obsShape))
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
@@ -679,15 +715,41 @@ class sacOnPolicyTrainer(ONPolicy):
             return(obsState, reward, done)
     
     def checkStep(self, action):
+        """
+        this method is for sending messages for unity environment.
+
+        input:
+            action:
+                dtype:np.array
+                shape:[nAgent, 2]
+        """
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         agentId = decisionStep.agent_id
-        value = True
         if len(agentId) != 0:
             self.env.set_actions(self.behaviorNames, action)
-        else:
-            value = False
         self.env.step()
-        return value
 
     def run(self):
-        pass
+        episodeReward = []
+        Rewards = []
+
+        for i in range(self.nAgent):
+            Rewards.append(0)
+        
+        obs = self.getObs(init=True)
+        stateT = []
+        action = []
+        for b in range(self.nAgent):
+            ob = obs[b]
+            state = self.ppState(ob)
+            act, lstmState = self.getAction(state, id=b)
+            action.append(act)
+            stateT.append((state, lstmState))
+        action = np.array(action)
+        
+        while 1:
+            nState = []
+            self.checkStep(action)
+            obs, reward, done = self.getObs()
+
+        

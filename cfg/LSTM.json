@@ -1,5 +1,5 @@
 {
-    "envName":"./Env/MacOs/4SimpleEnv_1440",
+    "envName":"./Env/Linux/v4/4SimpleEnv_1440",
     "sSize": [1, 96, 96],
     "nAgent": 24,
     "aSize": 2,
@@ -18,7 +18,7 @@
               },
               "actorFeature02":{
                   "netCat":"LSTMNET",
-                  "nLayer":3,
+                  "nLayer":1,
                   "hiddenSize":512
               },
               "actor":{
@@ -41,7 +41,7 @@
               },
               "criticFeature02":{
                   "netCat":"LSTMNET",
-                  "nLayer":3,
+                  "nLayer":1,
                   "hiddenSize":512
               },
               "critic":{
