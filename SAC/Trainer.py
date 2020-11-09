@@ -583,6 +583,36 @@ class sacOnPolicyTrainer(ONPolicy):
 
         return lidarImg
                  
+    def genOptim(self):
+        optimKeyList = list(self.optimData.keys())
+        self.actor, self.actorFeature, self.critic01, self.critic02 = \
+            self.agent.actor, self.agent.actorFeature,  self.agent.critic01, self.agent.critic02
+        self.criticFeature01, self.criticFeature02 = \
+            self.agent.criticFeature01, self.agent.criticFeature02
+
+        self.actor = self.actor.to(self.device)
+        self.critic01, self.critic02 = self.critic01.to(self.device), self.critic02.to(self.device)
+        self.tCritic01, self.tCritic02 = \
+            self.tCritic01.to(self.device), self.tCritic02.to(self.device)
+        self.actorFeature = self.actorFeature.to(self.device)
+        self.criticFeature01, self.criticFeature02 = \
+            self.criticFeature01.to(self.device), self.criticFeature02.to(self.device)
+        self.tCritic01Feature01, self.tCritic01Feature02 = \
+            self.tCriticFeature01.to(self.device), self.tCriticFeature02.to(self.device)
+
+        for optimKey in optimKeyList:
+            if optimKey == 'actor':
+                self.aOptim = getOptim(self.optimData[optimKey], self.actor)
+                self.aFOptim = getOptim(self.optimData[optimKey], self.actorFeature)
+            if optimKey == 'critic':
+                self.cOptim1 = getOptim(self.optimData[optimKey], self.critic01)
+                self.cFOptim1 = getOptim(self.optimData[optimKey], self.criticFeature01)
+                self.cOptim2 = getOptim(self.optimData[optimKey], self.critic02)
+                self.cFOptim2 = getOptim(self.optimData[optimKey], self.criticFeature02)
+            if optimKey == 'temperature':
+                if self.fixedTemp is False:
+                    self.tOptim = getOptim(self.optimData[optimKey], [self.tempValue], floatV=True)
+                 
     def getAction(self, state, lstmState=None, dMode=False):
         """
         input:
@@ -685,7 +715,7 @@ class sacOnPolicyTrainer(ONPolicy):
         gT -= self.tempValue * logProb
         
         if self.fixedTemp:
-            lossC1, lossC2 = self.agents[idx].calQLoss(
+            lossC1, lossC2 = self.agent.calQLoss(
                 states.detach(),
                 gT.detach(),
                 actions.detach(),
@@ -693,13 +723,13 @@ class sacOnPolicyTrainer(ONPolicy):
             )
             lossC1.backward()
             lossC2.backward()
-            self.agents[idx].criticStep(self.globalAgent)
 
-            lossP, lossT = self.agents[idx].calALoss(
-                state
+            lossP, lossT = self.agent.calALoss(
+                states.detach(),
+                lstmState,
+                alpha=self.tempValue
             )
             lossP.backward()
-            self.agents[idx].actorStep(self.globalAgent)
         
         normA, normC, normT = self.agents[idx].calculateNorm()
 

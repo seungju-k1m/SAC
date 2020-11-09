@@ -230,9 +230,9 @@ class sacAgent(baseAgent):
 
         return lossCritic1, lossCritic2
     
-    def calALoss(self, state, alpha=0):
+    def calALoss(self, state, lstmState, alpha=0):
 
-        action, logProb, critics, entropy, _ = self.forward(state)
+        action, logProb, critics, entropy, _ = self.forward(state, lstmState)
         critic1, critic2 = critics
         critic = torch.min(critic1, critic2)
         
