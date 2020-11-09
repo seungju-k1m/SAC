@@ -584,6 +584,7 @@ class sacOnPolicyTrainer(ONPolicy):
         self.sSize = self.aData['sSize']
         self.hiddenSize = self.aData['actorFeature02']['hiddenSize']
         self.updateStep = self.data['updateStep']
+        self.genOptim()
 
     def ppState(self, obs):
         """
@@ -622,34 +623,42 @@ class sacOnPolicyTrainer(ONPolicy):
                  
     def genOptim(self):
         optimKeyList = list(self.optimData.keys())
-        self.actor, self.actorFeature, self.critic01, self.critic02 = \
-            self.agent.actor, self.agent.actorFeature,  self.agent.critic01, self.agent.critic02
-        self.criticFeature01, self.criticFeature02 = \
-            self.agent.criticFeature01, self.agent.criticFeature02
-
-        self.actor = self.actor.to(self.device)
-        self.critic01, self.critic02 = self.critic01.to(self.device), self.critic02.to(self.device)
-        self.tCritic01, self.tCritic02 = \
-            self.tCritic01.to(self.device), self.tCritic02.to(self.device)
-        self.actorFeature = self.actorFeature.to(self.device)
-        self.criticFeature01, self.criticFeature02 = \
-            self.criticFeature01.to(self.device), self.criticFeature02.to(self.device)
-        self.tCritic01Feature01, self.tCritic01Feature02 = \
-            self.tCriticFeature01.to(self.device), self.tCriticFeature02.to(self.device)
+        self.actor, self.actorFeature01, self.actorFeature02 = \
+            self.agent.actor, self.agent.actorFeature01,  self.agent.actorFeature02
+        self.criticFeature01_1, self.criticFeature02_1, self.critic01 = \
+            self.agent.criticFeature01_1, self.agent.criticFeature02_1, self.agent.critic01
+        self.criticFeature01_2, self.criticFeature02_2, self.critic02 = \
+            self.agent.criticFeature01_2, self.agent.criticFeature02_2, self.agent.critic02
 
         for optimKey in optimKeyList:
             if optimKey == 'actor':
                 self.aOptim = getOptim(self.optimData[optimKey], self.actor)
-                self.aFOptim = getOptim(self.optimData[optimKey], self.actorFeature)
+                self.aFOptim01 = getOptim(self.optimData[optimKey], self.actorFeature01)
+                self.aFOptim02 = getOptim(self.optimData[optimKey], self.actorFeature02)
             if optimKey == 'critic':
-                self.cOptim1 = getOptim(self.optimData[optimKey], self.critic01)
-                self.cFOptim1 = getOptim(self.optimData[optimKey], self.criticFeature01)
-                self.cOptim2 = getOptim(self.optimData[optimKey], self.critic02)
-                self.cFOptim2 = getOptim(self.optimData[optimKey], self.criticFeature02)
+                self.cOptim01 = getOptim(self.optimData[optimKey], self.critic01)
+                self.cFOptim01_1 = getOptim(self.optimData[optimKey], self.criticFeature01_1)
+                self.cFOptim02_1 = getOptim(self.optimData[optimKey], self.criticFeature02_1)
+                self.cOptim02 = getOptim(self.optimData[optimKey], self.critic02)
+                self.cFOptim01_2 = getOptim(self.optimData[optimKey], self.criticFeature01_2)
+                self.cFOptim02_2 = getOptim(self.optimData[optimKey], self.criticFeature02_2)
             if optimKey == 'temperature':
                 if self.fixedTemp is False:
                     self.tOptim = getOptim(self.optimData[optimKey], [self.tempValue], floatV=True)
                  
+    def zeroGrad(self):
+        self.aOptim.zero_grad()
+        self.aFOptim01.zero_grad()
+        self.aFOptim02.zero_grad()
+
+        self.cOptim01.zero_grad()
+        self.cFOptim01_1.zero_grad()
+        self.cFOptim02_1.zero_grad()
+
+        self.cOptim01.zero_grad()
+        self.cFOptim01_1.zero_grad()
+        self.cFOptim02_1.zero_grad()
+
     def getAction(self, state, lstmState=None, dMode=False):
         """
         input:
@@ -687,7 +696,7 @@ class sacOnPolicyTrainer(ONPolicy):
             action = action.cpu().numpy()
         return action, lstmState
 
-    def train(self, step, idx=0):
+    def train(self, step):
         """
         this method is for training!!
 
@@ -721,25 +730,25 @@ class sacOnPolicyTrainer(ONPolicy):
             dones.append(data[4])
         
         states = torch.cat(states, dim=0).to(self.device)
-        hA = torch.cat(hA, dim=1).to(self.device)
-        cA = torch.cat(cA, dim=1).to(self.device)
-        hC1 = torch.cat(hC1, dim=1).to(self.device)
-        cC1 = torch.cat(cC1, dim=1).to(self.device)
-        hC2 = torch.cat(hC2, dim=1).to(self.device)
-        cC2 = torch.cat(cC2, dim=1).to(self.device)
+        hA = torch.cat(hA, dim=1).to(self.device).detach()
+        cA = torch.cat(cA, dim=1).to(self.device).detach()
+        hC1 = torch.cat(hC1, dim=1).to(self.device).detach()
+        cC1 = torch.cat(cC1, dim=1).to(self.device).detach()
+        hC2 = torch.cat(hC2, dim=1).to(self.device).detach()
+        cC2 = torch.cat(cC2, dim=1).to(self.device).detach()
 
         nstates = torch.cat(nstates, dim=0).to(self.device)
-        nhA = torch.cat(nhA, dim=1).to(self.device)
-        ncA = torch.cat(ncA, dim=1).to(self.device)
-        nhC1 = torch.cat(nhC1, dim=1).to(self.device)
-        ncC1 = torch.cat(ncC1, dim=1).to(self.device)
-        nhC2 = torch.cat(nhC2, dim=1).to(self.device)
-        ncC2 = torch.cat(ncC2, dim=1).to(self.device)
+        nhA = torch.cat(nhA, dim=1).to(self.device).detach()
+        ncA = torch.cat(ncA, dim=1).to(self.device).detach()
+        nhC1 = torch.cat(nhC1, dim=1).to(self.device).detach()
+        ncC1 = torch.cat(ncC1, dim=1).to(self.device).detach()
+        nhC2 = torch.cat(nhC2, dim=1).to(self.device).detach()
+        ncC2 = torch.cat(ncC2, dim=1).to(self.device).detach()
         
         lstmState = ((hA, cA), (hC1, cC1), (hC2, cC2))
         nlstmState = ((nhA, ncA), (nhC1, ncC1), (nhC2, ncC2))
 
-        actions = torch.tensor(actions).to(self.device)
+        actions = torch.tensor(actions).to(self.device).view((-1, 2))
         rewards = np.array(rewards)
         dones = np.array(dones)
   
@@ -747,11 +756,12 @@ class sacOnPolicyTrainer(ONPolicy):
             nAction, logProb, _, entropy, _ = \
                 self.agent.forward(states, lstmState=lstmState)
             c1, c2 = self.agent.criticForward(nstates, nAction, nlstmState)
-            minc = torch.min(c1, c2)
+            minc = torch.min(c1, c2).detach()
         gT = self.getReturn(rewards, dones, minc)
         gT -= self.tempValue * logProb
         
         if self.fixedTemp:
+            self.zeroGrad()
             lossC1, lossC2 = self.agent.calQLoss(
                 states.detach(),
                 gT.detach(),
@@ -761,14 +771,23 @@ class sacOnPolicyTrainer(ONPolicy):
             lossC1.backward()
             lossC2.backward()
 
+            self.cFOptim01_1.step()
+            self.cFOptim01_2.step()
+            self.cFOptim02_1.step()
+            self.cFOptim02_2.step()
+            self.cOptim01.step()
+            self.cOptim02.step()
+            self.zeroGrad()
+
             lossP, lossT = self.agent.calALoss(
                 states.detach(),
                 lstmState,
                 alpha=self.tempValue
             )
             lossP.backward()
-        
-        normA, normC, normT = self.agents[idx].calculateNorm()
+            self.aFOptim01.step()
+            self.aFOptim02.step()
+            self.aOptim.step()
 
     def getReturn(self, reward, done, minC):
         """
@@ -932,16 +951,16 @@ class sacOnPolicyTrainer(ONPolicy):
                 nStateT.append(state)
             nStateT = torch.stack(nStateT, dim=0).to(self.device)
             nAction, nnlstmState = self.getAction(nStateT, lstmState=nlstmState)
-            # self.appendMemory(
-            #     ((stateT, lstmState), action.copy(),
-            #         reward*self.rScaling, (nStateT, nlstmState), done.copy())
-            # )
+            self.appendMemory(
+                ((stateT, lstmState), action.copy(),
+                    reward*self.rScaling, (nStateT, nlstmState), done.copy())
+            )
 
-            # action = nAction
-            # stateT = nStateT
-            # lstmState = nlstmState
-            # nlstmState = nnlstmState
+            action = nAction
+            stateT = nStateT
+            lstmState = nlstmState
+            nlstmState = nnlstmState
 
-            # step += 1
-            # if step % self.updateStep == 0:
-            #     self.train(step)
+            step += 1
+            if step % self.updateStep == 0:
+                self.train(step)

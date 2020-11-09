@@ -126,11 +126,13 @@ class sacAgent(baseAgent):
         logProb -= torch.log(1-action.pow(2)+1e-6).sum(1, keepdim=True)
         entropy = (torch.log(std * (2 * 3.14)**0.5)+0.5).sum(1, keepdim=True)
 
-        stateAction = state
-        stateAction[:, 0, 0, 6:8] = action
+        offset = torch.zeros_like(state)
+        offset[:, 0, 0, 6:8] += action
 
-        cSS1_1 = torch.unsqueeze(self.criticFeature01_1(stateAction), dim=0)
-        cSS1_2 = torch.unsqueeze(self.criticFeature01_2(stateAction), dim=0)
+        state = state + offset
+
+        cSS1_1 = torch.unsqueeze(self.criticFeature01_1(state), dim=0)
+        cSS1_2 = torch.unsqueeze(self.criticFeature01_2(state), dim=0)
 
         cSS2_1, (hC1, cC1) = self.criticFeature02_1(cSS1_1, (hCState01, cCState01))
         cSS2_2, (hC2, cC2) = self.criticFeature02_1(cSS1_2, (hCState02, cCState02))
@@ -231,7 +233,6 @@ class sacAgent(baseAgent):
         return lossCritic1, lossCritic2
     
     def calALoss(self, state, lstmState, alpha=0):
-
         action, logProb, critics, entropy, _ = self.forward(state, lstmState)
         critic1, critic2 = critics
         critic = torch.min(critic1, critic2)
