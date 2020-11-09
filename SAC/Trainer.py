@@ -509,7 +509,6 @@ class sacOnPolicyTrainer(ONPolicy):
     def __init__(self, cfg):
         super(sacOnPolicyTrainer, self).__init__(cfg)
         
-        self.globalAgent = sacAgent(self.aData)
         self.agents = [sacAgent(self.aData) for i in range(self.nAgent)]
         if self.lPath != "None":
             self.agent.load_state_dict(
@@ -529,12 +528,9 @@ class sacOnPolicyTrainer(ONPolicy):
             
         else:
             self.device = torch.device("cpu")
-        self.tAgent.load_state_dict(self.agent.state_dict())
-        if 'gpuOverload' in self.data.keys():
-            self.gpuOverload = self.data['gpuOverload'] == 'True'
-        else:
-            self.gpuOverload = False
-        
+        self.globalAgent = sacAgent(self.aData)
+        self.globalAgent.to(self.device)
+ 
         pureEnv = self.data['envName'].split('/')
         name = pureEnv[-1]
         self.sPath += name + '_' + str(self.nAgent)
@@ -548,11 +544,8 @@ class sacOnPolicyTrainer(ONPolicy):
     def ppState(self, obs, id=0):
         rState, targetOn, lidarPt = obs[:6], obs[6], obs[7:]
         targetPos = np.reshape(rState[:2], (1, 2))
-        if self.gpuOverload:
-            rState = torch.tensor(rState)
-            lidarImg = torch.zeros(self.sSize).to(self.device)
-        else:
-            lidarImg = np.zeros(self.sSize)
+        rState = torch.tensor(rState).to(self.device)
+        lidarImg = torch.zeros(self.sSize).to(self.device)
         lidarPt = lidarPt[lidarPt != 0]
         lidarPt -= 1000
         lidarPt = np.reshape(lidarPt, (-1, 2))
@@ -583,18 +576,15 @@ class sacOnPolicyTrainer(ONPolicy):
         # lidarImg = lidarImg.type(torch.uint8)
         # if (id % 100 == 0):
         #     showLidarImg(lidarImg)
-        if self.gpuOverload:
-            lidarImg = lidarImg.type(torch.uint8)
-        else:
-            lidarImg = np.uint8(lidarImg)
+        lidarImg = lidarImg.type(torch.uint8)
 
         return (rState, lidarImg)
                  
     def getAction(self, states, lstmInput=None):
         if lstmInput is None:
             cStates, hStates = (
-                torch.zeros(self.hiddenSize).to(self.device).float(),
-                torch.zeros(self.hiddenSize).to(self.device).float() 
+                torch.zeros(self.hiddenSize).float(),
+                torch.zeros(self.hiddenSize).float() 
             )
         else:
             cStates, hStates = lstmInput

@@ -5,17 +5,29 @@ from baseline.utils import constructNet, getOptim
 
 class sacAgent(baseAgent):
 
-    def __init__(self, aData, oData):
+    def __init__(self, aData, oData, device='cpu'):
         super(sacAgent, self).__init__()
         
         self.aData = aData
         self.optimData = oData
         self.keyList = list(self.aData.keys())
-        device = self.aData['device']
         self.device = torch.device(device)
         self.getISize()
         self.buildModel()
     
+    def to(self, device):
+        self.actorFeature01 = self.actorFeature01.to(device)
+        self.actorFeature02 = self.actorFeature02.to(device)
+        self.actor = self.actor.to(device)
+
+        self.criticFeature01_1 = self.criticFeature01_1.to(device)
+        self.criticFeature02_1 = self.criticFeature02_1.to(device)
+        self.critic01 = self.critic01.to(device)
+
+        self.criticFeature01_2 = self.criticFeature01_2.to(device)
+        self.criticFeature02_2 = self.criticFeature02_2.to(device)
+        self.critic02 = self.critic02.to(device)
+
     def getISize(self):
         self.iFeature01 = 80
         self.iFeature02 = 100
