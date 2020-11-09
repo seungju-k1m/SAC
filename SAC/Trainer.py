@@ -514,7 +514,7 @@ class sacOnPolicyTrainer(ONPolicy):
             self.agent.load_state_dict(
                 torch.load(self.lPath, map_location=self.device)
             )
-        if 'fixedTemp' in self.keyLis:
+        if 'fixedTemp' in self.keyList:
             self.fixedTemp = self.data['fixedTemp'] == "True"
             if self.fixedTemp:
                 if 'tempValue' in self.keyList:
@@ -538,14 +538,14 @@ class sacOnPolicyTrainer(ONPolicy):
             self.sPath += str(int(self.tempValue * 100)) +'.pth'
         else:
             self.sPath += '.pth'
-        
+        self.sSize = self.aData['sSize']
         self.hiddenSize = self.aData['actorFeature02']['hiddenSize']
 
     def ppState(self, obs, id=0):
         """
         input:
             obs:[np.array]
-                shpae:[1, 1447]
+                shpae:[1447,]
         output:
             lidarImg:[tensor.cpu]
                 shape[1, 96, 96]
@@ -627,23 +627,75 @@ class sacOnPolicyTrainer(ONPolicy):
         pass
 
     def train(self, step, idx=0):
-        state, action, reward, nextState, dones = \
-            [], [], [], [], []
+        """
+        this method is for training!!
+
+        before training, shift the device of idx network and data
+
+        """
+        agent = self.agents[idx]
+        agent.to(self.device)
+
+        states, hA, cA, hC1, cC1, hC2, cC2, actions, rewards, dones = \
+            [], [], [], [], [], [], [], [], [], []
+        nstates, nhA, ncA, nhC1, ncC1, nhC2, ncC2 = \
+            [], [], [], [], [], [], []
         for data in self.replayMemory:
-            state.append(data[0])
-            action.append(data[1])
-            reward.append(data[2])
-            nextState.append(data[3])
+            states.append(data[0][0])
+            hA.append(data[0][1][0][0])
+            cA.append(data[0][1][0][1])
+            hC1.append(data[0][1][1][0])
+            cC1.append(data[0][1][1][1])
+            hC2.append(data[0][1][2][0])
+            cC2.append(data[0][1][2][1])
+
+            actions.append(data[1])
+            nrewards.append(data[2])
+
+            nstates.append(data[3][0])
+            nhA.append(data[3][1][0][0])
+            ncA.append(data[3][1][0][1])
+            nhC1.append(data[3][1][1][0])
+            ncC1.append(data[3][1][1][1])
+            nhC2.append(data[3][1][2][0])
+            ncC2.append(data[3][1][2][1])
+
             dones.append(data[4])
         
-        reward = reward[::-1]
-        nAction, target, _, entropy = self.agents[idx].forward(state)
-        target = target[::-1]
+        states = torch.stack(states, dim=0).to(self.device)
+        hA = torch.cat(hA, dim=1).to(self.device)
+        cA = torch.cat(cA, dim=1).to(self.device)
+        hC1 = torch.cat(hC1, dim=1).to(self.device)
+        cC1 = torch.cat(cC1, dim=1).to(self.device)
+        hC2 = torch.cat(hC2, dim=1).to(self.device)
+        cC2 = torch.cat(cC2, dim=1).to(self.device)
+
+        nstates = torch.stack(nstates, dim=0).to(self.device)
+        nhA = torch.cat(nhA, dim=1).to(self.device)
+        ncA = torch.cat(ncA, dim=1).to(self.device)
+        nhC1 = torch.cat(nhC1, dim=1).to(self.device)
+        ncC1 = torch.cat(ncC1, dim=1).to(self.device)
+        nhC2 = torch.cat(nhC2, dim=1).to(self.device)
+        ncC2 = torch.cat(ncC2, dim=1).to(self.device)
+        
+        lstmState = ((hA, cA), (hC1, cC1), (hC2, cC2))
+        nlstmState = ((nhA, ncA), (nhC1, ncC1), (nhC2, ncC2))
+
+        actions = torch.tensor(actions).to(self.device)
+
+        reward = rewards[::-1]
+        with torch.no_grad():
+            nAction, logProb, _, entropy, _ = \
+                agent.forward(state, lstmState=lstmState)
+        
+        target = []
 
         if dones[-1]:
             target[0] += reward[0]
         else:
-            target[0] += self.agents[idx].criticForward(nextState[-1], nAction[-1])
+            c1, c2 = agent.criticForward(nstates[-1:], nAction[-1:])
+            minc = torch.min(c1, c2)
+            target[0] += minc[0]
         i = 1
         for rw, done in zip(reward, dones):
             target[i] += rw + self.gamma * target[i-1]
@@ -685,7 +737,7 @@ class sacOnPolicyTrainer(ONPolicy):
             done:[np.array]
                 shape[:nAgent, 1]
         """
-        obsState = np.zeros((self.nAgent, self.obsShape))
+        obsState = np.zeros((self.nAgent, self.obsShape), dtype=np.float32)
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
         rewards, treward = decisionStep.reward, terminalStep.reward
@@ -732,6 +784,7 @@ class sacOnPolicyTrainer(ONPolicy):
     def run(self):
         episodeReward = []
         Rewards = []
+        step = 0
 
         for i in range(self.nAgent):
             Rewards.append(0)
@@ -751,5 +804,33 @@ class sacOnPolicyTrainer(ONPolicy):
             nState = []
             self.checkStep(action)
             obs, reward, done = self.getObs()
+
+            for b in range(self.nAgent):
+                ob = obs[b]
+                state = self.ppState(ob)
+                act, lstmState = self.getAction(state, id=b)
+                nState.append((state, lstmState))
+                self.appendMemory(
+                    stateT[b], action[b].copy(),
+                    reward[b]*self.rScaling, nState[b], done[b]
+                )
+                Rewards[b] += reward[b]
+                if self.inferMode:
+                    action[b] = self.getAction(
+                        state, lstmState=lstmState, id=b, dMode=True)
+                else:
+                    action[b] = self.getAction(
+                        state, lstmState=lstmState, id=b
+                    )
+                if done[b]:
+                    episodeReward.append(Rewards[b])
+                    Rewards[b] = 0
+                if step > self.startStep and self.inferMode is False:
+                    pass
+            stateT = nState
+            step += self.nAgent
+
+
+
 
         

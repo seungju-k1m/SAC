@@ -83,18 +83,24 @@ def getActivation(actName, **kwargs):
     return act
 
 
-def constructNet(netData, iSize=1):
+def constructNet(netData, iSize=1, WH=-1):
     netCat = netData['netCat']
     Net = [MLP, CNET, LSTMNET]
     netName = ["MLP", "CNET", "LSTMNET"]
     ind = netName.index(netCat)
 
     baseNet = Net[ind]
-
-    network = baseNet(
-        netData,
-        iSize=iSize
-    )
+    if WH is -1:
+        network = baseNet(
+            netData,
+            iSize=iSize
+        )
+    else:
+        network = baseNet(
+            netData,
+            iSize=iSize,
+            WH=WH
+        )
 
     return network
 

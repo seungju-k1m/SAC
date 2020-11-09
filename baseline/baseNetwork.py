@@ -82,12 +82,13 @@ class MLP(nn.Module):
 
 class CNET(nn.Module):
 
-    def __init__(self, netData, iSize=3):
+    def __init__(self, netData, iSize=3, WH=96):
         super(CNET, self).__init__()
 
         self.netData = netData
         self.iSize = iSize
         keyList = list(netData.keys())
+        self.WH = WH
 
         if "BN" in keyList:
             self.BN = netData['BN'] == "True"
@@ -173,15 +174,13 @@ class CNET(nn.Module):
 class LSTMNET(nn.Module):
 
     def __init__(self, netData, iSize=1):
-        super(self, LSTMNET).__init__()
+        super(LSTMNET, self).__init__()
         self.netData = netData
         self.hiddenSize = netData['hiddenSize']
         self.nLayer = netData['nLayer']
         self.rnn = nn.LSTM(iSize, self.hiddenSize, self.nLayer)
 
-    def forward(self, states):
-        state, pastHidden, pastCell = states
-        
-        output = self.rnn(state, (pastHidden, pastCell))
+    def forward(self, state, lstmState):
+        output, (hn, cn) = self.rnn(state, lstmState)
         # output consists of output, hidden, cell state
-        return output
+        return output, (hn, cn)

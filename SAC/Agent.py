@@ -37,9 +37,9 @@ class sacAgent(baseAgent):
         for t in temp:
             div *= t
         nUnit = self.aData['actorFeature01']['nUnit'][-1]
-        self.iFeature02 = int((self.iFeature/div)**2) * nUnit
+        self.iFeature02 = int((self.iFeature01/div)**2) * nUnit
         self.iFeature03 = self.hiddenSize
-
+        self.sSize = self.aData['sSize']
     def criticStep(self, globalAgent):
         cF1_1, cF2_1, c1, cF1_2, cF2_2, c2 = (
             globalAgent.criticFeature01_1,
@@ -65,17 +65,19 @@ class sacAgent(baseAgent):
         for netName in self.keyList:
             netData = self.aData[netName]
             if netName == 'actorFeature01':
-                self.actorFeature01 = constructNet(netData, iSize=self.iFeature01)
+                self.actorFeature01 = constructNet(netData, iSize=self.sSize[0], WH=self.iFeature01)
             elif netName == 'actorFeature02':
                 self.actorFeature02 = constructNet(netData, iSize=self.iFeature02)
             elif netName == 'actor':
                 self.actor = constructNet(netData, iSize=self.iFeature03)
             elif netName == 'criticFeature01':
-                self.criticFeature01_1 = constructNet(netData, iSize=self.iFeature01)
-                self.criticFeature01_2 = constructNet(netData, iSize=self.iFeature01)
-            elif netName == 'ciriticFeature02':
+                self.criticFeature01_1 = constructNet(
+                    netData, iSize=self.sSize[0], WH=self.iFeature01)
+                self.criticFeature01_2 = constructNet(
+                    netData, iSize=self.sSize[0], WH=self.iFeature01)
+            elif netName == 'criticFeature02':
                 self.criticFeature02_1 = constructNet(netData, iSize=self.iFeature02)
-                self.criticFeature02_1 = constructNet(netData, iSize=self.iFeature02)
+                self.criticFeature02_2 = constructNet(netData, iSize=self.iFeature02)
             elif netName == 'critic':
                 self.critic01 = constructNet(netData, iSize=self.iFeature03)
                 self.critic02 = constructNet(netData, iSize=self.iFeature03)
@@ -125,8 +127,10 @@ class sacAgent(baseAgent):
             hCState02, cCState02 = hCState02.to(self.device), cCState02.to(self.device)
        
         aF1 = self.actorFeature01(state)
+        aF1 = torch.unsqueeze(aF1, dim=1)
         aL1, (hA, cA) = self.actorFeature02(aF1, (hAState, cAState))
         output = self.actor(aL1)
+        output = torch.squeeze(output, dim=1)
 
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
@@ -142,8 +146,8 @@ class sacAgent(baseAgent):
         stateAction = state
         stateAction[:, :, :, 6:8] = action
 
-        cSS1_1 = self.criticFeature01_1(stateAction)
-        cSS1_2 = self.criticFeature01_2(stateAction)
+        cSS1_1 = torch.unsqueeze(self.criticFeature01_1(stateAction), dim=1)
+        cSS1_2 = torch.unsqueeze(self.criticFeature01_2(stateAction), dim=1)
 
         cSS2_1, (hC1, cC1) = self.criticFeature02_1(cSS1_1, (hCState01, cCState01))
         cSS2_2, (hC2, cC2) = self.criticFeature02_1(cSS1_2, (hCState02, cCState02))
