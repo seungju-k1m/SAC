@@ -503,6 +503,52 @@ class sacTrainer(OFFPolicy):
                 torch.save(self.agent.state_dict(), self.sPath)
 
 
+def ppState_(obs):
+        """
+        input:
+            obs:[np.array]
+                shpae:[1447,]
+        output:
+            lidarImg:[tensor. device]
+                shape[1, 96, 96]
+        """
+        device = torch.device("cpu")
+        sSize = [1, 96, 96]
+        rState, targetOn, lidarPt = obs[:6], obs[6], obs[7:]
+        targetPos = np.reshape(rState[:2], (1, 2))
+        rState = torch.tensor(rState).to(device)
+        lidarImg = torch.zeros((1, 96, 96)).to(device)
+        lidarPt = lidarPt[lidarPt != 0]
+        lidarPt -= 1000
+        lidarPt = np.reshape(lidarPt, (-1, 2))
+        R = [[math.cos(rState[-1]), -math.sin(rState[-1])], [math.sin(rState[-1]), math.cos(rState[-1])]]
+        R = np.array(R)
+        lidarPt = np.dot(lidarPt, R)
+        for pt in lidarPt:
+            
+            locX = int(((pt[0]+7) / 14)*sSize[-1]-1)
+            locY = int(((pt[1]+7) / 14)*sSize[-1]-1)
+
+            if locX == (sSize[-1]-1):
+                locX -= 1
+            if locY == (sSize[-1]-1):
+                locY -= 1
+
+            lidarImg[0, locY+1, locX+1] = 1.0
+        if targetOn == 1:
+            pt = np.dot(targetPos, R)[0]
+            locX = int(((pt[0]+7) / 14)*sSize[-1])
+            locY = int(((pt[1]+7) / 14)*sSize[-1])
+            if (locX == sSize[-1]-1):
+                locX -= 1
+            if (locY == sSize[-1]-1):
+                locY -= 1
+            lidarImg[0, locY+1, locX+1] = 10
+        lidarImg[0, 0, :6] = rState
+        
+        return lidarImg
+
+
 class sacOnPolicyTrainer(ONPolicy):
 
     def __init__(self, cfg):
@@ -539,36 +585,28 @@ class sacOnPolicyTrainer(ONPolicy):
         self.hiddenSize = self.aData['actorFeature02']['hiddenSize']
         self.updateStep = self.data['updateStep']
 
-    def ppState(self, obs, id=0):
+    def ppState(self, obs):
         """
         input:
             obs:[np.array]
                 shpae:[1447,]
         output:
             lidarImg:[tensor. device]
-                shape[1, 96, 96]
+                shape:[1, 96, 96]
         """
         rState, targetOn, lidarPt = obs[:6], obs[6], obs[7:]
         targetPos = np.reshape(rState[:2], (1, 2))
         rState = torch.tensor(rState).to(self.device)
-        lidarImg = torch.zeros(self.sSize).to(self.device)
+        lidarImg = torch.zeros(self.sSize[1:]).to(self.device)
         lidarPt = lidarPt[lidarPt != 0]
         lidarPt -= 1000
         lidarPt = np.reshape(lidarPt, (-1, 2))
         R = [[math.cos(rState[-1]), -math.sin(rState[-1])], [math.sin(rState[-1]), math.cos(rState[-1])]]
         R = np.array(R)
         lidarPt = np.dot(lidarPt, R)
-        for pt in lidarPt:
-            
-            locX = int(((pt[0]+7) / 14)*self.sSize[-1]-1)
-            locY = int(((pt[1]+7) / 14)*self.sSize[-1]-1)
-
-            if locX == (self.sSize[-1]-1):
-                locX -= 1
-            if locY == (self.sSize[-1]-1):
-                locY -= 1
-
-            lidarImg[0, locY+1, locX+1] = 1.0
+        locXY = (((lidarPt + 7) / 14) * self.sSize[-1]-1.5).astype(np.int16)
+        locYX = locXY[:, ::-1]
+        lidarImg[locYX.copy()] = 1.0
         if targetOn == 1:
             pt = np.dot(targetPos, R)[0]
             locX = int(((pt[0]+7) / 14)*self.sSize[-1])
@@ -577,9 +615,9 @@ class sacOnPolicyTrainer(ONPolicy):
                 locX -= 1
             if locY == (self.sSize[-1]-1):
                 locY -= 1
-            lidarImg[0, locY+1, locX+1] = 10
-        lidarImg[0, 0, :6] = rState
-
+            lidarImg[locY+1, locX+1] = 10
+        lidarImg[0, :6] = rState
+        lidarImg = torch.unsqueeze(lidarImg, dim=0)
         return lidarImg
                  
     def genOptim(self):
@@ -887,23 +925,23 @@ class sacOnPolicyTrainer(ONPolicy):
             self.checkStep(action)
             obs, reward, done = self.getObs()
             nStateT = []
-            
+
             for b in range(self.nAgent):
                 ob = obs[b]
                 state = self.ppState(ob)
                 nStateT.append(state)
             nStateT = torch.stack(nStateT, dim=0).to(self.device)
             nAction, nnlstmState = self.getAction(nStateT, lstmState=nlstmState)
-            self.appendMemory(
-                ((stateT, lstmState), action.copy(),
-                    reward*self.rScaling, (nStateT, nlstmState), done.copy())
-            )
+            # self.appendMemory(
+            #     ((stateT, lstmState), action.copy(),
+            #         reward*self.rScaling, (nStateT, nlstmState), done.copy())
+            # )
 
-            action = nAction
-            stateT = nStateT
-            lstmState = nlstmState
-            nlstmState = nnlstmState
+            # action = nAction
+            # stateT = nStateT
+            # lstmState = nlstmState
+            # nlstmState = nnlstmState
 
-            step += 1
-            if step % self.updateStep == 0:
-                self.train(step)
+            # step += 1
+            # if step % self.updateStep == 0:
+            #     self.train(step)
