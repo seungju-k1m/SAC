@@ -908,7 +908,3 @@ class sacOnPolicyTrainer(ONPolicy):
             step += 1
             if step % self.updateStep == 0:
                 self.train(step)
-
-
-
-        
