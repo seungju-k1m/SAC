@@ -1,6 +1,6 @@
 import torch
 from baseline.baseNetwork import baseAgent
-from baseline.utils import constructNet, getOptim
+from baseline.utils import constructNet
 
 
 class sacAgent(baseAgent):
