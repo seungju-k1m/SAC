@@ -595,8 +595,7 @@ class sacOnPolicyTrainer(ONPolicy):
             lidarImg:[tensor. device]
                 shape:[1, 96, 96]
         """
-        rState, targetOn, lidarPt = obs[:6], obs[6], obs[7:]
-        targetPos = np.reshape(rState[:2], (1, 2))
+        rState, targetOn, lidarPt = obs[:6], obs[6], obs[7:720+7]
         rState = torch.tensor(rState).to(self.device)
         lidarImg = torch.zeros(self.sSize[1]**2).to(self.device)
         lidarPt = lidarPt[lidarPt != 0]

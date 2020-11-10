@@ -71,6 +71,7 @@ class OFFPolicy:
             setChannel = EnvironmentParametersChannel()
             if self.inferMode is False:
                 setChannel.set_float_parameter("nAgent", self.data['nAgent'])
+            setChannel.set_float_parameter("imgMode", 0.0)
             self.env = UnityEnvironment(
                 name, worker_id=id_, 
                 side_channels=[setChannel, engineChannel])
@@ -192,6 +193,7 @@ class ONPolicy:
         engineChannel = EngineConfigurationChannel()
         engineChannel.set_configuration_parameters(time_scale=2)
         setChannel = EnvironmentParametersChannel()
+        setChannel.set_float_parameter("imgMode", 0)
         name = self.data['envName']
         self.env = UnityEnvironment(
             name, worker_id=id_, 
