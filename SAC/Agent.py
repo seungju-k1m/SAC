@@ -112,9 +112,9 @@ class sacAgent(baseAgent):
         aF1 = self.actorFeature01(state)
         aF1 = torch.unsqueeze(aF1, dim=0)
         aL1, (hA, cA) = self.actorFeature02(aF1, (hAState, cAState))
+        aL1 = torch.squeeze(aL1, dim=0)
         output = self.actor(aL1)
-        output = torch.squeeze(output, dim=0)
-
+        
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
@@ -128,11 +128,11 @@ class sacAgent(baseAgent):
 
         offset = torch.zeros_like(state)
         offset[:, 0, 0, 6:8] += action
+        y = state[:, 0, 0, 6:8]
+        stateAction = state + offset
 
-        state = state + offset
-
-        cSS1_1 = torch.unsqueeze(self.criticFeature01_1(state), dim=0)
-        cSS1_2 = torch.unsqueeze(self.criticFeature01_2(state), dim=0)
+        cSS1_1 = torch.unsqueeze(self.criticFeature01_1(stateAction), dim=0)
+        cSS1_2 = torch.unsqueeze(self.criticFeature01_2(stateAction), dim=0)
 
         cSS2_1, (hC1, cC1) = self.criticFeature02_1(cSS1_1, (hCState01, cCState01))
         cSS2_2, (hC2, cC2) = self.criticFeature02_1(cSS1_2, (hCState02, cCState02))
@@ -170,11 +170,13 @@ class sacAgent(baseAgent):
             hCState02, cCState02 = lstmState[2]
             hCState01, cCState01 = hCState01.to(self.device), cCState01.to(self.device)
             hCState02, cCState02 = hCState02.to(self.device), cCState02.to(self.device)
-       
-        state[:, 0, 0, 6:8] = action
+        
+        offset = torch.zeros_like(state)
+        offset[:, 0, 0, 6:8] += action
+        stateAction = state + offset
 
-        cSS1_1 = torch.unsqueeze(self.criticFeature01_1(state), dim=0)
-        cSS1_2 = torch.unsqueeze(self.criticFeature01_2(state), dim=0)
+        cSS1_1 = torch.unsqueeze(self.criticFeature01_1(stateAction), dim=0)
+        cSS1_2 = torch.unsqueeze(self.criticFeature01_2(stateAction), dim=0)
 
         cSS2_1, (hC1, cC1) = self.criticFeature02_1(cSS1_1, (hCState01, cCState01))
         cSS2_2, (hC2, cC2) = self.criticFeature02_1(cSS1_2, (hCState02, cCState02))

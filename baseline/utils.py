@@ -7,7 +7,7 @@ from baseline.baseNetwork import MLP, CNET, LSTMNET
 
 
 def showLidarImg(img):
-    img = torch.tensor(img).float()
+    img = img.cpu()
     img = TF.to_pil_image(img)
     img.show()
     

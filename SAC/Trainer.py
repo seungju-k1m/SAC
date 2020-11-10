@@ -5,7 +5,7 @@ import math
 import numpy as np
 from baseline.baseTrainer import OFFPolicy, ONPolicy
 from SAC.Agent import sacAgent
-from baseline.utils import getOptim, calGlobalNorm
+from baseline.utils import getOptim, calGlobalNorm, showLidarImg
 from collections import deque
 
 
@@ -598,16 +598,20 @@ class sacOnPolicyTrainer(ONPolicy):
         rState, targetOn, lidarPt = obs[:6], obs[6], obs[7:]
         targetPos = np.reshape(rState[:2], (1, 2))
         rState = torch.tensor(rState).to(self.device)
-        lidarImg = torch.zeros(self.sSize[1:]).to(self.device)
+        lidarImg = torch.zeros(self.sSize[1]**2).to(self.device)
         lidarPt = lidarPt[lidarPt != 0]
         lidarPt -= 1000
         lidarPt = np.reshape(lidarPt, (-1, 2))
         R = [[math.cos(rState[-1]), -math.sin(rState[-1])], [math.sin(rState[-1]), math.cos(rState[-1])]]
         R = np.array(R)
         lidarPt = np.dot(lidarPt, R)
-        locXY = (((lidarPt + 7) / 14) * self.sSize[-1]-1.5).astype(np.int16)
+        locXY = (((lidarPt + 7) / 14) * (self.sSize[-1]+1)).astype(np.int16)
         locYX = locXY[:, ::-1]
-        lidarImg[locYX.copy()] = 1.0
+        locYX = np.unique(locYX, axis=0)
+        locYX = locYX[:, 0] * self.sSize[1] + locYX[:, 1]
+        locYX = np.clip(locYX, self.sSize[1], self.sSize[1]**2 - 2)
+        lidarImg[locYX] = 1
+        lidarImg = lidarImg.view(self.sSize[1:])
         if targetOn == 1:
             pt = np.dot(targetPos, R)[0]
             locX = int(((pt[0]+7) / 14)*self.sSize[-1])
@@ -617,8 +621,8 @@ class sacOnPolicyTrainer(ONPolicy):
             if locY == (self.sSize[-1]-1):
                 locY -= 1
             lidarImg[locY+1, locX+1] = 10
-        lidarImg[0, :6] = rState
         lidarImg = torch.unsqueeze(lidarImg, dim=0)
+        lidarImg[0, 0, :6] = rState
         return lidarImg
                  
     def genOptim(self):
@@ -754,7 +758,7 @@ class sacOnPolicyTrainer(ONPolicy):
   
         with torch.no_grad():
             nAction, logProb, _, entropy, _ = \
-                self.agent.forward(states, lstmState=lstmState)
+                self.agent.forward(nstates, lstmState=nlstmState)
             c1, c2 = self.agent.criticForward(nstates, nAction, nlstmState)
             minc = torch.min(c1, c2).detach()
         gT = self.getReturn(rewards, dones, minc)
@@ -777,7 +781,6 @@ class sacOnPolicyTrainer(ONPolicy):
             self.cFOptim02_2.step()
             self.cOptim01.step()
             self.cOptim02.step()
-            self.zeroGrad()
 
             lossP, lossT = self.agent.calALoss(
                 states.detach(),
@@ -788,6 +791,26 @@ class sacOnPolicyTrainer(ONPolicy):
             self.aFOptim01.step()
             self.aFOptim02.step()
             self.aOptim.step()
+
+        normA = calGlobalNorm(self.actor) + calGlobalNorm(self.actorFeature01) + calGlobalNorm(self.actorFeature02)
+        normC = calGlobalNorm(self.critic01) + calGlobalNorm(self.criticFeature01_1) + calGlobalNorm(self.criticFeature02_1)
+        norm = normA + normC
+        
+        entropy = entropy.mean().cpu().detach().numpy()
+        lossP = lossP.cpu().sum().detach().numpy()
+        lossC1 = lossC1.cpu().sum().detach().numpy()
+        lossC2 = lossC2.cpu().sum().detach().numpy()
+        loss = (lossC1 + lossC2)/2 + lossP + lossT
+
+        if self.writeTMode:
+            self.writer.add_scalar('Action Gradient Mag', normA, step)
+            self.writer.add_scalar('Critic Gradient Mag', normC, step)
+            self.writer.add_scalar('Gradient Mag', norm, step)
+            self.writer.add_scalar('Entropy', entropy, step)
+            self.writer.add_scalar('Loss', loss, step)
+            self.writer.add_scalar('Policy Loss', lossP, step)
+            self.writer.add_scalar('Critic Loss', (lossC1+lossC2)/2, step)
+        self.replayMemory.clear()
 
     def getReturn(self, reward, done, minC):
         """
@@ -838,20 +861,20 @@ class sacOnPolicyTrainer(ONPolicy):
                         tempGT.append(divRAgent[i+1] + self.gamma*tempGT[i])
                     GT.append(torch.stack(tempGT[::-1], dim=0))
                 divRAgent = rewardAgent[j:]
+                
                 divDAgent = doneAgent[j:]
                 divCAgent = minCAgent[j:]
-                
-                if divDAgent[-1]:
-                    tempGT = [torch.tensor([divRAgent[-1]]).to(self.device).float()]
-                else:
-                    tempGT = [divCAgent[-1]]
-                divRAgent = divRAgent[::-1]
-                for i in range(len(divRAgent)-1):
-                    tempGT.append(divRAgent[i+1] + self.gamma*tempGT[i])
-                GT.append(torch.stack(tempGT[::-1], dim=0))
+                if len(divDAgent) != 0:
+                    if divDAgent[-1]:
+                        tempGT = [torch.tensor([divRAgent[-1]]).to(self.device).float()]
+                    else:
+                        tempGT = [divCAgent[-1]]
+                    divRAgent = divRAgent[::-1]
+                    for i in range(len(divRAgent)-1):
+                        tempGT.append(divRAgent[i+1] + self.gamma*tempGT[i])
+                    GT.append(torch.stack(tempGT[::-1], dim=0))
 
                 gT.append(torch.cat(GT, dim=0))
-        print(1) #
         return torch.cat(gT, dim=0)        
 
     def getObs(self, init=False):
@@ -922,13 +945,31 @@ class sacOnPolicyTrainer(ONPolicy):
         cCState02 = torch.zeros(1, self.nAgent, self.hiddenSize).to(self.device)
         lstmState = ((hAState, cAState), (hCState01, cCState01), (hCState02, cCState02))
         return lstmState
+    
+    def setZeroLSTMState(self, lstmState, idx):
+        (ha, ca), (hc1, cc1), (hc2, cc2) = lstmState
+
+        hAState = torch.zeros(1, 1, self.hiddenSize).to(self.device)
+        cAState = torch.zeros(1, 1, self.hiddenSize).to(self.device)
+        hCState01 = torch.zeros(1, 1, self.hiddenSize).to(self.device)
+        cCState01 = torch.zeros(1, 1, self.hiddenSize).to(self.device)
+        hCState02 = torch.zeros(1, 1, self.hiddenSize).to(self.device)
+        cCState02 = torch.zeros(1, 1, self.hiddenSize).to(self.device)
+
+        ha[:, idx:idx+1, :] = hAState
+        ca[:, idx:idx+1, :] = cAState
+        hc1[:, idx:idx+1, :] = hCState01
+        cc1[:, idx:idx+1, :] = cCState01
+        hc2[:, idx:idx+1, :] = hCState02
+        cc2[:, idx:idx+1, :] = cCState02
+
+        lstmState = ((ha, ca), (hc1, cc1), (hc2, cc2))
+
+        return lstmState
 
     def run(self):
         episodeReward = []
-        Rewards = []
-
-        for i in range(self.nAgent):
-            Rewards.append(0)
+        Rewards = np.zeros(self.nAgent)
         
         obs = self.getObs(init=True)
         stateT = []
@@ -943,6 +984,7 @@ class sacOnPolicyTrainer(ONPolicy):
         while 1:
             self.checkStep(action)
             obs, reward, done = self.getObs()
+            Rewards += reward
             nStateT = []
 
             for b in range(self.nAgent):
@@ -955,6 +997,11 @@ class sacOnPolicyTrainer(ONPolicy):
                 ((stateT, lstmState), action.copy(),
                     reward*self.rScaling, (nStateT, nlstmState), done.copy())
             )
+            for i, d in enumerate(done):
+                if d:
+                    nlstmState = self.setZeroLSTMState(nlstmState, i)
+                    episodeReward.append(Rewards[i])
+                    Rewards[i] = 0
 
             action = nAction
             stateT = nStateT
@@ -964,3 +1011,14 @@ class sacOnPolicyTrainer(ONPolicy):
             step += 1
             if step % self.updateStep == 0:
                 self.train(step)
+            
+            if step % 200 == 0:
+                episodeReward = np.array(episodeReward)
+                reward = episodeReward.mean()
+                if self.writeTMode:
+                    self.writer.add_scalar('Reward', reward, step)
+
+                print("""
+                Step : {:5d} // Reward : {:3f}  
+                """.format(step, reward))
+                episodeReward = []

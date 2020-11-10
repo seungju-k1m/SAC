@@ -53,7 +53,7 @@
               }
     },
     "episodeP": 20,
-    "updateStep":30,
+    "updateStep":60,
   
     "fixedTemp": "True",
     "tempValue": 0.2,
@@ -64,14 +64,14 @@
     "optim": {
       "actor": {
         "name": "adam",
-        "lr": 3e-4,
+        "lr": 1e-4,
         "decay": 0,
         "eps": 1e-7,
         "clipping": "None"
       },
       "critic": {
         "name": "adam",
-        "lr": 3e-4,
+        "lr": 1e-4,
         "decay": 0,
         "clipping": "None",
         "eps": 1e-7
@@ -80,7 +80,7 @@
     "gamma": 0.99,
   
     "sPath": "./save/SAC/",
-    "writeTMode":"False",
+    "writeTMode":"True",
     "tPath": "./tensorboard/SAC/",
     "lPath":"None",
   
