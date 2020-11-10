@@ -1,91 +1,86 @@
 {
-  "envName":"./Env/MacOs/4SimpleEnv_1440",
+  "envName":"./Env/MacOs/4MoreSimpleEnv_1440",
   "sSize": [1, 96, 96],
-  "nAgent": 30,
-  "aSize": 2,
-  "seed": 0,
-
-  "agent": {
-            "actorFeature01": {
-              "netCat": "CNET",
-              "nLayer": 5,
-              "nUnit": [8, 16, 32, 64],
-              "stride": [2, 2, 2, 2],
-              "fSize" : [3, 3, 3, 3, -1],
-              "padding" : [1, 1, 1, 1],
-              "act": "relu",
-              "BN": "None"
-            },
-            "actorFeature02":{
-                "netCat":"LSTMNET",
-                "nLayer":1,
-                "hiddenSize":16
-            },
-            "actor":{
-                "netCat":"MLP",
-                "nLayer":1,
-                "fSize":[4],
-                "act":["linear"],
-                "BN":"None"
-            },
-
-            "criticFeature01": {
-              "netCat": "CNET",
-              "nLayer": 5,
-              "nUnit": [8, 16, 32, 64],
-              "stride": [2, 2, 2, 2],
-              "fSize" : [3, 3, 3, 3, -1],
-              "padding" : [1, 1, 1, 1],
-              "act": "relu",
-              "BN": "None"
-            },
-            "criticFeature02":{
-                "netCat":"LSTMNET",
-                "nLayer":1,
-                "hiddenSize":16
-            },
-            "critic":{
-                "netCat":"MLP",
-                "nLayer":1,
-                "fSize":[1],
-                "act":["linear"],
-                "BN":"None"
-            }
-  },
-  "episodeP": 20,
-  "updateStep":30,
-
-  "fixedTemp": "True",
-  "tempValue": 0.2,
-
-  "lrFreq": 1,
-  "rScaling": 1,
-
-  "optim": {
-    "actor": {
-      "name": "adam",
-      "lr": 3e-4,
-      "decay": 0,
-      "eps": 1e-7,
-      "clipping": "None"
+    "nAgent": 15,
+    "aSize": 2,
+    "seed": 0,
+  
+    "agent": {
+              "actorFeature01": {
+                "netCat": "CNET",
+                "nLayer": 5,
+                "nUnit": [8, 16, 32, 64],
+                "stride": [2, 2, 2, 2],
+                "fSize" : [3, 3, 3, 3, -1],
+                "padding" : [1, 1, 1, 1],
+                "act": "relu",
+                "BN": "None"
+              },
+              "actorFeature02":{
+                  "netCat":"LSTMNET",
+                  "nLayer":1,
+                  "hiddenSize":512
+              },
+              "actor":{
+                  "netCat":"MLP",
+                  "nLayer":1,
+                  "fSize":[4],
+                  "act":["linear"],
+                  "BN":"None"
+              },
+  
+              "criticFeature01": {
+                "netCat": "CNET",
+                "nLayer": 5,
+                "nUnit": [8, 16, 32, 64],
+                "stride": [2, 2, 2, 2],
+                "fSize" : [3, 3, 3, 3, -1],
+                "padding" : [1, 1, 1, 1],
+                "act": "relu",
+                "BN": "None"
+              },
+              "critic":{
+                  "netCat":"MLP",
+                  "nLayer":1,
+                  "fSize":[1],
+                  "act":["linear"],
+                  "BN":"None"
+              }
     },
-    "critic": {
-      "name": "adam",
-      "lr": 3e-4,
-      "decay": 0,
-      "clipping": "None",
-      "eps": 1e-7
-    }
-  },
-  "gamma": 0.99,
-
-  "sPath": "./save/SAC/",
-  "writeTMode":"False",
-  "tPath": "./tensorboard/SAC/",
-  "lPath":"None",
-
-  "device": "cpu",
-  "gpuOverload":"True",
-  "inferMode": "False",
-  "renderMode": "True"
-}
+    "episodeP": 20,
+    "updateStep":5,
+  
+    "fixedTemp": "True",
+    "tempValue": 0.2,
+  
+    "lrFreq": 1,
+    "rScaling": 1,
+  
+    "optim": {
+      "actor": {
+        "name": "adam",
+        "lr": 1e-4,
+        "decay": 0,
+        "eps": 1e-7,
+        "clipping": "None"
+      },
+      "critic": {
+        "name": "adam",
+        "lr": 1e-4,
+        "decay": 0,
+        "clipping": "None",
+        "eps": 1e-7
+      }
+    },
+    "gamma": 0.99,
+  
+    "sPath": "./save/SAC/",
+    "writeTMode":"True",
+    "tPath": "./tensorboard/SAC/",
+    "lPath":"None",
+  
+    "device": "cpu",
+    "gpuOverload":"True",
+    "inferMode": "False",
+    "renderMode": "True"
+  }
