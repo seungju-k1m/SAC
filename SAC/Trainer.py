@@ -731,7 +731,9 @@ class sacOnPolicyTrainer(ONPolicy):
         actions = torch.tensor(actions).to(self.device).view((-1, 2))
         rewards = np.array(rewards)
         dones = np.array(dones)
-        donesMask = dones.astype(np.float32)
+        donesMask = (dones==False).astype(np.float32)
+        dd = torch.tensor(donesMask).to(self.device)
+        donesMask = torch.unsqueeze(dd, dim=1)
   
         with torch.no_grad():
             nAction, logProb, _, entropy, _ = \
