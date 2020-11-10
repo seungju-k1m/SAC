@@ -181,6 +181,7 @@ class LSTMNET(nn.Module):
         self.rnn = nn.LSTM(iSize, self.hiddenSize, self.nLayer)
 
     def forward(self, state, lstmState):
+        
         output, (hn, cn) = self.rnn(state, lstmState)
         # output consists of output, hidden, cell state
         return output, (hn, cn)
