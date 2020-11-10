@@ -717,7 +717,7 @@ class sacOnPolicyTrainer(ONPolicy):
 
             dones.append(data[4])
         
-        states = torch.cat(states, dim=0).to(self.device)
+        states = torch.cat(states, dim=0).to(self.device)  # states step, nAgent
         hA = torch.cat(hA, dim=1).to(self.device).detach()
         cA = torch.cat(cA, dim=1).to(self.device).detach()
 
@@ -740,7 +740,7 @@ class sacOnPolicyTrainer(ONPolicy):
                 self.agent.forward(nstates, lstmState=nlstmState)
             c1, c2 = self.agent.criticForward(nstates, nAction)
             minc = torch.min(c1, c2).detach()
-        gT = self.getReturn(rewards, dones, minc)
+        gT = self.getReturn(rewards, dones, minc)  # step, nAgent
         gT -= self.tempValue * logProb * donesMask
         
         if self.fixedTemp:
@@ -802,10 +802,11 @@ class sacOnPolicyTrainer(ONPolicy):
         nAgent = self.nAgent
         gT = []
         step = len(reward)
+        minC = minC.view((step, -1))
         for i in range(nAgent):
-            rewardAgent = reward[:, i]  # [step]
-            doneAgent = done[:, i]  # [step]
-            minCAgent = minC[i * step:(i+1)*step]
+            rewardAgent = reward[:, i]  # [step] , 100
+            doneAgent = done[:, i]  # [step] , 100
+            minCAgent = minC[:, i]
             GT = []
 
             ind = np.where(doneAgent == True)[0]
@@ -816,28 +817,30 @@ class sacOnPolicyTrainer(ONPolicy):
                 else:
                     tempGT = [minCAgent[-1]]
                 rewardAgent = rewardAgent[::-1]
-                for i in range(len(rewardAgent)-1):
-                    tempGT.append(rewardAgent[i+1] + self.gamma*tempGT[i])
-                GT = torch.stack(tempGT[::-1], dim=0)
+                for l in range(len(rewardAgent)-1):
+                    tempGT.append(rewardAgent[l+1] + self.gamma*tempGT[l])
+                GT = torch.stack(tempGT[::-1], dim=0)  # 99
                 gT.append(GT)
             else:
                 j = 0
-                for i in ind:
-                    divRAgent = rewardAgent[j:i+1]
-                    divDAgent = doneAgent[j:i+1]
-                    divCAgent = minCAgent[j:i+1]
-                    j = i+1
+                for z in ind:
+                    divRAgent = rewardAgent[j:z+1]
+                    divDAgent = doneAgent[j:z+1]
+                    divCAgent = minCAgent[j:z+1]
+                    j = z+1
                     
                     if divDAgent[-1]:
                         tempGT = [torch.tensor([divRAgent[-1]]).to(self.device).float()]
                     else:
                         tempGT = [divCAgent[-1]]
                     divRAgent = divRAgent[::-1]
-                    for i in range(len(divRAgent)-1):
-                        tempGT.append(divRAgent[i+1] + self.gamma*tempGT[i])
-                    GT.append(torch.stack(tempGT[::-1], dim=0))
+                    for k in range(len(divRAgent)-1):
+                        tempGT.append(divRAgent[k+1] + self.gamma*tempGT[k])
+                    x = torch.stack(tempGT[::-1], dim=0)
+                    if x.ndim == 2:
+                        x = torch.squeeze(x, dim=1)
+                    GT.append(x)
                 divRAgent = rewardAgent[j:]
-                
                 divDAgent = doneAgent[j:]
                 divCAgent = minCAgent[j:]
                 if len(divDAgent) != 0:
@@ -846,12 +849,20 @@ class sacOnPolicyTrainer(ONPolicy):
                     else:
                         tempGT = [divCAgent[-1]]
                     divRAgent = divRAgent[::-1]
-                    for i in range(len(divRAgent)-1):
-                        tempGT.append(divRAgent[i+1] + self.gamma*tempGT[i])
-                    GT.append(torch.stack(tempGT[::-1], dim=0))
+                    for m in range(len(divRAgent)-1):
+                        tempGT.append(divRAgent[m+1] + self.gamma*tempGT[m])
+                    x = torch.stack(tempGT[::-1], dim=0)
+                    if x.ndim == 2:
+                        x = torch.squeeze(x, dim=1)
+                    GT.append(x)
 
                 gT.append(torch.cat(GT, dim=0))
-        return torch.cat(gT, dim=0)        
+        
+        x = torch.cat(gT, dim=0)
+        x = x.view(nAgent, -1)
+        x = x.permute((1, 0)).contiguous()
+        x = x.view(-1, 1)
+        return x        
 
     def getObs(self, init=False):
         """

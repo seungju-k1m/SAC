@@ -1,7 +1,7 @@
 {
-    "envName":"./Env/Linux/v4/4SimpleEnv_1440",
+    "envName":"./Env/Linux/v4/4MoreSimpleEnv_1440",
     "sSize": [1, 96, 96],
-    "nAgent": 30,
+    "nAgent": 15,
     "aSize": 2,
     "seed": 0,
   
