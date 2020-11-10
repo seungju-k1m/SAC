@@ -643,7 +643,7 @@ class sacOnPolicyTrainer(ONPolicy):
                 self.cOptim01 = getOptim(self.optimData[optimKey], self.critic01)
                 self.cFOptim01 = getOptim(self.optimData[optimKey], self.criticFeature01)
                 self.cOptim02 = getOptim(self.optimData[optimKey], self.critic02)
-                self.cFOptim02 = getOptim(self.optimData[optimKey], self.criticFeature0)
+                self.cFOptim02 = getOptim(self.optimData[optimKey], self.criticFeature02)
             if optimKey == 'temperature':
                 if self.fixedTemp is False:
                     self.tOptim = getOptim(self.optimData[optimKey], [self.tempValue], floatV=True)
@@ -705,15 +705,15 @@ class sacOnPolicyTrainer(ONPolicy):
             [], [], []
         for data in self.replayMemory:
             states.append(data[0][0])
-            hA.append(data[0][1][0][0])
-            cA.append(data[0][1][0][1])
+            hA.append(data[0][1][0])
+            cA.append(data[0][1][1])
 
             actions.append(data[1])
             rewards.append(data[2])
 
             nstates.append(data[3][0])
-            nhA.append(data[3][1][0][0])
-            ncA.append(data[3][1][0][1])
+            nhA.append(data[3][1][0])
+            ncA.append(data[3][1][1])
 
             dones.append(data[4])
         
@@ -915,31 +915,20 @@ class sacOnPolicyTrainer(ONPolicy):
     def zeroLSTMState(self):
         hAState = torch.zeros(1, self.nAgent, self.hiddenSize).to(self.device)
         cAState = torch.zeros(1, self.nAgent, self.hiddenSize).to(self.device)
-        hCState01 = torch.zeros(1, self.nAgent, self.hiddenSize).to(self.device)
-        cCState01 = torch.zeros(1, self.nAgent, self.hiddenSize).to(self.device)
-        hCState02 = torch.zeros(1, self.nAgent, self.hiddenSize).to(self.device)
-        cCState02 = torch.zeros(1, self.nAgent, self.hiddenSize).to(self.device)
-        lstmState = ((hAState, cAState), (hCState01, cCState01), (hCState02, cCState02))
+
+        lstmState = (hAState, cAState)
         return lstmState
     
     def setZeroLSTMState(self, lstmState, idx):
-        (ha, ca), (hc1, cc1), (hc2, cc2) = lstmState
+        ha, ca = lstmState
 
         hAState = torch.zeros(1, 1, self.hiddenSize).to(self.device)
         cAState = torch.zeros(1, 1, self.hiddenSize).to(self.device)
-        hCState01 = torch.zeros(1, 1, self.hiddenSize).to(self.device)
-        cCState01 = torch.zeros(1, 1, self.hiddenSize).to(self.device)
-        hCState02 = torch.zeros(1, 1, self.hiddenSize).to(self.device)
-        cCState02 = torch.zeros(1, 1, self.hiddenSize).to(self.device)
 
         ha[:, idx:idx+1, :] = hAState
         ca[:, idx:idx+1, :] = cAState
-        hc1[:, idx:idx+1, :] = hCState01
-        cc1[:, idx:idx+1, :] = cCState01
-        hc2[:, idx:idx+1, :] = hCState02
-        cc2[:, idx:idx+1, :] = cCState02
 
-        lstmState = ((ha, ca), (hc1, cc1), (hc2, cc2))
+        lstmState = (ha, ca)
 
         return lstmState
 
