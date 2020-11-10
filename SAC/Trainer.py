@@ -731,7 +731,7 @@ class sacOnPolicyTrainer(ONPolicy):
         actions = torch.tensor(actions).to(self.device).view((-1, 2))
         rewards = np.array(rewards)
         dones = np.array(dones)
-        donesMask = (dones==False).astype(np.float32)
+        donesMask = (dones==False).astype(np.float32).reshape(-1)
         dd = torch.tensor(donesMask).to(self.device)
         donesMask = torch.unsqueeze(dd, dim=1)
   
@@ -748,16 +748,13 @@ class sacOnPolicyTrainer(ONPolicy):
             lossC1, lossC2 = self.agent.calQLoss(
                 states.detach(),
                 gT.detach(),
-                actions.detach(),
-                lstmState
+                actions.detach()
             )
             lossC1.backward()
             lossC2.backward()
 
-            self.cFOptim01_1.step()
-            self.cFOptim01_2.step()
-            self.cFOptim02_1.step()
-            self.cFOptim02_2.step()
+            self.cFOptim01.step()
+            self.cFOptim02.step()
             self.cOptim01.step()
             self.cOptim02.step()
 
@@ -772,7 +769,7 @@ class sacOnPolicyTrainer(ONPolicy):
             self.aOptim.step()
 
         normA = calGlobalNorm(self.actor) + calGlobalNorm(self.actorFeature01) + calGlobalNorm(self.actorFeature02)
-        normC = calGlobalNorm(self.critic01) + calGlobalNorm(self.criticFeature01_1) + calGlobalNorm(self.criticFeature02_1)
+        normC = calGlobalNorm(self.critic01) + calGlobalNorm(self.criticFeature01) 
         norm = normA + normC
         
         entropy = entropy.mean().cpu().detach().numpy()
