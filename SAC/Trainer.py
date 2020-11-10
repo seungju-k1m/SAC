@@ -654,12 +654,10 @@ class sacOnPolicyTrainer(ONPolicy):
         self.aFOptim02.zero_grad()
 
         self.cOptim01.zero_grad()
-        self.cFOptim01_1.zero_grad()
-        self.cFOptim02_1.zero_grad()
+        self.cFOptim01.zero_grad()
 
         self.cOptim02.zero_grad()
-        self.cFOptim01_1.zero_grad()
-        self.cFOptim02_1.zero_grad()
+        self.cFOptim02.zero_grad()
 
     def getAction(self, state, lstmState=None, dMode=False):
         """
@@ -683,11 +681,7 @@ class sacOnPolicyTrainer(ONPolicy):
         if lstmState is None:
             hAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
             cAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
-            hCState01 = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
-            cCState01 = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
-            hCState02 = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
-            cCState02 = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
-            lstmState = ((hAState, cAState), (hCState01, cCState01), (hCState02, cCState02))
+            lstmState = (hAState, cAState)
 
         with torch.no_grad():
             if dMode:
@@ -705,18 +699,14 @@ class sacOnPolicyTrainer(ONPolicy):
         before training, shift the device of idx network and data
 
         """
-        states, hA, cA, hC1, cC1, hC2, cC2, actions, rewards, dones = \
-            [], [], [], [], [], [], [], [], [], []
-        nstates, nhA, ncA, nhC1, ncC1, nhC2, ncC2 = \
-            [], [], [], [], [], [], []
+        states, hA, cA,  actions, rewards, dones = \
+            [], [], [], [], [], []
+        nstates, nhA, ncA = \
+            [], [], []
         for data in self.replayMemory:
             states.append(data[0][0])
             hA.append(data[0][1][0][0])
             cA.append(data[0][1][0][1])
-            hC1.append(data[0][1][1][0])
-            cC1.append(data[0][1][1][1])
-            hC2.append(data[0][1][2][0])
-            cC2.append(data[0][1][2][1])
 
             actions.append(data[1])
             rewards.append(data[2])
@@ -724,43 +714,32 @@ class sacOnPolicyTrainer(ONPolicy):
             nstates.append(data[3][0])
             nhA.append(data[3][1][0][0])
             ncA.append(data[3][1][0][1])
-            nhC1.append(data[3][1][1][0])
-            ncC1.append(data[3][1][1][1])
-            nhC2.append(data[3][1][2][0])
-            ncC2.append(data[3][1][2][1])
 
             dones.append(data[4])
         
         states = torch.cat(states, dim=0).to(self.device)
         hA = torch.cat(hA, dim=1).to(self.device).detach()
         cA = torch.cat(cA, dim=1).to(self.device).detach()
-        hC1 = torch.cat(hC1, dim=1).to(self.device).detach()
-        cC1 = torch.cat(cC1, dim=1).to(self.device).detach()
-        hC2 = torch.cat(hC2, dim=1).to(self.device).detach()
-        cC2 = torch.cat(cC2, dim=1).to(self.device).detach()
 
         nstates = torch.cat(nstates, dim=0).to(self.device)
         nhA = torch.cat(nhA, dim=1).to(self.device).detach()
         ncA = torch.cat(ncA, dim=1).to(self.device).detach()
-        nhC1 = torch.cat(nhC1, dim=1).to(self.device).detach()
-        ncC1 = torch.cat(ncC1, dim=1).to(self.device).detach()
-        nhC2 = torch.cat(nhC2, dim=1).to(self.device).detach()
-        ncC2 = torch.cat(ncC2, dim=1).to(self.device).detach()
         
-        lstmState = ((hA, cA), (hC1, cC1), (hC2, cC2))
-        nlstmState = ((nhA, ncA), (nhC1, ncC1), (nhC2, ncC2))
+        lstmState = (hA, cA)
+        nlstmState = (nhA, ncA)
 
         actions = torch.tensor(actions).to(self.device).view((-1, 2))
         rewards = np.array(rewards)
         dones = np.array(dones)
+        donesMask = dones.astype(np.float32)
   
         with torch.no_grad():
             nAction, logProb, _, entropy, _ = \
                 self.agent.forward(nstates, lstmState=nlstmState)
-            c1, c2 = self.agent.criticForward(nstates, nAction, nlstmState)
+            c1, c2 = self.agent.criticForward(nstates, nAction)
             minc = torch.min(c1, c2).detach()
         gT = self.getReturn(rewards, dones, minc)
-        gT -= self.tempValue * logProb
+        gT -= self.tempValue * logProb * donesMask
         
         if self.fixedTemp:
             self.zeroGrad()

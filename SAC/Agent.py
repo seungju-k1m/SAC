@@ -54,8 +54,8 @@ class sacAgent(baseAgent):
                 self.criticFeature01_2 = constructNet(
                     netData, iSize=self.sSize[0], WH=self.iFeature01)
             elif netName == 'critic':
-                self.critic01 = constructNet(netData, iSize=self.iFeature03)
-                self.critic02 = constructNet(netData, iSize=self.iFeature03)
+                self.critic01 = constructNet(netData, iSize=self.iFeature02)
+                self.critic02 = constructNet(netData, iSize=self.iFeature02)
         self.temperature = torch.zeros(1, requires_grad=True, device=self.aData['device'])
     
     def forward(self, state, lstmState=None):
