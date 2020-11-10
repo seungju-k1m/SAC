@@ -39,11 +39,6 @@
                 "act": "relu",
                 "BN": "None"
               },
-              "criticFeature02":{
-                  "netCat":"LSTMNET",
-                  "nLayer":1,
-                  "hiddenSize":512
-              },
               "critic":{
                   "netCat":"MLP",
                   "nLayer":1,

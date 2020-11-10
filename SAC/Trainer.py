@@ -629,10 +629,10 @@ class sacOnPolicyTrainer(ONPolicy):
         optimKeyList = list(self.optimData.keys())
         self.actor, self.actorFeature01, self.actorFeature02 = \
             self.agent.actor, self.agent.actorFeature01,  self.agent.actorFeature02
-        self.criticFeature01_1, self.criticFeature02_1, self.critic01 = \
-            self.agent.criticFeature01_1, self.agent.criticFeature02_1, self.agent.critic01
-        self.criticFeature01_2, self.criticFeature02_2, self.critic02 = \
-            self.agent.criticFeature01_2, self.agent.criticFeature02_2, self.agent.critic02
+        self.criticFeature01, self.critic01 = \
+            self.agent.criticFeature01_1, self.agent.critic01
+        self.criticFeature02,  self.critic02 = \
+            self.agent.criticFeature01_2, self.agent.critic02
 
         for optimKey in optimKeyList:
             if optimKey == 'actor':
@@ -641,11 +641,9 @@ class sacOnPolicyTrainer(ONPolicy):
                 self.aFOptim02 = getOptim(self.optimData[optimKey], self.actorFeature02)
             if optimKey == 'critic':
                 self.cOptim01 = getOptim(self.optimData[optimKey], self.critic01)
-                self.cFOptim01_1 = getOptim(self.optimData[optimKey], self.criticFeature01_1)
-                self.cFOptim02_1 = getOptim(self.optimData[optimKey], self.criticFeature02_1)
+                self.cFOptim01 = getOptim(self.optimData[optimKey], self.criticFeature01)
                 self.cOptim02 = getOptim(self.optimData[optimKey], self.critic02)
-                self.cFOptim01_2 = getOptim(self.optimData[optimKey], self.criticFeature01_2)
-                self.cFOptim02_2 = getOptim(self.optimData[optimKey], self.criticFeature02_2)
+                self.cFOptim02 = getOptim(self.optimData[optimKey], self.criticFeature0)
             if optimKey == 'temperature':
                 if self.fixedTemp is False:
                     self.tOptim = getOptim(self.optimData[optimKey], [self.tempValue], floatV=True)
@@ -659,7 +657,7 @@ class sacOnPolicyTrainer(ONPolicy):
         self.cFOptim01_1.zero_grad()
         self.cFOptim02_1.zero_grad()
 
-        self.cOptim01.zero_grad()
+        self.cOptim02.zero_grad()
         self.cFOptim01_1.zero_grad()
         self.cFOptim02_1.zero_grad()
 
