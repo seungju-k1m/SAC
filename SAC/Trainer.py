@@ -659,7 +659,7 @@ class sacOnPolicyTrainer(ONPolicy):
         self.cFOptim01_1.zero_grad()
         self.cFOptim02_1.zero_grad()
 
-        self.cOptim01.zero_grad()
+        self.cOptim02.zero_grad()
         self.cFOptim01_1.zero_grad()
         self.cFOptim02_1.zero_grad()
 
