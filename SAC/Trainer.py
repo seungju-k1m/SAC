@@ -755,6 +755,9 @@ class sacOnPolicyTrainer(ONPolicy):
         actions = torch.tensor(actions).to(self.device).view((-1, 2))
         rewards = np.array(rewards)
         dones = np.array(dones)
+        dd = (dones==False).reshape((-1))
+        donesMask = torch.tensor(dd.astype(np.float32)).to(self.device)
+        donesMask = torch.unsqueeze(donesMask, dim=1)
   
         with torch.no_grad():
             nAction, logProb, _, entropy, _ = \
@@ -762,7 +765,7 @@ class sacOnPolicyTrainer(ONPolicy):
             c1, c2 = self.agent.criticForward(nstates, nAction, nlstmState)
             minc = torch.min(c1, c2).detach()
         gT = self.getReturn(rewards, dones, minc)
-        gT -= self.tempValue * logProb
+        gT -= self.tempValue * logProb * donesMask
         
         if self.fixedTemp:
             self.zeroGrad()
