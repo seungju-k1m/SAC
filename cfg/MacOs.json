@@ -1,25 +1,15 @@
 {
   "envName":"./Env/MacOs/4SimpleEnv_1440",
-  "sSize": [1, 96, 96],
-  "nAgent": 30,
+  "sSize": [1, 726],
+  "nAgent": 15,
   "aSize": 2,
   "seed": 0,
 
   "agent": {
-            "actorFeature01": {
-              "netCat": "CNET",
-              "nLayer": 5,
-              "nUnit": [8, 16, 32, 64],
-              "stride": [2, 2, 2, 2],
-              "fSize" : [3, 3, 3, 3, -1],
-              "padding" : [1, 1, 1, 1],
-              "act": "relu",
-              "BN": "None"
-            },
-            "actorFeature02":{
+            "actorFeature01":{
                 "netCat":"LSTMNET",
                 "nLayer":1,
-                "hiddenSize":16
+                "hiddenSize":1024
             },
             "actor":{
                 "netCat":"MLP",
@@ -29,20 +19,10 @@
                 "BN":"None"
             },
 
-            "criticFeature01": {
-              "netCat": "CNET",
-              "nLayer": 5,
-              "nUnit": [8, 16, 32, 64],
-              "stride": [2, 2, 2, 2],
-              "fSize" : [3, 3, 3, 3, -1],
-              "padding" : [1, 1, 1, 1],
-              "act": "relu",
-              "BN": "None"
-            },
-            "criticFeature02":{
+            "criticFeature01":{
                 "netCat":"LSTMNET",
                 "nLayer":1,
-                "hiddenSize":16
+                "hiddenSize":1024
             },
             "critic":{
                 "netCat":"MLP",
@@ -53,7 +33,7 @@
             }
   },
   "episodeP": 20,
-  "updateStep":30,
+  "updateStep":5,
 
   "fixedTemp": "True",
   "tempValue": 0.2,

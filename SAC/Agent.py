@@ -1,6 +1,6 @@
 import torch
 from baseline.baseNetwork import baseAgent
-from baseline.utils import constructNet, getOptim
+from baseline.utils import constructNet
 
 
 class sacAgent(baseAgent):
@@ -30,30 +30,20 @@ class sacAgent(baseAgent):
 
     def getISize(self):
         self.iFeature01 = self.aData['sSize'][-1]
-        temp = self.aData['actorFeature01']['stride']
-        div = 1
-        for t in temp:
-            div *= t
-        nUnit = self.aData['actorFeature01']['nUnit'][-1]
-        self.iFeature02 = int((self.iFeature01/div)**2) * nUnit
-        self.iFeature03 = self.hiddenSize
+        self.iFeature02 = self.hiddenSize
         self.sSize = self.aData['sSize']
     
     def buildModel(self):
         for netName in self.keyList:
             netData = self.aData[netName]
             if netName == 'actorFeature01':
-                self.actorFeature01 = constructNet(netData, iSize=self.sSize[0], WH=self.iFeature01)
-            elif netName == 'actorFeature02':
-                self.actorFeature02 = constructNet(netData, iSize=self.iFeature02)
-            elif netName == 'actor':
-                self.actor = constructNet(netData, iSize=self.iFeature03)
-            elif netName == 'criticFeature01':
-                self.criticFeature01_1 = constructNet(
-                    netData, iSize=self.sSize[0], WH=self.iFeature01)
-                self.criticFeature01_2 = constructNet(
-                    netData, iSize=self.sSize[0], WH=self.iFeature01)
-            elif netName == 'critic':
+                self.actorFeature01 = constructNet(netData, iSize=self.iFeature01)
+            if netName == 'actor':
+                self.actor = constructNet(netData, iSize=self.iFeature02)
+            if netName == 'criticFeature01':
+                self.criticFeature01 = constructNet(netData, iSize=self.iFeature01+2)
+                self.criticFeature02 = constructNet(netData, iSize=self.iFeature01+2)
+            if netName == 'critic':
                 self.critic01 = constructNet(netData, iSize=self.iFeature02)
                 self.critic02 = constructNet(netData, iSize=self.iFeature02)
         self.temperature = torch.zeros(1, requires_grad=True, device=self.aData['device'])
