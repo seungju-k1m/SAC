@@ -213,7 +213,7 @@ class sacOnPolicyTrainer(ONPolicy):
             minc = torch.min(c1, c2)
             minc = minc.detach()
 
-        gT = self.getReturn(rewards, dones, minc)  # step, nAgent
+        gT = self.getReturn(rewards, dones, minc, logProb)  # step, nAgent
         gT -= self.tempValue * logProb * donesMask
         
         if self.fixedTemp:
@@ -261,7 +261,7 @@ class sacOnPolicyTrainer(ONPolicy):
             self.writer.add_scalar('Critic Loss', (lossC1+lossC2)/2, step)
         self.replayMemory.clear()
 
-    def getReturn(self, reward, done, minC):
+    def getReturn(self, reward, done, minC, logProb):
         """
         input:
             reward:[np.array]  
@@ -276,19 +276,21 @@ class sacOnPolicyTrainer(ONPolicy):
         gT = []
         step = len(reward)
         minC = minC.view((step, -1))
+        logProb = logProb.view((step, -1))
         for i in range(nAgent):
             rewardAgent = reward[:, i]  # [step] , 100
             doneAgent = done[:, i]  # [step] , 100
             minCAgent = minC[:, i]
+            logProbAgent = logProb[:, i]
             GT = []
             if doneAgent[-1] is False:
                 discounted_r = minCAgent[-1]
             else:
                 discounted_r = 0
-            for r, is_terminal in zip(reversed(rewardAgent), reversed(doneAgent)):
+            for r, is_terminal, lP in zip(reversed(rewardAgent), reversed(doneAgent), reversed(logProbAgent)):
                 if is_terminal:
                     discounted_r = 0
-                discounted_r = r + self.gamma * discounted_r
+                discounted_r = r + self.gamma * (discounted_r - self.fixedTemp*lP)
                 GT.append(discounted_r)
             GT = torch.tensor(GT[::-1]).view((-1, 1)).to(self.device)
             gT.append(GT)
