@@ -171,12 +171,12 @@ class sacOnPolicyTrainer(ONPolicy):
             actions.append(data[1])
             rewards.append(data[2])
 
+            dones.append(data[4])
+
             nstates.append(data[3][0])
             nhA.append(data[3][1][0])
             ncA.append(data[3][1][1])
 
-            dones.append(data[4])
-        
         states = torch.cat(states, dim=0).to(self.device)  # states step, nAgent
         hA = torch.cat(hA, dim=1).to(self.device).detach()
         cA = torch.cat(cA, dim=1).to(self.device).detach()
@@ -200,16 +200,18 @@ class sacOnPolicyTrainer(ONPolicy):
                 self.agent.forward(nstates, lstmState=nlstmState)
             c1, c2 = self.agent.criticForward(nstates, nAction)
 
-            c1a, c2a = torch.abs(c1), torch.abs(c2)
+            # c1a, c2a = torch.abs(c1), torch.abs(c2)
 
-            ca = torch.cat((c1a, c2a), dim=1)
+            # ca = torch.cat((c1a, c2a), dim=1)
 
-            argmin = torch.argmin(ca, dim=1).view(-1, 1)
-            minc = torch.cat((c1a, c2a), dim=1)
-            c = []
-            for z, i in enumerate(argmin):
-                c.append(minc[z, i])
-            minc = torch.stack(c, dim=0)
+            # argmin = torch.argmin(ca, dim=1).view(-1, 1)
+            # minc = torch.cat((c1a, c2a), dim=1)
+            # c = []
+            # for z, i in enumerate(argmin):
+            #     c.append(minc[z, i])
+            # minc = torch.stack(c, dim=0)
+            minc = torch.min(c1, c2)
+            minc = minc.detach()
 
         gT = self.getReturn(rewards, dones, minc)  # step, nAgent
         gT -= self.tempValue * logProb * donesMask
@@ -279,61 +281,20 @@ class sacOnPolicyTrainer(ONPolicy):
             doneAgent = done[:, i]  # [step] , 100
             minCAgent = minC[:, i]
             GT = []
-
-            ind = np.where(doneAgent == True)[0]
-            div = len(ind) + 1
-            if div == 1:
-                if doneAgent[-1]:
-                    tempGT = [torch.tensor([rewardAgent[-1]]).to(self.device).float()]
-                else:
-                    tempGT = [minCAgent[-1]]
-                rewardAgent = rewardAgent[::-1]
-                for l in range(len(rewardAgent)-1):
-                    tempGT.append(rewardAgent[l+1] + self.gamma*tempGT[l])
-                GT = torch.stack(tempGT[::-1], dim=0)  # 99
-                gT.append(GT)
+            if doneAgent[-1] is False:
+                discounted_r = minCAgent[-1]
             else:
-                j = 0
-                for z in ind:
-                    divRAgent = rewardAgent[j:z+1]
-                    divDAgent = doneAgent[j:z+1]
-                    divCAgent = minCAgent[j:z+1]
-                    j = z+1
-                    
-                    if divDAgent[-1]:
-                        tempGT = [torch.tensor([divRAgent[-1]]).to(self.device).float()]
-                    else:
-                        tempGT = [divCAgent[-1]]
-                    divRAgent = divRAgent[::-1]
-                    for k in range(len(divRAgent)-1):
-                        tempGT.append(divRAgent[k+1] + self.gamma*tempGT[k])
-                    x = torch.stack(tempGT[::-1], dim=0)
-                    if x.ndim == 2:
-                        x = torch.squeeze(x, dim=1)
-                    GT.append(x)
-                divRAgent = rewardAgent[j:]
-                divDAgent = doneAgent[j:]
-                divCAgent = minCAgent[j:]
-                if len(divDAgent) != 0:
-                    if divDAgent[-1]:
-                        tempGT = [torch.tensor([divRAgent[-1]]).to(self.device).float()]
-                    else:
-                        tempGT = [divCAgent[-1]]
-                    divRAgent = divRAgent[::-1]
-                    for m in range(len(divRAgent)-1):
-                        tempGT.append(divRAgent[m+1] + self.gamma*tempGT[m])
-                    x = torch.stack(tempGT[::-1], dim=0)
-                    if x.ndim == 2:
-                        x = torch.squeeze(x, dim=1)
-                    GT.append(x)
+                discounted_r = 0
+            for r, is_terminal in zip(reversed(rewardAgent), reversed(doneAgent)):
+                if is_terminal:
+                    discounted_r = 0
+                discounted_r = r + self.gamma * discounted_r
+                GT.append(discounted_r)
+            GT = torch.tensor(GT).view((-1, 1)).to(self.device)
+            gT.append(GT)
 
-                gT.append(torch.cat(GT, dim=0))
-        
-        x = torch.cat(gT, dim=0)
-        x = x.view(nAgent, -1)
-        x = x.permute((1, 0)).contiguous()
-        x = x.view(-1, 1)
-        return x        
+        gT = torch.cat(gT, dim=0)
+        return gT        
 
     def getObs(self, init=False):
         """
