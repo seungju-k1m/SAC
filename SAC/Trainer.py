@@ -36,7 +36,7 @@ class sacOnPolicyTrainer(ONPolicy):
  
         pureEnv = self.data['envName'].split('/')
         name = pureEnv[-1]
-        self.sPath += name + '_' + str(self.nAgent)
+        self.sPath += name + '_' + str(self.nAgent) + '_LSTMV1_'
         if self.fixedTemp:
             self.sPath += str(int(self.tempValue * 100)) +'.pth'
         else:
