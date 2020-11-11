@@ -193,8 +193,17 @@ class sacAgent(baseAgent):
     def calALoss(self, state, lstmState, alpha=0):
         action, logProb, critics, entropy, _ = self.forward(state, lstmState)
         critic1, critic2 = critics
-        critic = torch.min(critic1, critic2)
-        
+        c1a, c2a = torch.abs(critic1), torch.abs(critic2)
+
+        ca = torch.cat((c1a, c2a), dim=1)
+
+        argmin = torch.argmin(ca, dim=1).view(-1, 1)
+        minc = torch.cat((c1a, c2a), dim=1)
+        c = []
+        for z, i in enumerate(argmin):
+            c.append(minc[z, i])
+        critic = torch.stack(c, dim=0)
+    
         if alpha != 0:
             tempDetached = alpha
         else:
