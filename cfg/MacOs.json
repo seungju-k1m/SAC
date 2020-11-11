@@ -1,7 +1,7 @@
 {
-  "envName":"./Env/MacOs/4MoreSimpleEnv_1440",
+  "envName":"./Env/MacOs/8MoreSimpleEnv_1440",
   "sSize": [1, 726],
-  "nAgent": 15,
+  "nAgent": 24,
   "aSize": 2,
   "seed": 0,
 
@@ -9,7 +9,7 @@
             "actorFeature01":{
                 "netCat":"LSTMNET",
                 "nLayer":1,
-                "hiddenSize":1024
+                "hiddenSize":4096
             },
             "actor":{
                 "netCat":"MLP",
@@ -22,7 +22,7 @@
             "criticFeature01":{
                 "netCat":"LSTMNET",
                 "nLayer":1,
-                "hiddenSize":1024
+                "hiddenSize":4096
             },
             "critic":{
                 "netCat":"MLP",
@@ -44,14 +44,14 @@
   "optim": {
     "actor": {
       "name": "adam",
-      "lr": 3e-4,
+      "lr": 3e-5,
       "decay": 0,
       "eps": 1e-7,
       "clipping": "None"
     },
     "critic": {
       "name": "adam",
-      "lr": 3e-4,
+      "lr": 3e-5,
       "decay": 0,
       "clipping": "None",
       "eps": 1e-7
