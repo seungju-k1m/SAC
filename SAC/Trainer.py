@@ -191,9 +191,6 @@ class sacOnPolicyTrainer(ONPolicy):
         actions = torch.tensor(actions).to(self.device).view((-1, 2))
         rewards = np.array(rewards)
         dones = np.array(dones)
-        donesMask = (dones==False).astype(np.float32).reshape(-1)
-        dd = torch.tensor(donesMask).to(self.device)
-        donesMask = torch.unsqueeze(dd, dim=1)
 
         with torch.no_grad():
             nAction, logProb, _, entropy, _ = \
@@ -214,7 +211,6 @@ class sacOnPolicyTrainer(ONPolicy):
             minc = minc.detach()
 
         gT = self.getReturn(rewards, dones, minc, logProb)  # step, nAgent
-        gT -= self.tempValue * logProb * donesMask
         
         if self.fixedTemp:
             self.zeroGrad()
