@@ -1,7 +1,7 @@
 {
-  "envName":"./Env/Linux/v4/8MoreSimpleEnv_1440",
+  "envName":"./Env/Linux/v4/16MoreSimpleEnv_1440",
   "sSize": [1, 726],
-  "nAgent": 24,
+  "nAgent": 48,
   "aSize": 2,
   "seed": 0,
 
@@ -9,7 +9,7 @@
             "actorFeature01":{
                 "netCat":"LSTMNET",
                 "nLayer":1,
-                "hiddenSize":1024
+                "hiddenSize":2048
             },
             "actor":{
                 "netCat":"MLP",
@@ -22,7 +22,7 @@
             "criticFeature01":{
                 "netCat":"LSTMNET",
                 "nLayer":1,
-                "hiddenSize":1024
+                "hiddenSize":2048
             },
             "critic":{
                 "netCat":"MLP",

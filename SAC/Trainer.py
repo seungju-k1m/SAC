@@ -433,7 +433,7 @@ class sacOnPolicyTrainer(ONPolicy):
             if step % self.updateStep == 0:
                 self.train(step)
             
-            if step % 200 == 0:
+            if step % 2000 == 0:
                 episodeReward = np.array(episodeReward)
                 reward = episodeReward.mean()
                 if self.writeTMode:
