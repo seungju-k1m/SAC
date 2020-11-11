@@ -48,7 +48,7 @@
               }
     },
     "episodeP": 20,
-    "updateStep":5,
+    "updateStep":1,
   
     "fixedTemp": "True",
     "tempValue": 0.2,

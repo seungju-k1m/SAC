@@ -194,12 +194,23 @@ class sacOnPolicyTrainer(ONPolicy):
         donesMask = (dones==False).astype(np.float32).reshape(-1)
         dd = torch.tensor(donesMask).to(self.device)
         donesMask = torch.unsqueeze(dd, dim=1)
-  
+
         with torch.no_grad():
             nAction, logProb, _, entropy, _ = \
                 self.agent.forward(nstates, lstmState=nlstmState)
             c1, c2 = self.agent.criticForward(nstates, nAction)
-            minc = torch.min(c1, c2).detach()
+
+            c1a, c2a = torch.abs(c1), torch.abs(c2)
+
+            ca = torch.cat((c1a, c2a), dim=1)
+
+            argmin = torch.argmin(ca, dim=1).view(-1, 1)
+            minc = torch.cat((c1a, c2a), dim=1)
+            c = []
+            for z, i in enumerate(argmin):
+                c.append(minc[z, i])
+            minc = torch.stack(c, dim=0)
+
         gT = self.getReturn(rewards, dones, minc)  # step, nAgent
         gT -= self.tempValue * logProb * donesMask
         
