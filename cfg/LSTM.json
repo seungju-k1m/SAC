@@ -49,6 +49,7 @@
     },
     "episodeP": 20,
     "updateStep":5,
+    "tau":0.05,
   
     "fixedTemp": "True",
     "tempValue": 0.2,

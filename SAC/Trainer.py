@@ -29,6 +29,8 @@ class sacOnPolicyTrainer(ONPolicy):
         else:
             self.device = torch.device("cpu")
         self.agent = sacAgent(self.aData, self.optimData)
+        self.targetAgent = sacAgent(self.aData, self.optimData)
+        self.targetAgent.to(self.device)
         self.agent.to(self.device)
  
         pureEnv = self.data['envName'].split('/')
@@ -42,6 +44,7 @@ class sacOnPolicyTrainer(ONPolicy):
         self.hiddenSize = self.aData['actorFeature02']['hiddenSize']
         self.updateStep = self.data['updateStep']
         self.genOptim()
+        self.tau = self.data['tau']
 
     def ppState(self, obs):
         """
@@ -90,6 +93,11 @@ class sacOnPolicyTrainer(ONPolicy):
             self.agent.criticFeature01_1, self.agent.critic01
         self.criticFeature02,  self.critic02 = \
             self.agent.criticFeature01_2, self.agent.critic02
+        
+        self.tcriticFeature01, self.tcritic01 = \
+            self.targetAgent.criticFeature01_1, self.targetAgent.critic01
+        self.tcriticFeature02,  self.tcritic02 = \
+            self.targetAgent.criticFeature01_2, self.targetAgent.critic02
 
         for optimKey in optimKeyList:
             if optimKey == 'actor':
@@ -104,7 +112,28 @@ class sacOnPolicyTrainer(ONPolicy):
             if optimKey == 'temperature':
                 if self.fixedTemp is False:
                     self.tOptim = getOptim(self.optimData[optimKey], [self.tempValue], floatV=True)
-                 
+
+    def targetNetUpdate(self):
+        with torch.no_grad():
+            for tC1, tC2, C1, C2, tFC1, tFC2, FC1, FC2 in zip(
+                        self.tcritic01.parameters(), 
+                        self.tcritic02.parameters(), 
+                        self.critic01.parameters(), 
+                        self.critic02.parameters(),
+                        self.tcriticFeature01.parameters(),
+                        self.tcriticFeature02.parameters(),
+                        self.criticFeature01.parameters(),
+                        self.criticFeature02.parameters()):
+                temp1 = self.tau * C1 + (1 - self.tau) * tC1
+                temp2 = self.tau * C2 + (1 - self.tau) * tC2
+                temp3 = self.tau * FC1 + (1 - self.tau) * tFC1
+                temp4 = self.tau * FC2 + (1 - self.tau) * tFC2
+
+                tC1.copy_(temp1)
+                tC2.copy_(temp2)
+                tFC1.copy_(temp3)
+                tFC2.copy_(temp4)
+
     def zeroGrad(self):
         self.aOptim.zero_grad()
         self.aFOptim01.zero_grad()
@@ -192,7 +221,7 @@ class sacOnPolicyTrainer(ONPolicy):
         with torch.no_grad():
             nAction, logProb, _, entropy, _ = \
                 self.agent.forward(nstates, lstmState=nlstmState)
-            c1, c2 = self.agent.criticForward(nstates, nAction)
+            c1, c2 = self.targetAgent.criticForward(nstates, nAction)
 
             # c1a, c2a = torch.abs(c1), torch.abs(c2)
 
@@ -425,6 +454,7 @@ class sacOnPolicyTrainer(ONPolicy):
             step += 1
             if step % self.updateStep == 0:
                 self.train(step)
+                self.targetNetUpdate()
             
             if step % 2000 == 0:
                 episodeReward = np.array(episodeReward)
