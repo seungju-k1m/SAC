@@ -279,7 +279,7 @@ class sacOnPolicyTrainer(ONPolicy):
             minCAgent = minC[:, i]
             logProbAgent = logProb[:, i]
             GT = []
-            if doneAgent[-1] is False:
+            if doneAgent[-1] == False:
                 discounted_r = minCAgent[-1]
             else:
                 discounted_r = 0

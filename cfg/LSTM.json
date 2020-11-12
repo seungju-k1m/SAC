@@ -48,13 +48,13 @@
               }
     },
     "episodeP": 20,
-    "updateStep":90,
+    "updateStep":5,
   
     "fixedTemp": "True",
     "tempValue": 0.05,
   
     "lrFreq": 1,
-    "rScaling": 10,
+    "rScaling": 1,
   
     "optim": {
       "actor": {
