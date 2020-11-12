@@ -51,10 +51,10 @@
     "updateStep":90,
   
     "fixedTemp": "True",
-    "tempValue": 0.2,
+    "tempValue": 0.05,
   
     "lrFreq": 1,
-    "rScaling": 1,
+    "rScaling": 10,
   
     "optim": {
       "actor": {

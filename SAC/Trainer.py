@@ -286,12 +286,16 @@ class sacOnPolicyTrainer(ONPolicy):
             for r, is_terminal, lP in zip(reversed(rewardAgent), reversed(doneAgent), reversed(logProbAgent)):
                 if is_terminal:
                     discounted_r = 0
-                discounted_r = r + self.gamma * (discounted_r - self.fixedTemp*lP)
+                    lP = 0
+                discounted_r = r - self.tempValue * lP + self.gamma * discounted_r
                 GT.append(discounted_r)
             GT = torch.tensor(GT[::-1]).view((-1, 1)).to(self.device)
             gT.append(GT)
 
         gT = torch.cat(gT, dim=0)
+        gT = gT.view(nAgent, -1)
+        gT = gT.permute(1, 0).contiguous()
+        gT = gT.view((-1, 1))
         return gT        
 
     def getObs(self, init=False):
