@@ -1,5 +1,5 @@
 {
-    "envName":"./Env/MacOs/simEnv01",
+    "envName":"./Env/Linux/simEnv01",
     "unityEnv": "True",
     "imgMode":"True",
     "sSize": [1, 192, 192],
