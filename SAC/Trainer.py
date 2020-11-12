@@ -92,14 +92,8 @@ class sacTrainer(OFFPolicy):
     def ppState(self, obs, id=0):
         state = np.zeros(self.sSize)
 
-        if state.ndim > 2:
-            obs = cv2.resize(obs, (self.sSize[1:]))
-            obs = np.uint8(obs)
-            obs = cv2.cvtColor(obs, cv2.COLOR_BGR2GRAY)
-            obs = np.reshape(
-                obs, 
-                (self.sSize[1:])
-                )
+        obs = obs[:727]
+
         self.obsSets[id].append(obs)
         
         for i in range(self.sSize[0]):
@@ -318,7 +312,7 @@ class sacTrainer(OFFPolicy):
         return loss, entropy
     
     def getObs(self, init=False):
-        obsState = np.zeros((self.nAgent, self.sSize[-1]))
+        obsState = np.zeros((self.nAgent, 1447))
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
         rewards, treward = decisionStep.reward, terminalStep.reward
@@ -401,15 +395,15 @@ class sacTrainer(OFFPolicy):
                     episodicReward.append(episodeReward[b])
                     episodeReward[b] = 0
 
-                if step >= self.startStep and self.inferMode is False:
+                if step >= int(self.startStep/self.nAgent) and self.inferMode is False:
                     loss, entropy =\
                         self.train(step)
                     Loss.append(loss)
                     self.targetNetUpdate()
 
             stateT = nState
-            step += self.nAgent
-            if (step % 1000 == 0) and step > self.startStep:
+            step += 1
+            if (step % 100 == 0) and step > int(self.startStep/self.nAgent):
 
                 reward = np.array(episodicReward).mean()
                 if self.writeTMode:
