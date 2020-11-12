@@ -78,11 +78,11 @@
     "gamma": 0.99,
   
     "sPath": "./save/SAC/",
-    "writeTMode":"False",
+    "writeTMode":"True",
     "tPath": "./tensorboard/SAC/",
     "lPath":"None",
   
-    "device": "cpu",
+    "device": "cuda:0",
     "inferMode": "False",
     "renderMode": "True"
   }

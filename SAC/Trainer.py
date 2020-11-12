@@ -124,6 +124,15 @@ class sacTrainer(OFFPolicy):
         locYX = locXY[:, ::-1]
         if len(locYX) == 0:
             lidarImg = lidarImg.view(self.sSize[1:])
+            if targetOn == 1:
+                pt = np.dot(targetPos, R)[0]
+                locX = int(((pt[0]+7) / 14)*self.sSize[-1])
+                locY = int(((pt[1]+7) / 14)*self.sSize[-1])
+                if locX == self.sSize[-1]:
+                    locX -= 1
+                if locY == self.sSize[-1]:
+                    locY -= 1
+            lidarImg[locY, locX] = 10
             lidarImg = torch.unsqueeze(lidarImg, dim=0).type(torch.uint8)
             return (rState, lidarImg)
         locYX = np.unique(locYX, axis=0)
