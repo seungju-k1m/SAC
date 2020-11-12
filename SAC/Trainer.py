@@ -132,7 +132,7 @@ class sacTrainer(OFFPolicy):
                     locX -= 1
                 if locY == self.sSize[-1]:
                     locY -= 1
-            lidarImg[locY, locX] = 10
+                lidarImg[locY, locX] = 10
             lidarImg = torch.unsqueeze(lidarImg, dim=0).type(torch.uint8)
             return (rState, lidarImg)
         locYX = np.unique(locYX, axis=0)
