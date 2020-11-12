@@ -266,16 +266,10 @@ class sacTrainer(OFFPolicy):
             nLStates.append(miniBatch[i][3][1])
             dones.append(miniBatch[i][4])
         
-        if self.gpuOverload:
-            nRStatesT = torch.stack(nRStates, 0).to(self.device).float()
-            rStatesT = torch.stack(rStates, 0).to(self.device).float()
-            lStatesT = torch.stack(lStates, 0).to(self.device).float()
-            nLStatesT = torch.stack(nLStates, 0).to(self.device).float()
-        else:
-            nRStatesT = torch.tensor(nRStates).to(self.device).float()
-            rStatesT = torch.tensor(rStates).to(self.device).float()
-            lStatesT = torch.tensor(lStates).to(self.device).float()
-            nLStatesT = torch.tensor(nLStates).to(self.device).float()
+        nRStatesT = torch.stack(nRStates, 0).to(self.device).float()
+        rStatesT = torch.stack(rStates, 0).to(self.device).float()
+        lStatesT = torch.stack(lStates, 0).to(self.device).float()
+        nLStatesT = torch.stack(nLStates, 0).to(self.device).float()
         actionsT = torch.tensor(actions).to(self.device).float()
 
         with torch.no_grad():

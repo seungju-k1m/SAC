@@ -49,7 +49,7 @@
   
     "tau": 0.005,
     "sMode": "True",
-    "startStep": 10000,
+    "startStep": 1000,
   
     "fixedTemp": "True",
     "tempValue": 0.2,
