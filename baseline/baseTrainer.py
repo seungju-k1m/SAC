@@ -31,7 +31,6 @@ class OFFPolicy:
             self.udateP = self.data['updateP']
         
         name = self.data['envName']
-        print(name)
         
         self.nReplayMemory = int(self.data['nReplayMemory'])
         self.gamma = self.data['gamma']
@@ -76,7 +75,6 @@ class OFFPolicy:
                 side_channels=[setChannel, engineChannel])
             self.env.reset()
             self.behaviorNames = list(self.env.behavior_specs._dict.keys())[0]
-            # engineChannel.set_configuration_parameters()
         else:
             self.env = gym.make(name)
             self.evalEnv = gym.make(name)

@@ -6,7 +6,7 @@ import numpy as np
 
 from baseline.baseTrainer import OFFPolicy
 from SAC.Agent import sacAgent
-from baseline.utils import getOptim, calGlobalNorm, showLidarImg
+from baseline.utils import getOptim, calGlobalNorm
 from collections import deque
 
 
@@ -96,30 +96,38 @@ class sacTrainer(OFFPolicy):
             self.obsSets[0].append(np.zeros(self.sSize[1:]))
     
     def ppState(self, obs, id=0):
+        """
+        args:
+            obs:[np.array]
+                observation
+                shape:[1447, ]
+        
+        output:
+            rState:[torch.tensor]
+                state of robot. each element corresponds to relative pos x, y, 
+                velocity, yaw rate and y_angle.
+                shape:[6, ]
+            lidarImg:[torch.tensor uint8]
+                project lidar point to lidar img.
+                shape:[1, 96, 96]
+        """
         rState, targetOn, lidarPt = obs[:6], obs[6], obs[7:]
         targetPos = np.reshape(rState[:2], (1, 2))
-        if self.gpuOverload:
-            rState = torch.tensor(rState)
-            lidarImg = torch.zeros(self.sSize).to(self.device)
-        else:
-            lidarImg = np.zeros(self.sSize)
+        rState = torch.tensor(rState).to(self.deivce)
+        lidarImg = torch.zeros(self.sSize[1]**2).to(self.device)
         lidarPt = lidarPt[lidarPt != 0]
         lidarPt -= 1000
         lidarPt = np.reshape(lidarPt, (-1, 2))
         R = [[math.cos(rState[-1]), -math.sin(rState[-1])], [math.sin(rState[-1]), math.cos(rState[-1])]]
         R = np.array(R)
         lidarPt = np.dot(lidarPt, R)
-        for pt in lidarPt:
-            
-            locX = int(((pt[0]+7) / 14)*self.sSize[-1])
-            locY = int(((pt[1]+7) / 14)*self.sSize[-1])
-
-            if locX == self.sSize[-1]:
-                locX -= 1
-            if locY == self.sSize[-1]:
-                locY -= 1
-
-            lidarImg[0, locY, locX] = 1.0
+        locXY = (((lidarPt + 7) / 14) * (self.sSize[-1]+1)).astype(np.int16)
+        locYX = locXY[:, ::-1]
+        locYX = np.unique(locYX, axis=0)
+        locYX = locYX[:, 0] * self.sSize[1] + locYX[:, 1]
+        locYX = np.clip(locYX, self.sSize[1], self.sSize[1]**2 - 2)
+        lidarImg[locYX] = 1
+        lidarImg = lidarImg.view(self.sSize[1:])
         if targetOn == 1:
             pt = np.dot(targetPos, R)[0]
             locX = int(((pt[0]+7) / 14)*self.sSize[-1])
@@ -129,38 +137,15 @@ class sacTrainer(OFFPolicy):
             if locY == self.sSize[-1]:
                 locY -= 1
             lidarImg[0, locY, locX] = 10
-            # showLidarImg(lidarImg)
-        # lidarImg = lidarImg.type(torch.uint8)
-        # if (id % 100 == 0):
-        #     showLidarImg(lidarImg)
         if self.gpuOverload:
             lidarImg = lidarImg.type(torch.uint8)
-        else:
-            lidarImg = np.uint8(lidarImg)
 
         return (rState, lidarImg)
-    
-    def ppEvalState(self, obs):
-        state = np.zeros(self.sSize)
-
-        if state.ndim > 2:
-            obs = cv2.resize(obs, (self.sSize[1:]))
-            obs = np.uint8(obs)
-            obs = cv2.cvtColor(obs, cv2.COLOR_BGR2GRAY)
-            obs = np.reshape(
-                obs, 
-                (self.sSize[1:])
-                )
-        self.evalObsSet.append(obs)
-        
-        for i in range(self.sSize[0]):
-            state[i] = self.evalObsSet[i]
-        
-        if state.ndim > 2:
-            state = np.uint8(state)
-        return state
 
     def genOptim(self):
+        """
+        Generate optimizer of each network.
+        """
         optimKeyList = list(self.optimData.keys())
         self.actor, self.actorFeature, self.critic01, self.critic02 = \
             self.agent.actor, self.agent.actorFeature,  self.agent.critic01, self.agent.critic02
@@ -195,7 +180,20 @@ class sacTrainer(OFFPolicy):
                     self.tOptim = getOptim(self.optimData[optimKey], [self.tempValue], floatV=True)
                  
     def getAction(self, state, dMode=False):
+        """
+        sample the action from the actor network!
+
+        args:
+            state:[tuple]
+                consists of rState and lidarImg
+            dMode:[bool]
+                In the policy evalution, action is not sampled, then determined by actor.
         
+        output:
+            action:[np.array]
+                action
+                shape:[2, ]
+        """
         with torch.no_grad():
             if dMode:
                 action = torch.tanh(self.actor(state)[:, :self.aSize])
@@ -205,6 +203,9 @@ class sacTrainer(OFFPolicy):
         return action[0].cpu().detach().numpy()
     
     def targetNetUpdate(self):
+        """
+        Update the target Network
+        """
         if self.sMode:
             with torch.no_grad():
                 for tC1, tC2, C1, C2, tFC1, tFC2, FC1, FC2 in zip(
@@ -239,36 +240,15 @@ class sacTrainer(OFFPolicy):
         if self.fixedTemp is False:
             self.tOptim.zero_grad()
     
-    def eval(self, step):
-        episodeReward = []
-        for i in range(100):
-            obs = self.evalEnv.reset()
-            for j in range(self.sSize[0]):
-                self.evalObsSet.append(np.zeros(self.sSize[1:]))
-            state = self.ppEvalState(obs)
-            action = self.getAction(state, dMode=True)
-            done = False
-            rewardT = 0
-
-            while done is False:
-                obs, reward, done, _ = self.evalEnv.step(action)
-                nState = self.ppEvalState(obs)
-                action = self.getAction(nState, dMode=True)
-                rewardT += reward
-                if done:
-                    episodeReward.append(rewardT)
-        episodeReward = np.array(episodeReward).mean()
-        print("""
-        The performance of Deterministic policy is {:3f}
-        """.format(episodeReward))
-        if self.writeTMode:
-            self.writer.add_scalar("Eval Reward", episodeReward, step)
-        if episodeReward > self.best:
-            self.best = episodeReward
-            path = self.data['sPath'] + self.data['envName']+'_'+str(self.best)+'.pth'
-            torch.save(self.agent.state_dict(), path)
-
     def train(self, step):
+        """
+        Train the network. it consists of 4 procedure.
+        1. preprocess the memory which comes from the replay buffer.
+        2. detach the memory from the computer's resource and then get the target value
+           for the state-action network update.
+        3. calculate the loss, then get the gradient.
+        4. Finally, log the statistics of the training, e.g norm, entropy
+        """
         miniBatch = random.sample(self.replayMemory, self.bSize)
         
         rStates, lStates, actions, rewards, nRStates, nLStates, dones = \
@@ -294,10 +274,6 @@ class sacTrainer(OFFPolicy):
             lStatesT = torch.tensor(lStates).to(self.device).float()
             nLStatesT = torch.tensor(nLStates).to(self.device).float()
         actionsT = torch.tensor(actions).to(self.device).float()
-        # nRStatesT = torch.tensor(nRStates).to(self.device).float()
-        # nLStatesT = torch.tensor(nLStates).to(self.device).float()
-        # rStatesT = torch.tensor(rStates).to(self.device).float()
-        # lStatesT = torch.tensor(lStates).to(self.device).float()
 
         with torch.no_grad():
             nActionsT, logProb, __, entropy = \
@@ -390,6 +366,11 @@ class sacTrainer(OFFPolicy):
         return loss, entropy
     
     def getObs(self, init=False):
+        """
+        Get the observation from the unity Environment.
+        The environment provides the vector which has the 1447 length.
+        As you know, two type of step is provided from the environment.
+        """
         obsState = np.zeros((self.nAgent, 1447))
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
@@ -469,21 +450,19 @@ class sacTrainer(OFFPolicy):
                     action[b] = self.getAction(state)
 
                 if donesN_[b]:
-                    # showLidarImg(state[1])
                     self.resetInd(id=b)
                     episodicReward.append(episodeReward[b])
                     episodeReward[b] = 0
 
-                if step >= self.startStep and self.inferMode is False:
+                if step >= int(self.startStep/self.nAgent) and self.inferMode is False:
                     loss, entropy =\
                         self.train(step)
                     Loss.append(loss)
                     self.targetNetUpdate()
 
             stateT = nState
-            step += self.nAgent
-            if (step % 1000 == 0) and step > self.startStep:
-
+            step += 1
+            if (step % 400 == 0) and step > int(self.startStep/self.nAgent):
                 reward = np.array(episodicReward).mean()
                 if self.writeTMode:
                     self.writer.add_scalar('Reward', reward, step)
