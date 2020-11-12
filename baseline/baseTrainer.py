@@ -31,7 +31,6 @@ class OFFPolicy:
             self.udateP = self.data['updateP']
         
         name = self.data['envName']
-        print(name)
         
         self.nReplayMemory = int(self.data['nReplayMemory'])
         self.gamma = self.data['gamma']
@@ -67,7 +66,7 @@ class OFFPolicy:
         if self.uMode:
             id_ = np.random.randint(10, 100, 1)[0]
             engineChannel = EngineConfigurationChannel()
-            engineChannel.set_configuration_parameters(time_scale=4)
+            engineChannel.set_configuration_parameters(time_scale=2)
             setChannel = EnvironmentParametersChannel()
             setChannel.set_float_parameter("imgMode", 0)
             self.env = UnityEnvironment(
