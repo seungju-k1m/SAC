@@ -37,10 +37,7 @@ class OFFPolicy:
         self.bSize = self.data['bSize']
         self.rScaling = self.data['rScaling']
         self.lrFreq = self.data['lrFreq']
-
-        self.runStep = self.data['runStep']
         self.startStep = self.data['startStep']
-        self.episodeP = self.data['episodeP']
 
         self.sPath = self.data['sPath']
         self.writeTMode = \
@@ -58,9 +55,6 @@ class OFFPolicy:
         self.aSize = self.data['aSize']
         self.sSize = self.data['sSize']
         self.nAgent = self.data['nAgent']
-        self.evalObsSet = deque(maxlen=self.sSize[0])
-        self.best = self.data['best']
-        self.evalP = self.data['evalP']
         assert ~(self.uMode is False and self.nAgent > 1), "nAgent must be 1,"
 
         if self.uMode:
@@ -68,6 +62,11 @@ class OFFPolicy:
             engineChannel = EngineConfigurationChannel()
             engineChannel.set_configuration_parameters(time_scale=2)
             setChannel = EnvironmentParametersChannel()
+            imgMode = self.data['imgMode'] == 'True'
+            if imgMode:
+                setChannel.set_float_parameter("imgMode", 1.0)
+            else:
+                setChannel.set_float_parameter("imgMode", 0.0)
             if self.inferMode is False:
                 setChannel.set_float_parameter("nAgent", self.data['nAgent'])
             self.env = UnityEnvironment(

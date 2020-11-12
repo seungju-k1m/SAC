@@ -1,4 +1,3 @@
-import cv2
 import torch
 import random
 import math
@@ -113,7 +112,7 @@ class sacTrainer(OFFPolicy):
         """
         rState, targetOn, lidarPt = obs[:6], obs[6], obs[7:]
         targetPos = np.reshape(rState[:2], (1, 2))
-        rState = torch.tensor(rState).to(self.deivce)
+        rState = torch.tensor(rState).to(self.device)
         lidarImg = torch.zeros(self.sSize[1]**2).to(self.device)
         lidarPt = lidarPt[lidarPt != 0]
         lidarPt -= 1000
@@ -123,6 +122,10 @@ class sacTrainer(OFFPolicy):
         lidarPt = np.dot(lidarPt, R)
         locXY = (((lidarPt + 7) / 14) * (self.sSize[-1]+1)).astype(np.int16)
         locYX = locXY[:, ::-1]
+        if len(locYX) == 0:
+            lidarImg = lidarImg.view(self.sSize[1:])
+            lidarImg = torch.unsqueeze(lidarImg, dim=0).type(torch.uint8)
+            return (rState, lidarImg)
         locYX = np.unique(locYX, axis=0)
         locYX = locYX[:, 0] * self.sSize[1] + locYX[:, 1]
         locYX = np.clip(locYX, self.sSize[1], self.sSize[1]**2 - 2)
@@ -136,9 +139,9 @@ class sacTrainer(OFFPolicy):
                 locX -= 1
             if locY == self.sSize[-1]:
                 locY -= 1
-            lidarImg[0, locY, locX] = 10
-        if self.gpuOverload:
-            lidarImg = lidarImg.type(torch.uint8)
+            lidarImg[locY, locX] = 10
+        lidarImg = lidarImg.type(torch.uint8)
+        lidarImg = torch.unsqueeze(lidarImg, dim=0)
 
         return (rState, lidarImg)
 

@@ -1,39 +1,55 @@
 {
-    "envName":"./Env/MacOs/easyv4",
+    "envName":"./Env/MacOs/simEnv01",
     "unityEnv": "True",
-    "workId":102,
-    "sSize": [1,78],
-    "best" : 100,
-     
-    "nAgent": 1,
+    "imgMode":"True",
+    "sSize": [1, 192, 192],
+    "nAgent": 5,
     "aSize": 2,
     "seed": 0,
   
     "agent": {
-              
-              "actor": {
-                "netCat": "MLP",
-                "nLayer": 3,
-                "fSize": [256, 256, 4],
-                "act": ["relu", "relu", "linear"],
-                "BN": "None"
-              },
-              "critic": {
-                "netCat": "MLP",
-                "nLayer": 3,
-                "fSize":[256, 256, 1],
-                "act": ["relu", "relu", "linear"],
-                "BN":"None"
-              }
+      "actorFeature": {
+        "netCat": "CNET",
+        "nLayer": 5,
+        "nUnit": [8, 16, 32, 64],
+        "stride": [2, 2, 2, 2],
+        "fSize" : [3, 3, 3, 3, -1],
+        "padding" : [1, 1, 1, 1],
+        "act": "relu",
+        "BN": "None"
+      },
+
+      "actor":{
+        "netCat": "MLP",
+        "nLayer": 2,
+        "fSize": [256, 4],
+        "act": ["relu", "linear"],
+        "BN": "None"
+      },
+
+      "criticFeature": {
+        "netCat": "CNET",
+        "nLayer": 5,
+        "nUnit": [8, 16, 32, 64],
+        "stride": [2, 2, 2, 2],
+        "padding": [1, 1, 1, 1],
+        "fSize" : [3, 3, 3, 3, -1],
+        "act": "relu",
+        "BN": "None"
+      },
+
+      "critic": {
+        "netCat": "MLP",
+        "nLayer": 2,
+        "fSize":[256, 1],
+        "act": ["relu", "linear"],
+        "BN":"None"
+      }
     },
   
     "tau": 0.005,
-    "updateP":1000,
     "sMode": "True",
-    "runStep": 300000,
     "startStep": 10000,
-    "evalP":5000,
-    "episodeP": 20,
   
     "fixedTemp": "True",
     "tempValue": 0.2,
@@ -62,7 +78,7 @@
     "gamma": 0.99,
   
     "sPath": "./save/SAC/",
-    "writeTMode":"True",
+    "writeTMode":"False",
     "tPath": "./tensorboard/SAC/",
     "lPath":"None",
   

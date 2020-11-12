@@ -12,52 +12,40 @@ class sacAgent(baseAgent):
         self.keyList = list(self.aData.keys())
         device = self.aData['device']
         self.device = torch.device(device)
+        self.getSize()
         self.buildModel()
+    
+    def getSize(self):
+        self.sSize = self.aData['sSize']
+        self.aSize = self.aData['aSize']
+        self.inputSize1 = self.sSize[0]
+        div = 1
+        stride = self.aData['actorFeature']['stride']
+        fSize = self.aData['actorFeature']['nUnit'][-1]
+        for s in stride:
+            div *= s
+        self.inputSize2 = int((self.sSize[-1]/div)**2*fSize) + 6
+        self.inputSize3 = self.inputSize2 + self.aSize
 
     def buildModel(self):
         for netName in self.keyList:
             
             if netName == "actor":
                 netData = self.aData[netName]
-                netCat = netData['netCat']
-                
-                if netCat == "MLP":
-                    self.actor = \
-                        MLP(
-                            netData, 
-                            iSize=int((self.aData['sSize'][-1]/totlaDiv)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6)
+                self.actor = \
+                    MLP(
+                        netData, 
+                        iSize=self.inputSize2)
                         
-                elif netCat == "CNET":
-                    self.actor = \
-                        CNET(
-                            netData, 
-                            iSize=self.aData['sSize'][0], 
-                            WH=self.aData['sSize'][-1])
-                else:
-                    RuntimeError("The name of agent is not invalid")
-            
             if netName == "actorFeature":
                 netData = self.aData[netName]
                 netCat = netData['netCat']
-                totla = np.array(netData['stride'])
-                totlaDiv = 1
-                for k in totla:
-                    totlaDiv *= k
-                
-                if netCat == "MLP":
-                    self.actorFeature = \
-                        MLP(
-                            netData, 
-                            iSize=self.aData['sSize'][-1]/totlaDiv + 6)
-                elif netCat == "CNET":
-                    self.actorFeature = \
-                        CNET(
-                            netData, 
-                            iSize=self.aData['sSize'][0], 
-                            WH=self.aData['sSize'][-1])
-                else:
-                    RuntimeError("The name of agent is not invalid")
-                
+                self.actorFeature = \
+                    CNET(
+                        netData, 
+                        iSize=self.sSize[0], 
+                        WH=self.sSize[1])
+
             if netName == "critic":
                 netData = self.aData[netName]
                 netCat = netData['netCat']
@@ -65,49 +53,23 @@ class sacAgent(baseAgent):
                     self.critic01 = \
                         MLP(
                             netData, 
-                            iSize=int((self.aData['sSize'][-1]/totlaDiv)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6 + self.aData['aSize'])
+                            iSize=self.inputSize3)
                     self.critic02 = \
                         MLP(
                             netData, 
-                            iSize=int((self.aData['sSize'][-1]/totlaDiv)**2 * self.aData['actorFeature']['nUnit'][-1]) + 6 + self.aData['aSize'])
-                elif netCat == "CNET":
-                    self.critic01 = \
-                        CNET(
-                            netData, 
-                            iSize=self.aData['sSize'][0], 
-                            WH=self.aData['sSize'][-1])
-                    self.critic02 = \
-                        CNET(
-                            netData, 
-                            iSize=self.aData['sSize'][0], 
-                            WH=self.aData['sSize'][-1])
-                else:
-                    RuntimeError("The name of agent is not invalid")
+                            iSize=self.inputSize3)
             if netName == "criticFeature":
                 netData = self.aData[netName]
-                netCat = netData['netCat']
-                if netCat == "MLP":
-                    self.criticFeature01 = \
-                        MLP(
-                            netData, 
-                            iSize=int(self.aData['sSize'][-1]/totlaDiv * netData['fSize'][-1]) + 6 + self.aData['aSize'])
-                    self.criticFeature02 = \
-                        MLP(
-                            netData, 
-                            iSize=int(self.aData['sSize'][-1]/totlaDiv * netData['fSize'][-1]) + 6 + self.aData['aSize'])
-                elif netCat == "CNET":
-                    self.criticFeature01 = \
-                        CNET(
-                            netData, 
-                            iSize=self.aData['sSize'][0], 
-                            WH=self.aData['sSize'][-1])
-                    self.criticFeature02 = \
-                        CNET(
-                            netData, 
-                            iSize=self.aData['sSize'][0], 
-                            WH=self.aData['sSize'][-1])
-                else:
-                    RuntimeError("The name of agent is not invalid")
+                self.criticFeature01 = \
+                    CNET(
+                        netData, 
+                        iSize=self.sSize[0], 
+                        WH=self.sSize[1])
+                self.criticFeature02 = \
+                    CNET(
+                        netData, 
+                        iSize=self.sSize[0], 
+                        WH=self.sSize[1])
 
         self.temperature = torch.zeros(1, requires_grad=True, device=self.aData['device'])
     
