@@ -1,12 +1,9 @@
-import cv2
 import torch
-import random
 import math
 import numpy as np
-from baseline.baseTrainer import OFFPolicy, ONPolicy
+from baseline.baseTrainer import ONPolicy
 from SAC.Agent import sacAgent
-from baseline.utils import getOptim, calGlobalNorm, showLidarImg
-from collections import deque
+from baseline.utils import getOptim, calGlobalNorm
 
 
 class sacOnPolicyTrainer(ONPolicy):
@@ -38,7 +35,7 @@ class sacOnPolicyTrainer(ONPolicy):
         name = pureEnv[-1]
         self.sPath += name + '_' + str(self.nAgent) + '_LSTMV1_'
         if self.fixedTemp:
-            self.sPath += str(int(self.tempValue * 100)) +'.pth'
+            self.sPath += str(int(self.tempValue * 100)) + '.pth'
         else:
             self.sPath += '.pth'
         self.sSize = self.aData['sSize']
@@ -236,9 +233,16 @@ class sacOnPolicyTrainer(ONPolicy):
             self.aFOptim01.step()
             self.aFOptim02.step()
             self.aOptim.step()
+        
+        aN = calGlobalNorm(self.actor)
+        aF1N = calGlobalNorm(self.actorFeature01)
+        aF2N = calGlobalNorm(self.actorFeature02)
+        normA = aN + aF1N + aF2N
 
-        normA = calGlobalNorm(self.actor) + calGlobalNorm(self.actorFeature01) + calGlobalNorm(self.actorFeature02)
-        normC = calGlobalNorm(self.critic01) + calGlobalNorm(self.criticFeature01) 
+        cN = calGlobalNorm(self.critic01)
+        cF1N = calGlobalNorm(self.criticFeature01)
+        normC = cN + cF1N
+
         norm = normA + normC
         
         entropy = entropy.mean().cpu().detach().numpy()
@@ -274,20 +278,20 @@ class sacOnPolicyTrainer(ONPolicy):
         minC = minC.view((step, -1))
         logProb = logProb.view((step, -1))
         for i in range(nAgent):
-            rewardAgent = reward[:, i]  # [step] , 100
-            doneAgent = done[:, i]  # [step] , 100
-            minCAgent = minC[:, i]
-            logProbAgent = logProb[:, i]
+            rA = reward[:, i]  # [step] , 100
+            dA = done[:, i]  # [step] , 100
+            mCA = minC[:, i]
+            lProbA = logProb[:, i]
             GT = []
-            if doneAgent[-1] == False:
-                discounted_r = minCAgent[-1]
-            else:
+            if dA[-1]:
                 discounted_r = 0
-            for r, is_terminal, lP in zip(reversed(rewardAgent), reversed(doneAgent), reversed(logProbAgent)):
+            else:
+                discounted_r = mCA[-1]
+            for r, is_terminal, lP in zip(reversed(rA), reversed(dA), reversed(lProbA)):
                 if is_terminal:
                     discounted_r = 0
                     lP = 0
-                discounted_r = r - self.tempValue * lP + self.gamma * discounted_r
+                discounted_r = r + self.gamma * (discounted_r - self.tempValue * lP)
                 GT.append(discounted_r)
             GT = torch.tensor(GT[::-1]).view((-1, 1)).to(self.device)
             gT.append(GT)

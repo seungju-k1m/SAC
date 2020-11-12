@@ -51,7 +51,7 @@
     "updateStep":5,
   
     "fixedTemp": "True",
-    "tempValue": 0.05,
+    "tempValue": 0.2,
   
     "lrFreq": 1,
     "rScaling": 1,
