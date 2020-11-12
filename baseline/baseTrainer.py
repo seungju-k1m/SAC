@@ -12,7 +12,7 @@ from collections import deque
 
 
 class OFFPolicy:
-
+    
     def __init__(self, fName):
         parser = jsonParser(fName)
         self.data = parser.loadParser()
