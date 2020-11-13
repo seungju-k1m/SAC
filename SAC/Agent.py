@@ -10,7 +10,7 @@ class sacAgent(baseAgent):
         
         self.aData = aData
         self.optimData = oData
-        self.hiddenSize = self.aData['actorFeature02']['hiddenSize']
+        self.hiddenSize = self.aData['Feature']['hiddenSize']
         self.keyList = list(self.aData.keys())
         self.device = torch.device(device)
         self.getISize()
@@ -18,58 +18,39 @@ class sacAgent(baseAgent):
     
     def to(self, device):
         self.device = device
-        self.actorFeature01 = self.actorFeature01.to(device)
-        self.actorFeature02 = self.actorFeature02.to(device)
+        self.Feature = self.Feature.to(device)
         self.actor = self.actor.to(device)
-
-        self.criticFeature01_1 = self.criticFeature01_1.to(device)
         self.critic01 = self.critic01.to(device)
-
-        self.criticFeature01_2 = self.criticFeature01_2.to(device)
         self.critic02 = self.critic02.to(device)
 
     def getISize(self):
         self.iFeature01 = self.aData['sSize'][-1]
-        temp = self.aData['actorFeature01']['stride']
-        div = 1
-        for t in temp:
-            div *= t
-        nUnit = self.aData['actorFeature01']['nUnit'][-1]
-        self.iFeature02 = int((self.iFeature01/div)**2) * nUnit
-        self.iFeature03 = self.hiddenSize
+        self.iFeature02 = self.hiddenSize
+        self.iFeature03 = self.hiddenSize + 2
         self.sSize = self.aData['sSize']
     
     def buildModel(self):
         for netName in self.keyList:
             netData = self.aData[netName]
-            if netName == 'actorFeature01':
-                self.actorFeature01 = constructNet(netData, iSize=self.sSize[0], WH=self.iFeature01)
-            elif netName == 'actorFeature02':
-                self.actorFeature02 = constructNet(netData, iSize=self.iFeature02)
+            if netName == 'Feature':
+                self.Feature = constructNet(netData, iSize=self.iFeature01)
             elif netName == 'actor':
-                self.actor = constructNet(netData, iSize=self.iFeature03)
-            elif netName == 'criticFeature01':
-                self.criticFeature01_1 = constructNet(
-                    netData, iSize=self.sSize[0], WH=self.iFeature01)
-                self.criticFeature01_2 = constructNet(
-                    netData, iSize=self.sSize[0], WH=self.iFeature01)
+                self.actor = constructNet(netData, iSize=self.iFeature02)
             elif netName == 'critic':
-                self.critic01 = constructNet(netData, iSize=self.iFeature02)
-                self.critic02 = constructNet(netData, iSize=self.iFeature02)
+                self.critic01 = constructNet(netData, iSize=self.iFeature03)
+                self.critic02 = constructNet(netData, iSize=self.iFeature03)
         self.temperature = torch.zeros(1, requires_grad=True, device=self.aData['device'])
     
     def forward(self, state, lstmState=None):
         """
         input:
             state:[tensor]
-                shape : [batch, 1, 96, 96]
+                shape : [batch, 726]
             lstmState:[tuple]
                 dtype : (hAState, cAState), each state is tensor
                 shape : [1, batch, 512] for each state
                 default : None
                 if default is None, the lstm State is padded.
-            stateAction:[tensor]
-                shape : [batch, 1, 96, 96]
         output:
             action:[tensor]
                 shape : [batch, actionSize]
@@ -92,12 +73,11 @@ class sacAgent(baseAgent):
         else:
             hAState, cAState = lstmState
        
-        aF1 = self.actorFeature01(state)
-        aF1 = torch.unsqueeze(aF1, dim=0)
-        aL1, (hA, cA) = self.actorFeature02(aF1, (hAState, cAState))
-        aL1 = torch.squeeze(aL1, dim=0)
-        output = self.actor(aL1)
-        
+        state = torch.unsqueeze(state, dim=0)
+        Feature, (hA, cA) = self.Feature(state, (hAState, cAState))
+        Feature = torch.squeeze(Feature, dim=0)
+
+        output = self.actor(Feature)
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
@@ -109,46 +89,47 @@ class sacAgent(baseAgent):
         logProb -= torch.log(1-action.pow(2)+1e-6).sum(1, keepdim=True)
         entropy = (torch.log(std * (2 * 3.14)**0.5)+0.5).sum(1, keepdim=True)
 
-        offset = torch.zeros_like(state)
-        offset[:, 0, 0, 6:8] += action
-        y = state[:, 0, 0, 6:8]
-        stateAction = state + offset
+        FeatureQ = torch.cat((action, Feature), dim=1)
 
-        cSS1_1 = self.criticFeature01_1(stateAction)
-        cSS1_2 = self.criticFeature01_2(stateAction)
-
-        critic01, critic02 = self.critic01(cSS1_1), self.critic02(cSS1_2)
+        critic01, critic02 = self.critic01(FeatureQ), self.critic02(FeatureQ)
         return action, logProb, (critic01, critic02), entropy, (hA, cA)
     
-    def criticForward(self, state, action):
+    def criticForward(self, state, action, lstmState=None):
         """
         input:
             state:[tensor]
-                shape:[batch, 1, 96, 96]
+                shape:[batch, 726]
             action:[tensor]
                 shape:[batch, 2]
+            lstmState:[tuple]
+                shape:[1, batch, 512]
         output:
             critics:[tuple]
                 dtype:(critic01, critic02)
                 shape:[batch, 1] for each state
         """
+        bSize = state.shape[0]
         state = state.to(self.device)
+        if lstmState is None:
+            hAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
+            cAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
+        else:
+            hAState, cAState = lstmState
+        state = torch.unsqueeze(state, dim=0)
 
-        offset = torch.zeros_like(state)
-        offset[:, 0, 0, 6:8] += action
-        stateAction = state + offset
+        Feature, (hA, cA) = self.Feature(state, (hAState, cAState))
 
-        cSS1_1 = self.criticFeature01_1(stateAction)
-        cSS1_2 = self.criticFeature01_2(stateAction)
+        Feature = torch.squeeze(Feature, dim=0)
+        FeatureQ = torch.cat((action, Feature), dim=1)
 
-        critic01, critic02 = self.critic01(cSS1_1), self.critic02(cSS1_2)
+        critic01, critic02 = self.critic01(FeatureQ), self.critic02(FeatureQ)
         return critic01, critic02
 
     def actorForward(self, state, lstmState=None):
         """
         input:
             state:[tensor]
-                shape:[batch, 1, 96, 96]
+                shape:[batch, 726]
             lstmState:[tuple]
                 dtype:(hs1, cs1)
                 shape :[1, bath, 512] for each state
@@ -167,11 +148,10 @@ class sacAgent(baseAgent):
         else:
             hAState, cAState = lstmState
             hAState, cAState = hAState.to(self.device), cAState.to(self.device)
-     
-        aF1 = self.actorFeature01(state)
-        aL1, (hA, cA) = self.actorFeature02(aF1, (hAState, cAState))
-        output = self.actor(aL1)
-
+        state = torch.unsqueeze(state, dim=0)
+        Feature, (hA, cA) = self.Feature(state, (hAState, cAState))
+        Feature = torch.squeeze(Feature, dim=0)
+        output = self.actor(Feature)
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
@@ -182,9 +162,9 @@ class sacAgent(baseAgent):
 
         return action, (hA, cA)
 
-    def calQLoss(self, state, target, pastActions):
+    def calQLoss(self, state, target, pastActions, lstmState):
 
-        critic1, critic2 = self.criticForward(state, pastActions)
+        critic1, critic2 = self.criticForward(state, pastActions, lstmState)
         lossCritic1 = torch.mean((critic1-target).pow(2)/2)
         lossCritic2 = torch.mean((critic2-target).pow(2)/2)
 

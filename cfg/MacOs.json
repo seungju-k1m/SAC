@@ -1,54 +1,35 @@
 {
-  "envName":"./Env/MacOs/4MoreSimpleEnv_1440",
-  "sSize": [1, 96, 96],
-    "nAgent": 15,
+    "envName":"./Env/MacOs/simEnv16",
+    "sSize": [1, 726],
+    "nAgent": 48,
+    "imgMode":"False",
     "aSize": 2,
     "seed": 0,
   
     "agent": {
-              "actorFeature01": {
-                "netCat": "CNET",
-                "nLayer": 5,
-                "nUnit": [8, 16, 32, 64],
-                "stride": [2, 2, 2, 2],
-                "fSize" : [3, 3, 3, 3, -1],
-                "padding" : [1, 1, 1, 1],
-                "act": "relu",
-                "BN": "None"
-              },
-              "actorFeature02":{
-                  "netCat":"LSTMNET",
-                  "nLayer":1,
-                  "hiddenSize":512
+              "Feature": {
+                "netCat": "LSTMNET",
+                "nLayer": 1,
+                "hiddenSize":512
               },
               "actor":{
                   "netCat":"MLP",
-                  "nLayer":1,
-                  "fSize":[4],
-                  "act":["linear"],
+                  "nLayer":2,
+                  "fSize":[256, 4],
+                  "act":["relu", "linear"],
                   "BN":"None"
               },
   
-              "criticFeature01": {
-                "netCat": "CNET",
-                "nLayer": 5,
-                "nUnit": [8, 16, 32, 64],
-                "stride": [2, 2, 2, 2],
-                "fSize" : [3, 3, 3, 3, -1],
-                "padding" : [1, 1, 1, 1],
-                "act": "relu",
-                "BN": "None"
-              },
               "critic":{
                   "netCat":"MLP",
-                  "nLayer":1,
-                  "fSize":[1],
-                  "act":["linear"],
+                  "nLayer":2,
+                  "fSize":[256, 1],
+                  "act":["relu", "linear"],
                   "BN":"None"
               }
     },
     "episodeP": 20,
-    "updateStep":5,
+    "updateStep":200,
   
     "fixedTemp": "True",
     "tempValue": 0.2,
@@ -59,14 +40,14 @@
     "optim": {
       "actor": {
         "name": "adam",
-        "lr": 1e-4,
+        "lr": 3e-4,
         "decay": 0,
         "eps": 1e-7,
         "clipping": "None"
       },
       "critic": {
         "name": "adam",
-        "lr": 1e-4,
+        "lr": 3e-4,
         "decay": 0,
         "clipping": "None",
         "eps": 1e-7
