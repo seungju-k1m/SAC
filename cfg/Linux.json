@@ -1,9 +1,9 @@
 {
-    "envName":"./Env/Linux/simEnv01",
+    "envName":"./Env/Linux/simEnv16",
     "unityEnv": "True",
     "imgMode":"True",
-    "sSize": [1, 192, 192],
-    "nAgent": 5,
+    "sSize": [1, 96, 96],
+    "nAgent": 48,
     "aSize": 2,
     "seed": 0,
   
@@ -49,13 +49,13 @@
   
     "tau": 0.005,
     "sMode": "True",
-    "startStep": 10000,
+    "startStep": 100000,
   
     "fixedTemp": "False",
     "tempValue": 0.2,
   
     "nReplayMemory": 1e6,
-    "bSize": 64,
+    "bSize": 720,
     "lrFreq": 1,
     "rScaling": 1,
   

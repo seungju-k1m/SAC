@@ -60,7 +60,7 @@ class OFFPolicy:
         if self.uMode:
             id_ = np.random.randint(10, 100, 1)[0]
             engineChannel = EngineConfigurationChannel()
-            engineChannel.set_configuration_parameters(time_scale=2)
+            engineChannel.set_configuration_parameters(time_scale=1)
             setChannel = EnvironmentParametersChannel()
             imgMode = self.data['imgMode'] == 'True'
             if imgMode:
