@@ -112,8 +112,12 @@ class sacTrainer(OFFPolicy):
         """
         rState, targetOn, lidarPt = obs[:6], obs[6], obs[7:]
         targetPos = np.reshape(rState[:2], (1, 2))
-        rState = torch.tensor(rState)
-        lidarImg = torch.zeros(self.sSize[1]**2)
+        if self.gpuOverload:
+            rState = torch.tensor(rState).to(self.device)
+            lidarImg = torch.zeros(self.sSize[1]**2).to(self.device)
+        else:
+            rState = torch.tensor(rState)
+            lidarImg = torch.zeros(self.sSize[1]**2)
         lidarPt = lidarPt[lidarPt != 0]
         lidarPt -= 1000
         lidarPt = np.reshape(lidarPt, (-1, 2))
@@ -368,8 +372,8 @@ class sacTrainer(OFFPolicy):
             self.writer.add_scalar('Critic Loss', (lossC1+lossC2)/2, step)
             if self.fixedTemp is False:
                 self.writer.add_scalar('Temp Loss', lossT, step)
-                self.writer.add_scalar('alpha', self.tempValue.exp().detach().cpu().numpy([0], step))
-
+                self.writer.add_scalar('alpha', self.tempValue.exp().detach().cpu().numpy()[0], step)
+                
         return loss, entropy
     
     def getObs(self, init=False):

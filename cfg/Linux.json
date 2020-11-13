@@ -90,6 +90,7 @@
     "lPath":"None",
   
     "device": "cuda:0",
+    "gpuOverload":"False",
     "inferMode": "False",
     "renderMode": "True"
   }
