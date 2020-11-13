@@ -8,7 +8,6 @@ from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
 from mlagents_envs.side_channel.environment_parameters_channel import EnvironmentParametersChannel
 from torch.utils.tensorboard import SummaryWriter
-from collections import deque
 
 
 class OFFPolicy:
@@ -67,8 +66,7 @@ class OFFPolicy:
                 setChannel.set_float_parameter("imgMode", 1.0)
             else:
                 setChannel.set_float_parameter("imgMode", 0.0)
-            if self.inferMode is False:
-                setChannel.set_float_parameter("nAgent", self.data['nAgent'])
+            setChannel.set_float_parameter("nAgent", self.nAgent)
             self.env = UnityEnvironment(
                 name, worker_id=id_, 
                 side_channels=[setChannel, engineChannel])

@@ -111,7 +111,35 @@ class sacAgent(baseAgent):
         critic02 = self.critic02.forward(cat2)
 
         return action, logProb, (critic01, critic02), entropy
+
+    def actorForward(self, state, dMode=False):
+        state, lidarImg = state
+        if torch.is_tensor(state):
     
+            state = state.to(self.device).float()
+            lidarImg = lidarImg.to(self.device).float()
+        else:
+            state = torch.tensor(state).to(self.device).float()
+            lidarImg = torch.tensor(lidarImg).to(self.device).float()
+
+        if lidarImg.dim() == 3:
+            lidarImg = torch.unsqueeze(lidarImg, 0)
+            state = torch.unsqueeze(state, 0)
+
+        actorFeature = self.actorFeature(lidarImg)
+        ss = torch.cat((state, actorFeature), dim=1)
+        output = self.actor(ss)
+        mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
+        log_std = torch.clamp(log_std, -20, 2)
+        std = log_std.exp()
+
+        if dMode:
+            action = torch.tanh(mean)
+        else:
+            gaussianDist = torch.distributions.Normal(mean, std)
+            x_t = gaussianDist.rsample()
+            action = torch.tanh(x_t) 
+        return action
     def criticForward(self, state, action):
         rState, lState = state
 

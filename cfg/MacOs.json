@@ -1,8 +1,8 @@
 {
-    "envName":"./Env/MacOs/simEnv01",
+    "envName":"./Env/MacOs/Env01",
     "unityEnv": "True",
     "imgMode":"True",
-    "sSize": [1, 192, 192],
+    "sSize": [1, 96, 96],
     "nAgent": 5,
     "aSize": 2,
     "seed": 0,
@@ -78,11 +78,11 @@
     "gamma": 0.99,
   
     "sPath": "./save/SAC/",
-    "writeTMode":"True",
+    "writeTMode":"False",
     "tPath": "./tensorboard/SAC/",
-    "lPath":"None",
+    "lPath":"./save/SAC/4096_-1.pth",
   
-    "device": "cuda:0",
-    "inferMode": "False",
+    "device": "cpu",
+    "inferMode": "True",
     "renderMode": "True"
   }

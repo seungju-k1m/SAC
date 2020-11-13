@@ -47,8 +47,13 @@ class sacTrainer(OFFPolicy):
     
         self.initializePolicy()
         self.replayMemory = deque(maxlen=self.nReplayMemory)
-        self.sPath += str(self.bSize) + \
-            '_'+str(~self.fixedTemp)
+        pureEnv = self.data['envName'].split('/')
+        name = pureEnv[-1]
+        self.sPath += name + '_' + str(self.nAgent) + '_imgMode_'
+        if self.fixedTemp:
+            self.sPath += str(int(self.tempValue * 100)) + '.pth'
+        else:
+            self.sPath += '.pth'
         
         if self.fixedTemp:
             self.sPath += str(self.nAgent)+self.data['envName'][-2:]+'_'+str(int(self.tempValue*100))+'.pth'
@@ -212,7 +217,7 @@ class sacTrainer(OFFPolicy):
         """
         with torch.no_grad():
             if dMode:
-                action = torch.tanh(self.actor(state)[:, :self.aSize])
+                action = self.agent.actorForward(state, dMode=False)
             else:
                 action, logProb, critics, _ = self.agent.forward(state)
 
