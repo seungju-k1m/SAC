@@ -486,8 +486,8 @@ class sacTrainer(OFFPolicy):
                 Loss = np.array(Loss).mean()
                     
                 print("""
-                Step : {:5d} // Loss : {:3f}
-                Reward : {:3f}  // alpha: {:3f}
+                Step : {:5d} // Loss : {:.3f}
+                Reward : {:.3f}  // alpha: {:.3f}
                 """.format(step, Loss, reward, alpha))
                 Loss = []
                 episodicReward = []
