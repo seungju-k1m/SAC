@@ -51,7 +51,7 @@
     "sMode": "True",
     "startStep": 10000,
   
-    "fixedTemp": "True",
+    "fixedTemp": "False",
     "tempValue": 0.2,
   
     "nReplayMemory": 1e6,
@@ -68,6 +68,13 @@
         "clipping": "None"
       },
       "critic": {
+        "name": "adam",
+        "lr": 3e-4,
+        "decay": 0,
+        "clipping": "None",
+        "eps": 1e-7
+      },
+      "temperature": {
         "name": "adam",
         "lr": 3e-4,
         "decay": 0,
