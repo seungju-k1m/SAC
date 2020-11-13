@@ -49,13 +49,13 @@
   
     "tau": 0.005,
     "sMode": "True",
-    "startStep": 100000,
+    "startStep": 240000,
   
     "fixedTemp": "False",
     "tempValue": 0.2,
   
     "nReplayMemory": 1e6,
-    "bSize": 720,
+    "bSize": 4096,
     "lrFreq": 1,
     "rScaling": 1,
   

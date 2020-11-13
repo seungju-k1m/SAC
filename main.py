@@ -1,4 +1,3 @@
-import argparse
 from SAC.Trainer import sacTrainer
 
 if __name__ == '__main__':
