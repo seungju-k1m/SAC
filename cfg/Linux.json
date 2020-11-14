@@ -1,9 +1,9 @@
 {
-    "envName":"./Env/Linux/Env16",
+    "envName":"./Env/Linux/Env01",
     "unityEnv": "True",
     "imgMode":"True",
     "sSize": [1, 96, 96],
-    "nAgent": 48,
+    "nAgent": 3,
     "Count":1000,
     "aSize": 2,
     "seed": 0,
@@ -50,13 +50,13 @@
   
     "tau": 0.005,
     "sMode": "True",
-    "startStep": 240000,
+    "startStep": 10000,
   
     "fixedTemp": "False",
     "tempValue": 0.2,
   
     "nReplayMemory": 1e6,
-    "bSize": 4096,
+    "bSize": 256,
     "lrFreq": 1,
     "rScaling": 1,
   
