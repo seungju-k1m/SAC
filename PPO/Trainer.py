@@ -48,6 +48,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.div = self.data['div']
 
         self.replayMemory = [deque(maxlen=self.updateStep) for i in range(self.div)]
+        self.epoch = self.data['epoch']
 
     def clear(self):
         for i in self.replayMemory:
@@ -390,11 +391,12 @@ class PPOOnPolicyTrainer(ONPolicy):
             nlstmState = nnlstmState
 
             step += 1
-            if step % self.updateStep == 0:
-                for j in range(self.div):
-                    self.train(step, j)
-                self.oldAgent.update(self.agent)
-                self.clear()
+            for epoch in self.epoch:
+                if step % self.updateStep == 0:
+                    for j in range(self.div):
+                        self.train(step, j)
+            self.oldAgent.update(self.agent)
+            self.clear()
             
             if step % 2000 == 0:
                 episodeReward = np.array(episodeReward)

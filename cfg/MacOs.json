@@ -28,7 +28,7 @@
                   "BN":"None"
               }
     },
-    "updateStep":200,
+    "updateStep":256,
     "div":16,
   
     "lrFreq": 1,
@@ -52,6 +52,7 @@
     },
     "gamma": 0.99,
     "Lambda":0.95,
+    "epoch":15,
     "epsilon": 0.2,
     "entropyCoeff":0.05,
   
