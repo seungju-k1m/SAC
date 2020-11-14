@@ -2,6 +2,7 @@ import torch
 import random
 import math
 import numpy as np
+import multiprocessing as mp
 
 from baseline.baseTrainer import OFFPolicy
 from SAC.Agent import sacAgent
@@ -62,6 +63,8 @@ class sacTrainer(OFFPolicy):
         
         if self.writeTMode:
             self.writeTrainInfo()
+        
+        self.queue = mp.Queue()
     
     def writeTrainInfo(self):
         super(sacTrainer, self).writeTrainInfo()
@@ -446,12 +449,10 @@ class sacTrainer(OFFPolicy):
             action.append(self.getAction(state))
             stateT.append(state)
         action = np.array(action)
-
         while 1:
             nState = []
             self.checkStep(np.array(action))
             obs, rewards, donesN_ = self.getObs()
-            
             for b in range(self.nAgent):
                 ob = obs[b]
                 state = self.ppState(ob, id=step)

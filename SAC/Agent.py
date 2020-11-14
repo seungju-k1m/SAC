@@ -140,6 +140,7 @@ class sacAgent(baseAgent):
             x_t = gaussianDist.rsample()
             action = torch.tanh(x_t) 
         return action
+
     def criticForward(self, state, action):
         rState, lState = state
 
