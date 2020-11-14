@@ -59,6 +59,8 @@ class ONPolicy:
         else:
             setChannel.set_float_parameter("imgMode", 0)
         name = self.data['envName']
+        self.nAgent = self.data['nAgent']
+        setChannel.set_float_parameter("nAgent", self.nAgent)
         self.env = UnityEnvironment(
             name, worker_id=id_, 
             side_channels=[setChannel, engineChannel])
@@ -66,8 +68,7 @@ class ONPolicy:
         self.behaviorNames = list(self.env.behavior_specs._dict.keys())[0]
         a = self.env.behavior_specs[self.behaviorNames]
         self.obsShape = a.observation_shapes[0][0]
-        self.nAgent = self.data['nAgent']
-
+        
         # replay memory for each agent
         self.replayMemory = deque(maxlen=30 * 100)
 

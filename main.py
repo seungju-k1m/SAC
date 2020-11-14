@@ -1,5 +1,5 @@
-from SAC.Trainer import sacOnPolicyTrainer
+from PPO.Trainer import PPOOnPolicyTrainer
 
 if __name__ == '__main__':
-    trainer = sacOnPolicyTrainer('./cfg/MacOs.json')
+    trainer = PPOOnPolicyTrainer('./cfg/MacOs.json')
     trainer.run()

@@ -1,5 +1,5 @@
 {
-    "envName":"./Env/MacOs/simEnv16",
+    "envName":"./Env/MacOs/Env16",
     "sSize": [1, 726],
     "nAgent": 48,
     "imgMode":"False",
@@ -28,11 +28,8 @@
                   "BN":"None"
               }
     },
-    "episodeP": 20,
     "updateStep":200,
-  
-    "fixedTemp": "True",
-    "tempValue": 0.2,
+    "div":16,
   
     "lrFreq": 1,
     "rScaling": 1,
@@ -54,10 +51,13 @@
       }
     },
     "gamma": 0.99,
+    "Lambda":0.95,
+    "epsilon": 0.2,
+    "entropyCoeff":0.05,
   
-    "sPath": "./save/SAC/",
+    "sPath": "./save/PPO/",
     "writeTMode":"True",
-    "tPath": "./tensorboard/SAC/",
+    "tPath": "./tensorboard/PPO/",
     "lPath":"None",
   
     "device": "cpu",
