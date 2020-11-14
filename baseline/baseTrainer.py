@@ -62,6 +62,8 @@ class OFFPolicy:
             engineChannel.set_configuration_parameters(time_scale=1)
             setChannel = EnvironmentParametersChannel()
             imgMode = self.data['imgMode'] == 'True'
+            Count = self.data['Count']
+            setChannel.set_float_parameter("Count", Count)
             if imgMode:
                 setChannel.set_float_parameter("imgMode", 1.0)
             else:

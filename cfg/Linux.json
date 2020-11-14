@@ -1,9 +1,10 @@
 {
-    "envName":"./Env/Linux/simEnv16",
+    "envName":"./Env/Linux/Env16",
     "unityEnv": "True",
     "imgMode":"True",
     "sSize": [1, 96, 96],
     "nAgent": 48,
+    "Count":1000,
     "aSize": 2,
     "seed": 0,
   
