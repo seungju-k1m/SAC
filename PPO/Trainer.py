@@ -120,7 +120,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             action = action.cpu().numpy()
         return action, lstmState
 
-    def train(self, step, k):
+    def train(self, step, k, epoch):
         """
         this method is for training!!
 
@@ -201,12 +201,12 @@ class PPOOnPolicyTrainer(ONPolicy):
         loss = lossC - obj
 
         if self.writeTMode:
-            self.writer.add_scalar('Action Gradient Mag', normA, step)
-            self.writer.add_scalar('Critic Gradient Mag', normC, step)
-            self.writer.add_scalar('Gradient Mag', norm, step)
-            self.writer.add_scalar('Loss', loss, step)
-            self.writer.add_scalar('Obj', -obj, step)
-            self.writer.add_scalar('Critic Loss', lossC, step)
+            self.writer.add_scalar('Action Gradient Mag', normA, step+epoch)
+            self.writer.add_scalar('Critic Gradient Mag', normC, step+epoch)
+            self.writer.add_scalar('Gradient Mag', norm, step+epoch)
+            self.writer.add_scalar('Loss', loss, step+epoch)
+            self.writer.add_scalar('Obj', -obj, step+epoch)
+            self.writer.add_scalar('Critic Loss', lossC, step+epoch)
 
     def getReturn(self, reward, critic, nCritic, done):
         """
@@ -218,7 +218,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             critic:[tensor]
                 shape[step*nAgent, 1]
         """
-        nAgent = self.nAgent
+        nAgent = int(self.nAgent/self.div)
         gT, gAE = [], []
         step = len(reward)
         critic = critic.view((step, -1))
@@ -359,7 +359,6 @@ class PPOOnPolicyTrainer(ONPolicy):
         lstmState = self.zeroLSTMState()
         action, nlstmState = self.getAction(stateT, lstmState=lstmState)
         step = 1
-        index = 0
         while 1:
             self.checkStep(action)
             obs, reward, done = self.getObs()
@@ -372,13 +371,17 @@ class PPOOnPolicyTrainer(ONPolicy):
                 nStateT.append(state)
             nStateT = torch.cat(nStateT, dim=0).to(self.device)
             nAction, nnlstmState = self.getAction(nStateT, lstmState=nlstmState)
-            self.replayMemory[index].append(
-                ((stateT, lstmState), action.copy(),
-                    reward*self.rScaling, (nStateT, nlstmState), done.copy())
-            )
-            index += 1
-            if index == self.div:
-                index = 0
+            u = 0
+            for z in range(self.div):
+                uu = u + int(self.nAgent/self.div)
+                temp = (lstmState[0][:, u:uu], lstmState[1][:, u:uu])
+                ntemp = (nlstmState[0][:, u:uu], nlstmState[1][:, u:uu])
+                self.replayMemory[z].append(
+                    ((stateT[u:uu], temp), action[u:uu].copy(),
+                        reward[u:uu]*self.rScaling, (nStateT[u:uu], ntemp),
+                        done[u:uu].copy())
+                )
+                u = uu
             for i, d in enumerate(done):
                 if d:
                     nlstmState = self.setZeroLSTMState(nlstmState, i)
@@ -391,14 +394,14 @@ class PPOOnPolicyTrainer(ONPolicy):
             nlstmState = nnlstmState
 
             step += 1
-            for epoch in self.epoch:
-                if step % self.updateStep == 0:
+            if step % self.updateStep == 0:
+                for epoch in range(self.epoch):
                     for j in range(self.div):
-                        self.train(step, j)
-            self.oldAgent.update(self.agent)
-            self.clear()
+                        self.train(step, j, epoch)
+                self.oldAgent.update(self.agent)
+                self.clear()
             
-            if step % 2000 == 0:
+            if step % 400 == 0:
                 episodeReward = np.array(episodeReward)
                 reward = episodeReward.mean()
                 if self.writeTMode:
