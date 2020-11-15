@@ -29,9 +29,18 @@ class PPOOnPolicyTrainer(ONPolicy):
         else:
             self.device = torch.device("cpu")
         self.entropyCoeff = self.data['entropyCoeff']
-        self.agent = ppoAgent(self.aData, self.optimData, self.entropyCoeff)
+        self.epsilon = self.data['epsilon']
+        self.agent = ppoAgent(
+            self.aData, 
+            self.optimData, 
+            coeff=self.entropyCoeff, 
+            epsilon=self.epsilon)
         self.agent.to(self.device)
-        self.oldAgent = ppoAgent(self.aData, self.optimData, self.entropyCoeff)
+        self.oldAgent = ppoAgent(
+            self.aData,
+            self.optimData,
+            coeff= self.entropyCoeff,
+            epsilon=self.epsilon)
         self.oldAgent.to(self.device)
         self.oldAgent.update(self.agent)
  
@@ -161,8 +170,8 @@ class PPOOnPolicyTrainer(ONPolicy):
         dones = np.array(dones)
 
         with torch.no_grad():
-            critic = self.agent.criticForward(states, lstmState)
-            nCritic = self.agent.criticForward(nstates, nlstmState)
+            critic = self.oldAgent.criticForward(states, lstmState)
+            nCritic = self.oldAgent.criticForward(nstates, nlstmState)
 
         gT, gAE = self.getReturn(rewards, critic, nCritic, dones)  # step, nAgent
         
@@ -173,9 +182,6 @@ class PPOOnPolicyTrainer(ONPolicy):
             gT.detach(),
             
         )
-        lossC.backward()
-        self.cOptim.step()
-        self.fOptim.step()
 
         minusObj= self.agent.calAObj(
             self.oldAgent,
@@ -185,6 +191,9 @@ class PPOOnPolicyTrainer(ONPolicy):
             gAE
         )
         minusObj.backward()
+        lossC.backward()
+        self.cOptim.step()
+        self.fOptim.step()
         self.aOptim.step()
         self.fOptim.step()
         

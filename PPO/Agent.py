@@ -5,12 +5,13 @@ from baseline.utils import constructNet
 
 class ppoAgent(baseAgent):
 
-    def __init__(self, aData, oData, coeff, device='cpu'):
+    def __init__(self, aData, oData, coeff=0.01, epsilon=0.2, device='cpu'):
         super(ppoAgent, self).__init__()
         
         self.aData = aData
         self.optimData = oData
         self.coeff = coeff
+        self.epsilon = epsilon
         self.hiddenSize = self.aData['Feature']['hiddenSize']
         self.keyList = list(self.aData.keys())
         self.device = torch.device(device)
@@ -174,7 +175,7 @@ class ppoAgent(baseAgent):
         oldProb, _ = old_agent.calLogProb(state, action, lstmState=lstmState)
         oldProb = oldProb.detach()
         ratio = prob / oldProb
-        obj = torch.min(ratio * gae, torch.clamp(ratio, 0.8, 1.2) * gae) + self.coeff * entropy
+        obj = torch.min(ratio * gae, torch.clamp(ratio, 1-self.epsilon, 1+self.epsilon) * gae) + self.coeff * entropy
 
         return (-obj).mean()
 
@@ -194,9 +195,11 @@ class ppoAgent(baseAgent):
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         std = log_std.exp()
         gaussianDist = torch.distributions.Normal(mean, std)
+        action = torch.clamp(action, -0.995, 0.995)
         x = torch.atanh(action)
         log_prob = gaussianDist.log_prob(x).sum(1, keepdim=True)
-        entropy = (torch.log(std * (2 * 3.14)**0.5)+0.5).sum(1, keepdim=True)
+        entropy = gaussianDist.entropy().sum(1, keepdim=True)
+        # entropy = (torch.log(std * (2 * 3.14)**0.5)+0.5).sum(1, keepdim=True)
 
-        return log_prob.exp(), entropy
+        return log_prob.exp(), entropy.mean()
 
