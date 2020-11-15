@@ -90,7 +90,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         alpha = step / self.annealingStep
         temp = (1 - alpha) * self.initLogStd + alpha * self.finLogStd
         self.agent.logStd = temp
-        self.oldagent.logStd = temp
+        self.oldAgent.logStd = temp
 
     def genOptim(self):
         optimKeyList = list(self.optimData.keys())
@@ -202,13 +202,14 @@ class PPOOnPolicyTrainer(ONPolicy):
             states.detach(),
             lstmState,
             actions,
-            gAE
+            gT.detach()-critic
         )
         minusObj.backward()
         lossC.backward()
         self.cOptim.step()
         self.fOptim.step()
         self.aOptim.step()
+        
         self.fOptim.step()
         
         aN = calGlobalNorm(self.actor)
@@ -267,8 +268,10 @@ class PPOOnPolicyTrainer(ONPolicy):
                 if is_terminal:
                     discounted_r = 0
                     discounted_Td = 0
+                    td_error = r - c
+                else:
+                    td_error = r + self.gamma * nc - c
                 discounted_r = r + self.gamma * discounted_r
-                td_error = r + self.gamma * nc - c
                 discounted_Td = td_error + self.gamma * self.labmda * discounted_Td
 
                 GT.append(discounted_r)
