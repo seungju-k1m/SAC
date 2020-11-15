@@ -153,7 +153,7 @@ class ppoAgent(baseAgent):
         Feature = torch.squeeze(Feature, dim=0)
         output = self.actor(Feature)
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
-        log_std = torch.clamp(log_std, -20, 2)
+        log_std = torch.clamp(log_std, -5, 2)
         std = log_std.exp()
 
         gaussianDist = torch.distributions.Normal(mean, std)
@@ -175,7 +175,7 @@ class ppoAgent(baseAgent):
         oldProb, _ = old_agent.calLogProb(state, action, lstmState=lstmState)
         oldProb = oldProb.detach()
         ratio = prob / oldProb
-        obj = torch.min(ratio * gae, torch.clamp(ratio, 1-self.epsilon, 1+self.epsilon) * gae) + self.coeff * entropy
+        obj = torch.min(ratio * gae, torch.clamp(ratio, 1-self.epsilon, 1.2) * gae) + self.coeff * entropy
 
         return (-obj).mean()
 
@@ -193,9 +193,9 @@ class ppoAgent(baseAgent):
         Feature = torch.squeeze(Feature, dim=0)
         output = self.actor(Feature)
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
+        log_std = torch.clamp(log_std, -5, 2)
         std = log_std.exp()
         gaussianDist = torch.distributions.Normal(mean, std)
-        action = torch.clamp(action, -0.995, 0.995)
         x = torch.atanh(action)
         log_prob = gaussianDist.log_prob(x).sum(1, keepdim=True)
         entropy = gaussianDist.entropy().sum(1, keepdim=True)

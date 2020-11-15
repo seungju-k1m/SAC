@@ -10,7 +10,7 @@
             "Feature": {
               "netCat": "LSTMNET",
               "nLayer": 1,
-              "hiddenSize":1024
+              "hiddenSize":512
             },
             "actor":{
                 "netCat":"MLP",
@@ -37,14 +37,14 @@
   "optim": {
     "actor": {
       "name": "adam",
-      "lr": 3e-4,
+      "lr": 3e-5,
       "decay": 0,
       "eps": 1e-7,
       "clipping": "None"
     },
     "critic": {
       "name": "adam",
-      "lr": 3e-4,
+      "lr": 3e-5,
       "decay": 0,
       "clipping": "None",
       "eps": 1e-7
@@ -53,7 +53,7 @@
   "gamma": 0.99,
   "Lambda":0.95,
   "epoch":15,
-  "epsilon": 0.1,
+  "epsilon": 0.2,
   "entropyCoeff":0.01,
 
   "sPath": "./save/PPO/",
