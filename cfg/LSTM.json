@@ -15,7 +15,7 @@
             "actor":{
                 "netCat":"MLP",
                 "nLayer":2,
-                "fSize":[256, 4],
+                "fSize":[256, 2],
                 "act":["relu", "linear"],
                 "BN":"None"
             },

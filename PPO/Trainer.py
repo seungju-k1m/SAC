@@ -30,16 +30,24 @@ class PPOOnPolicyTrainer(ONPolicy):
             self.device = torch.device("cpu")
         self.entropyCoeff = self.data['entropyCoeff']
         self.epsilon = self.data['epsilon']
+
+        self.initLogStd = self.data['initLogStd']
+        self.LogStd = self.initLogStd
+        self.finLogStd = self.data['finLogStd']
+        self.annealingStep = self.data['annealingStep']
+
         self.agent = ppoAgent(
             self.aData, 
             self.optimData, 
-            coeff=self.entropyCoeff, 
+            coeff=self.entropyCoeff,
+            logStd=self.LogStd,
             epsilon=self.epsilon)
         self.agent.to(self.device)
         self.oldAgent = ppoAgent(
             self.aData,
             self.optimData,
-            coeff= self.entropyCoeff,
+            coeff=self.entropyCoeff,
+            logStd=self.LogStd,
             epsilon=self.epsilon)
         self.oldAgent.to(self.device)
         self.oldAgent.update(self.agent)
@@ -77,7 +85,13 @@ class PPOOnPolicyTrainer(ONPolicy):
         state = torch.cat((rState, lidarPt), dim=1).float().to(self.device)
 
         return state
- 
+
+    def annealingLogStd(self, step):
+        alpha = step / self.annealingStep
+        temp = (1 - alpha) * self.initLogStd + alpha * self.finLogStd
+        self.agent.logStd = temp
+        self.oldagent.logStd = temp
+
     def genOptim(self):
         optimKeyList = list(self.optimData.keys())
         self.Feature = self.agent.Feature.to(self.device)
@@ -403,6 +417,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             nlstmState = nnlstmState
 
             step += 1
+            self.annealingLogStd(step)
             if step % self.updateStep == 0:
                 for epoch in range(self.epoch):
                     for j in range(self.div):

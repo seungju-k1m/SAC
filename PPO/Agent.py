@@ -1,3 +1,4 @@
+import math
 import torch
 from baseline.baseNetwork import baseAgent
 from baseline.utils import constructNet
@@ -5,13 +6,22 @@ from baseline.utils import constructNet
 
 class ppoAgent(baseAgent):
 
-    def __init__(self, aData, oData, coeff=0.01, epsilon=0.2, device='cpu'):
+    def __init__(
+        self, 
+        aData,
+        oData,
+        coeff=0.01,
+        epsilon=0.2,
+        logStd=-1.6,
+        device='cpu'
+        ):
         super(ppoAgent, self).__init__()
         
         self.aData = aData
         self.optimData = oData
         self.coeff = coeff
         self.epsilon = epsilon
+        self.logStd = logStd
         self.hiddenSize = self.aData['Feature']['hiddenSize']
         self.keyList = list(self.aData.keys())
         self.device = torch.device(device)
@@ -80,10 +90,8 @@ class ppoAgent(baseAgent):
         Feature, (hA, cA) = self.Feature(state, (hAState, cAState))
         Feature = torch.squeeze(Feature, dim=0)
 
-        output = self.actor(Feature)
-        mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
-        log_std = torch.clamp(log_std, -20, 2)
-        std = log_std.exp()
+        mean = self.actor(Feature)
+        std = math.exp(self.logStd)
 
         gaussianDist = torch.distributions.Normal(mean, std)
         x_t = gaussianDist.rsample()
@@ -151,11 +159,8 @@ class ppoAgent(baseAgent):
         state = torch.unsqueeze(state, dim=0)
         Feature, (hA, cA) = self.Feature(state, (hAState, cAState))
         Feature = torch.squeeze(Feature, dim=0)
-        output = self.actor(Feature)
-        mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
-        log_std = torch.clamp(log_std, -5, 2)
-        std = log_std.exp()
-
+        mean = self.actor(Feature)
+        std = math.exp(self.logStd)
         gaussianDist = torch.distributions.Normal(mean, std)
         x_t = gaussianDist.rsample()
         action = torch.tanh(x_t)
@@ -191,10 +196,8 @@ class ppoAgent(baseAgent):
         state = torch.unsqueeze(state, dim=0)
         Feature, (hA, cA) = self.Feature(state, (hAState, cAState))
         Feature = torch.squeeze(Feature, dim=0)
-        output = self.actor(Feature)
-        mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
-        log_std = torch.clamp(log_std, -5, 2)
-        std = log_std.exp()
+        mean = self.actor(Feature)
+        std = math.exp(self.logStd)
         gaussianDist = torch.distributions.Normal(mean, std)
         x = torch.atanh(action)
         log_prob = gaussianDist.log_prob(x).sum(1, keepdim=True)

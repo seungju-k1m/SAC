@@ -1,68 +1,71 @@
 {
-    "envName":"./Env/MacOs/Env16",
-    "sSize": [1, 726],
-    "nAgent": 48,
-    "imgMode":"False",
-    "aSize": 2,
-    "seed": 0,
-  
-    "agent": {
-              "Feature": {
-                "netCat": "LSTMNET",
-                "nLayer": 1,
-                "hiddenSize":512
-              },
-              "actor":{
-                  "netCat":"MLP",
-                  "nLayer":2,
-                  "fSize":[256, 4],
-                  "act":["relu", "linear"],
-                  "BN":"None"
-              },
-  
-              "critic":{
-                  "netCat":"MLP",
-                  "nLayer":2,
-                  "fSize":[256, 1],
-                  "act":["relu", "linear"],
-                  "BN":"None"
-              }
+  "envName":"./Env/Linux/Env16",
+  "sSize": [1, 726],
+  "nAgent": 48,
+  "imgMode":"False",
+  "aSize": 2,
+  "seed": 0,
+
+  "agent": {
+            "Feature": {
+              "netCat": "LSTMNET",
+              "nLayer": 1,
+              "hiddenSize":512
+            },
+            "actor":{
+                "netCat":"MLP",
+                "nLayer":2,
+                "fSize":[256, 2],
+                "act":["relu", "linear"],
+                "BN":"None"
+            },
+
+            "critic":{
+                "netCat":"MLP",
+                "nLayer":2,
+                "fSize":[256, 1],
+                "act":["relu", "linear"],
+                "BN":"None"
+            }
+  },
+  "updateStep":256,
+  "div":16,
+
+  "lrFreq": 1,
+  "rScaling": 1,
+
+  "optim": {
+    "actor": {
+      "name": "adam",
+      "lr": 3e-5,
+      "decay": 0,
+      "eps": 1e-7,
+      "clipping": "None"
     },
-    "updateStep":256,
-    "div":16,
-  
-    "lrFreq": 1,
-    "rScaling": 1,
-  
-    "optim": {
-      "actor": {
-        "name": "adam",
-        "lr": 3e-4,
-        "decay": 0,
-        "eps": 1e-7,
-        "clipping": "None"
-      },
-      "critic": {
-        "name": "adam",
-        "lr": 3e-4,
-        "decay": 0,
-        "clipping": "None",
-        "eps": 1e-7
-      }
-    },
-    "gamma": 0.99,
-    "Lambda":0.95,
-    "epoch":15,
-    "epsilon": 0.2,
-    "entropyCoeff":0.05,
-  
-    "sPath": "./save/PPO/",
-    "writeTMode":"True",
-    "tPath": "./tensorboard/PPO/",
-    "lPath":"None",
-  
-    "device": "cpu",
-    "gpuOverload":"True",
-    "inferMode": "False",
-    "renderMode": "True"
-  }
+    "critic": {
+      "name": "adam",
+      "lr": 3e-5,
+      "decay": 0,
+      "clipping": "None",
+      "eps": 1e-7
+    }
+  },
+  "gamma": 0.99,
+  "Lambda":0.95,
+  "epoch":15,
+  "epsilon": 0.2,
+  "entropyCoeff":0,
+  "initLogStd": -0.6,
+  "finLogStd":-1.7,
+  "annealingStep":1e6,
+
+  "sPath": "./save/PPO/",
+  "writeTMode":"True",
+  "tPath": "./tensorboard/PPO/",
+  "lPath":"None",
+
+  "device": "cuda",
+  "gpuOverload":"True",
+  "inferMode": "False",
+  "renderMode": "True"
+}
