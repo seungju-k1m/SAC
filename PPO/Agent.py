@@ -22,20 +22,22 @@ class ppoAgent(baseAgent):
         self.coeff = coeff
         self.epsilon = epsilon
         self.logStd = logStd
-        self.hiddenSize = self.aData['Feature']['hiddenSize']
+        self.hiddenSize = self.aData['LSTM']['hiddenSize']
         self.keyList = list(self.aData.keys())
         self.device = torch.device(device)
         self.getISize()
         self.buildModel()
 
     def update(self, Agent):
-        self.Feature.load_state_dict(Agent.Feature.state_dict())
+        self.CNN.load_state_dict(Agent.CNN.state_dict())
         self.actor.load_state_dict(Agent.actor.state_dict())
+        self.LSTM.load_state_dict(Agent.LSTM.state_dict())
         self.critic.load_state_dict(Agent.critic.state_dict())
     
     def to(self, device):
         self.device = device
-        self.Feature = self.Feature.to(device)
+        self.LSTM = self.LSTM.to(device)
+        self.CNN = self.CNN.to(device)
         self.actor = self.actor.to(device)
         self.critic = self.critic.to(device)
 
@@ -43,12 +45,20 @@ class ppoAgent(baseAgent):
         self.iFeature01 = self.aData['sSize'][-1]
         self.iFeature02 = self.hiddenSize
         self.sSize = self.aData['sSize']
+        div = 1
+        stride = self.aData['CNN']['stride']
+        fSize = self.aData['CNN']['nUnit'][-1]
+        for s in stride:
+            div *= s
+        self.iFeature03 = int((self.sSize[-1]/div)**2*fSize)
     
     def buildModel(self):
         for netName in self.keyList:
             netData = self.aData[netName]
-            if netName == 'Feature':
-                self.Feature = constructNet(netData, iSize=self.iFeature01)
+            if netName == 'CNN':
+                self.CNN = constructNet(netData, iSize=1, WH=96)
+            elif netName == 'LSTM':
+                self.LSTM = constructNet(netData, iSize=self.iFeature03)
             elif netName == 'actor':
                 self.actor = constructNet(netData, iSize=self.iFeature02)
             elif netName == 'critic':
@@ -85,9 +95,11 @@ class ppoAgent(baseAgent):
             cAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
         else:
             hAState, cAState = lstmState
+        
+        cnnF = self.CNN(state)
+        cnnF = torch.unsqueeze(cnnF, dim=0)
        
-        state = torch.unsqueeze(state, dim=0)
-        Feature, (hA, cA) = self.Feature(state, (hAState, cAState))
+        Feature, (hA, cA) = self.LSTM(cnnF, (hAState, cAState))
         Feature = torch.squeeze(Feature, dim=0)
 
         mean = self.actor(Feature)
@@ -124,10 +136,10 @@ class ppoAgent(baseAgent):
             cAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
         else:
             hAState, cAState = lstmState
-        state = torch.unsqueeze(state, dim=0)
-
-        Feature, (hA, cA) = self.Feature(state, (hAState, cAState))
-
+        cnnF = self.CNN(state)
+        cnnF = torch.unsqueeze(cnnF, dim=0)
+       
+        Feature, (hA, cA) = self.LSTM(cnnF, (hAState, cAState))
         Feature = torch.squeeze(Feature, dim=0)
 
         critic = self.critic(Feature)
@@ -156,8 +168,10 @@ class ppoAgent(baseAgent):
         else:
             hAState, cAState = lstmState
             hAState, cAState = hAState.to(self.device), cAState.to(self.device)
-        state = torch.unsqueeze(state, dim=0)
-        Feature, (hA, cA) = self.Feature(state, (hAState, cAState))
+        cnnF = self.CNN(state)
+        cnnF = torch.unsqueeze(cnnF, dim=0)
+       
+        Feature, (hA, cA) = self.LSTM(cnnF, (hAState, cAState))
         Feature = torch.squeeze(Feature, dim=0)
         mean = self.actor(Feature)
         std = math.exp(self.logStd)
@@ -193,8 +207,10 @@ class ppoAgent(baseAgent):
         else:
             hAState, cAState = lstmState
             hAState, cAState = hAState.to(self.device), cAState.to(self.device)
-        state = torch.unsqueeze(state, dim=0)
-        Feature, (hA, cA) = self.Feature(state, (hAState, cAState))
+        cnnF = self.CNN(state)
+        cnnF = torch.unsqueeze(cnnF, dim=0)
+       
+        Feature, (hA, cA) = self.LSTM(cnnF, (hAState, cAState))
         Feature = torch.squeeze(Feature, dim=0)
         mean = self.actor(Feature)
         std = math.exp(self.logStd)

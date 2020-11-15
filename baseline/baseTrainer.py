@@ -1,4 +1,3 @@
-import gym
 import torch
 import datetime
 import numpy as np
@@ -54,6 +53,7 @@ class ONPolicy:
         engineChannel.set_configuration_parameters(time_scale=2)
         setChannel = EnvironmentParametersChannel()
         imgMode = self.data['imgMode'] == "True"
+        self.imgMode = imgMode
         if imgMode:
             setChannel.set_float_parameter("imgMode", 1.0)
         else:

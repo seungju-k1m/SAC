@@ -1,3 +1,4 @@
+import math
 import torch
 import numpy as np
 from baseline.baseTrainer import ONPolicy
@@ -58,7 +59,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.sPath += name + '_' + str(self.nAgent) + '_LSTMV1_.pth'
 
         self.sSize = self.aData['sSize']
-        self.hiddenSize = self.aData['Feature']['hiddenSize']
+        self.hiddenSize = self.aData['LSTM']['hiddenSize']
         self.updateStep = self.data['updateStep']
         self.genOptim()
 
@@ -77,14 +78,44 @@ class PPOOnPolicyTrainer(ONPolicy):
             obs:[np.array]
                 shpae:[1447,]
         """
+        if self.imgMode:
+            rState, targetOn, lidarPt = obs[:6], obs[6], obs[7:]
+            targetPos = np.reshape(rState[:2], (1, 2))
+            rState = torch.tensor(rState).to(self.device)
+            lidarImg = torch.zeros(self.sSize[1]**2).to(self.device)
+            lidarPt = lidarPt[lidarPt != 0]
+            lidarPt -= 1000
+            lidarPt = np.reshape(lidarPt, (-1, 2))
+            R = [[math.cos(rState[-1]), -math.sin(rState[-1])], [math.sin(rState[-1]), math.cos(rState[-1])]]
+            R = np.array(R)
+            lidarPt = np.dot(lidarPt, R)
+            locXY = (((lidarPt + 7) / 14) * (self.sSize[-1]+1)).astype(np.int16)
+            locYX = locXY[:, ::-1]
+            locYX = np.unique(locYX, axis=0)
+            locYX = locYX[:, 0] * self.sSize[1] + locYX[:, 1]
+            locYX = np.clip(locYX, self.sSize[1], self.sSize[1]**2 - 2)
+            lidarImg[locYX] = 1
+            lidarImg = lidarImg.view(self.sSize[1:])
+            if targetOn == 1:
+                pt = np.dot(targetPos, R)[0]
+                locX = int(((pt[0]+7) / 14)*self.sSize[-1])
+                locY = int(((pt[1]+7) / 14)*self.sSize[-1])
+                if locX == (self.sSize[-1]-1):
+                    locX -= 1
+                if locY == (self.sSize[-1]-1):
+                    locY -= 1
+                lidarImg[locY+1, locX+1] = 10
+            lidarImg = torch.unsqueeze(lidarImg, dim=0)
+            lidarImg[0, 0, :6] = rState
+            return lidarImg
+        else:
+            rState, lidarPt = obs[:6], obs[7:727]
+            rState = torch.tensor(rState).view((1, -1))
+            lidarPt = torch.tensor(lidarPt).view((1, -1))
 
-        rState, lidarPt = obs[:6], obs[7:727]
-        rState = torch.tensor(rState).view((1, -1))
-        lidarPt = torch.tensor(lidarPt).view((1, -1))
+            state = torch.cat((rState, lidarPt), dim=1).float().to(self.device)
 
-        state = torch.cat((rState, lidarPt), dim=1).float().to(self.device)
-
-        return state
+            return state
 
     def annealingLogStd(self, step):
         alpha = step / self.annealingStep
@@ -94,21 +125,24 @@ class PPOOnPolicyTrainer(ONPolicy):
 
     def genOptim(self):
         optimKeyList = list(self.optimData.keys())
-        self.Feature = self.agent.Feature.to(self.device)
+        self.CNN = self.agent.CNN.to(self.device)
+        self.LSTM = self.agent.LSTM.to(self.device)
         self.actor = self.agent.actor.to(self.device)
         self.critic = self.agent.critic.to(self.device)
         for optimKey in optimKeyList:
             if optimKey == 'actor':
                 self.aOptim = getOptim(self.optimData[optimKey], self.actor)
-                self.fOptim = getOptim(self.optimData[optimKey], self.Feature)
+                self.cnnOptim = getOptim(self.optimData[optimKey], self.CNN)
+                self.lOptim = getOptim(self.optimData[optimKey], self.LSTM)
 
             if optimKey == 'critic':
                 self.cOptim = getOptim(self.optimData[optimKey], self.critic)
 
     def zeroGrad(self):
         self.aOptim.zero_grad()
-        self.fOptim.zero_grad()
+        self.cnnOptim.zero_grad()
         self.cOptim.zero_grad()
+        self.lOptim.zero_grad()
 
     def getAction(self, state, lstmState=None, dMode=False):
         """
@@ -207,13 +241,12 @@ class PPOOnPolicyTrainer(ONPolicy):
         minusObj.backward()
         lossC.backward()
         self.cOptim.step()
-        self.fOptim.step()
+        self.cnnOptim.step()
         self.aOptim.step()
-        
-        self.fOptim.step()
+        self.lOptim.step()
         
         aN = calGlobalNorm(self.actor)
-        aF1N = calGlobalNorm(self.Feature)
+        aF1N = calGlobalNorm(self.LSTM) + calGlobalNorm(self.CNN)
         normA = aN + aF1N 
 
         cN = calGlobalNorm(self.critic)
@@ -381,7 +414,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             ob = obs[b]
             state = self.ppState(ob)
             stateT.append(state)
-        stateT = torch.cat(stateT, dim=0)
+        stateT = torch.stack(stateT, dim=0)
         lstmState = self.zeroLSTMState()
         action, nlstmState = self.getAction(stateT, lstmState=lstmState)
         step = 1
@@ -395,7 +428,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 ob = obs[b]
                 state = self.ppState(ob)
                 nStateT.append(state)
-            nStateT = torch.cat(nStateT, dim=0).to(self.device)
+            nStateT = torch.stack(nStateT, dim=0).to(self.device)
             nAction, nnlstmState = self.getAction(nStateT, lstmState=nlstmState)
             u = 0
             for z in range(self.div):
