@@ -10,7 +10,7 @@
             "Feature": {
               "netCat": "LSTMNET",
               "nLayer": 1,
-              "hiddenSize":512
+              "hiddenSize":1024
             },
             "actor":{
                 "netCat":"MLP",
@@ -52,7 +52,7 @@
   },
   "gamma": 0.99,
   "Lambda":0.95,
-  "epoch":15,
+  "epoch":10,
   "epsilon": 0.2,
   "entropyCoeff":0,
   "initLogStd": -0.6,
