@@ -1,10 +1,11 @@
 {
-  "envName":"./Env/MacOs/Env01",
+  "envName":"./Linux/Env01",
   "sSize": [1, 96, 96],
-  "nAgent": 6,
+  "nAgent": 3,
   "imgMode":"True",
   "aSize": 2,
   "seed": 0,
+  "fixedSigma":"False",
 
   "agent": {
             "CNN": {
@@ -25,7 +26,7 @@
             "actor":{
                 "netCat":"MLP",
                 "nLayer":2,
-                "fSize":[256, 2],
+                "fSize":[256, 4],
                 "act":["relu", "linear"],
                 "BN":"None"
             },
@@ -38,8 +39,8 @@
                 "BN":"None"
             }
   },
-  "updateStep":512,
-  "div":2,
+  "updateStep":256,
+  "div":1,
 
   "lrFreq": 1,
   "rScaling": 1,
@@ -62,19 +63,19 @@
   },
   "gamma": 0.99,
   "Lambda":0.95,
-  "epoch":10,
+  "epoch":80,
   "epsilon": 0.2,
-  "entropyCoeff":0,
-  "initLogStd": -0.6,
-  "finLogStd":-1.7,
-  "annealingStep":1e6,
+  "entropyCoeff":0.01,
+  "initLogStd": -0.7,
+  "finLogStd":-2.5,
+  "annealingStep":5e5,
 
   "sPath": "./save/PPO/",
   "writeTMode":"True",
   "tPath": "./tensorboard/PPO/",
   "lPath":"None",
 
-  "device": "cpu",
+  "device": "cuda:0",
   "gpuOverload":"True",
   "inferMode": "False",
   "renderMode": "True"
