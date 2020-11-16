@@ -208,7 +208,7 @@ class ppoAgent(baseAgent):
         ratio = prob / oldProb
         obj = torch.min(ratio * gae, torch.clamp(ratio, 1-self.epsilon, 1.2) * gae) + self.coeff * entropy
 
-        return (-obj).mean()
+        return (-obj).mean(), entropy
 
     def calLogProb(self, state, action, lstmState=None):
         state = state.to(self.device)

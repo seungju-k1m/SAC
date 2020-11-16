@@ -243,7 +243,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             
         )
 
-        minusObj= self.agent.calAObj(
+        minusObj, entropy = self.agent.calAObj(
             self.oldAgent,
             states.detach(),
             lstmState,
@@ -276,6 +276,8 @@ class PPOOnPolicyTrainer(ONPolicy):
             self.writer.add_scalar('Loss', loss, step+epoch)
             self.writer.add_scalar('Obj', -obj, step+epoch)
             self.writer.add_scalar('Critic Loss', lossC, step+epoch)
+            entropy = entropy.detach().cpu().numpy()
+            self.writer.add_scalar("Entropy", entropy, step+epoch)
 
     def getReturn(self, reward, critic, nCritic, done):
         """

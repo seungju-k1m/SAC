@@ -1,11 +1,12 @@
 {
-  "envName":"./Env/Linux/Env01",
+  "envName":"./Env/Linux/Env16",
   "sSize": [1, 96, 96],
-  "nAgent": 3,
+  "nAgent": 48,
+  "maxStack":1,
   "imgMode":"True",
   "aSize": 2,
   "seed": 0,
-  "fixedSigma":"True",
+  "fixedSigma":"False",
 
   "agent": {
             "CNN": {
@@ -26,8 +27,8 @@
             "actor":{
                 "netCat":"MLP",
                 "nLayer":2,
-                "fSize":[256, 2],
-                "act":["relu", "linear"],
+                "fSize":[256, 4],
+                "act":["tanh", "linear"],
                 "BN":"None"
             },
 
@@ -35,12 +36,12 @@
                 "netCat":"MLP",
                 "nLayer":2,
                 "fSize":[256, 1],
-                "act":["relu", "linear"],
+                "act":["tanh", "linear"],
                 "BN":"None"
             }
   },
   "updateStep":256,
-  "div":1,
+  "div":16,
 
   "lrFreq": 1,
   "rScaling": 1,
@@ -49,21 +50,21 @@
     "actor": {
       "name": "adam",
       "lr": 3e-4,
-      "decay": 0,
+      "decay": 1e-6,
       "eps": 1e-7,
       "clipping": "None"
     },
     "critic": {
       "name": "adam",
       "lr": 3e-4,
-      "decay": 0,
+      "decay": 1e-6,
       "clipping": "None",
       "eps": 1e-7
     }
   },
   "gamma": 0.99,
   "Lambda":0.95,
-  "epoch":80,
+  "epoch":5,
   "epsilon": 0.2,
   "entropyCoeff":0.01,
   "initLogStd": -0.7,
