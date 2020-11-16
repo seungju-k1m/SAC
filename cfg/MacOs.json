@@ -2,6 +2,7 @@
   "envName":"./Linux/Env01",
   "sSize": [1, 96, 96],
   "nAgent": 3,
+  "maxStack":1,
   "imgMode":"True",
   "aSize": 2,
   "seed": 0,
