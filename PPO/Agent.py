@@ -13,10 +13,12 @@ class ppoAgent(baseAgent):
         coeff=0.01,
         epsilon=0.2,
         logStd=-1.6,
+        fixedSigma=False,
         device='cpu'
         ):
         super(ppoAgent, self).__init__()
         
+        self.fixedSigma = fixedSigma
         self.aData = aData
         self.optimData = oData
         self.coeff = coeff
@@ -102,8 +104,13 @@ class ppoAgent(baseAgent):
         Feature, (hA, cA) = self.LSTM(cnnF, (hAState, cAState))
         Feature = torch.squeeze(Feature, dim=0)
 
-        mean = self.actor(Feature)
-        std = math.exp(self.logStd)
+        if self.fixedSigma:
+            mean = self.actor(Feature)
+            std = math.exp(self.logStd)
+        else:
+            output = self.actor(Feature)
+            mean, logStd = output[:, :2], output[:, 2:]
+            std = torch.exp(logStd)
 
         gaussianDist = torch.distributions.Normal(mean, std)
         x_t = gaussianDist.rsample()
@@ -173,8 +180,13 @@ class ppoAgent(baseAgent):
        
         Feature, (hA, cA) = self.LSTM(cnnF, (hAState, cAState))
         Feature = torch.squeeze(Feature, dim=0)
-        mean = self.actor(Feature)
-        std = math.exp(self.logStd)
+        if self.fixedSigma:
+            mean = self.actor(Feature)
+            std = math.exp(self.logStd)
+        else:
+            output = self.actor(Feature)
+            mean, logStd = output[:, :2], output[:, 2:]
+            std = torch.exp(logStd)
         gaussianDist = torch.distributions.Normal(mean, std)
         x_t = gaussianDist.rsample()
         action = torch.tanh(x_t)
@@ -212,11 +224,17 @@ class ppoAgent(baseAgent):
        
         Feature, (hA, cA) = self.LSTM(cnnF, (hAState, cAState))
         Feature = torch.squeeze(Feature, dim=0)
-        mean = self.actor(Feature)
-        std = math.exp(self.logStd)
+        if self.fixedSigma:
+            mean = self.actor(Feature)
+            std = math.exp(self.logStd)
+        else:
+            output = self.actor(Feature)
+            mean, logStd = output[:, :2], output[:, 2:]
+            std = torch.exp(logStd)
         gaussianDist = torch.distributions.Normal(mean, std)
         x = torch.atanh(action)
         log_prob = gaussianDist.log_prob(x).sum(1, keepdim=True)
+        log_prob -= torch.log(1-action.pow(2)+1e-6).sum(1, keepdim=True)
         entropy = gaussianDist.entropy().sum(1, keepdim=True)
         # entropy = (torch.log(std * (2 * 3.14)**0.5)+0.5).sum(1, keepdim=True)
 

@@ -1,10 +1,11 @@
 {
-  "envName":"./Env/Linux/Env16",
+  "envName":"./Env/Linux/Env01",
   "sSize": [1, 96, 96],
-  "nAgent": 48,
+  "nAgent": 3,
   "imgMode":"True",
   "aSize": 2,
   "seed": 0,
+  "fixedSigma":"True",
 
   "agent": {
             "CNN": {
@@ -39,7 +40,7 @@
             }
   },
   "updateStep":256,
-  "div":16,
+  "div":1,
 
   "lrFreq": 1,
   "rScaling": 1,
@@ -62,9 +63,9 @@
   },
   "gamma": 0.99,
   "Lambda":0.95,
-  "epoch":20,
+  "epoch":80,
   "epsilon": 0.2,
-  "entropyCoeff":0,
+  "entropyCoeff":0.01,
   "initLogStd": -0.7,
   "finLogStd":-2.5,
   "annealingStep":5e5,

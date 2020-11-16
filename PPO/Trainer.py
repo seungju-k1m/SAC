@@ -37,11 +37,13 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.finLogStd = self.data['finLogStd']
         self.annealingStep = self.data['annealingStep']
 
+        self.fixedSigma = self.data['fixedSigma'] == 'True'
         self.agent = ppoAgent(
             self.aData, 
             self.optimData, 
             coeff=self.entropyCoeff,
             logStd=self.LogStd,
+            fixedSigma=self.fixedSigma,
             epsilon=self.epsilon)
         self.agent.to(self.device)
         self.oldAgent = ppoAgent(
@@ -49,6 +51,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             self.optimData,
             coeff=self.entropyCoeff,
             logStd=self.LogStd,
+            fixedSigma=self.fixedSigma,
             epsilon=self.epsilon)
         self.oldAgent.to(self.device)
         self.oldAgent.update(self.agent)
@@ -67,7 +70,7 @@ class PPOOnPolicyTrainer(ONPolicy):
 
         self.replayMemory = [deque(maxlen=self.updateStep) for i in range(self.div)]
         self.epoch = self.data['epoch']
-
+        
     def clear(self):
         for i in self.replayMemory:
             i.clear()
@@ -236,7 +239,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             states.detach(),
             lstmState,
             actions,
-            gT.detach()-critic
+            gAE.detach()-critic
         )
         minusObj.backward()
         lossC.backward()
