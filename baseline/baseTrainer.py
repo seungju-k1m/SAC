@@ -104,16 +104,14 @@ class ONPolicy:
     def writeTrainInfo(self):
         self.info = """
         envName:{}
-        startStep:{:3d}
-        nReplayMemory:{:5d}
-        bSize:{:3d}
         lrFreq:{:3d}
         rScaling:{:3d}
         gamma:{}
         """.format(
-            self.data['envName'], self.startStep,
-            self.nReplayMemory, self.bSize, self.lrFreq,
-            self.rScaling, self.gamma)
+            self.data['envName'], 
+            self.lrFreq,
+            self.rScaling, 
+            self.gamma)
         optimKeyList = list(self.optimData.keys())
         for key in optimKeyList[:3]:
             self.info += """

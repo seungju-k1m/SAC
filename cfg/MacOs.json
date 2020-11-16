@@ -1,5 +1,5 @@
 {
-  "envName":"./Linux/Env01",
+  "envName":"./Env/MacOs/Env01",
   "sSize": [1, 96, 96],
   "nAgent": 3,
   "maxStack":1,
@@ -76,7 +76,7 @@
   "tPath": "./tensorboard/PPO/",
   "lPath":"None",
 
-  "device": "cuda:0",
+  "device": "cpu",
   "gpuOverload":"True",
   "inferMode": "False",
   "renderMode": "True"

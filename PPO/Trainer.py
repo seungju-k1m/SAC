@@ -76,27 +76,6 @@ class PPOOnPolicyTrainer(ONPolicy):
 
     def writeTrainInfo(self):
         super(PPOOnPolicyTrainer, self).writeTrainInfo()
-        
-        if self.sMode:
-            self.info += """
-        sMode : True 
-        tau : {:3f} 
-            """.format(self.tau)
-        else:
-            self.info += """
-        sMode : False
-            """
-        
-        if self.fixedTemp:
-            self.info += """
-        fixedTemp : True
-        tempValue : {}
-            """.format(self.tempValue)
-        else:
-            self.info += """
-        fixedTemp : False
-        """
-
         print(self.info)
 
         self.writer.add_text('info', self.info, 0)    
