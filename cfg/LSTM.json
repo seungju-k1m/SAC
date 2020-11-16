@@ -1,16 +1,26 @@
 {
   "envName":"./Env/Linux/Env16",
-  "sSize": [1, 726],
+  "sSize": [1, 96, 96],
   "nAgent": 48,
-  "imgMode":"False",
+  "imgMode":"True",
   "aSize": 2,
   "seed": 0,
 
   "agent": {
-            "Feature": {
+            "CNN": {
+              "netCat": "CNET",
+              "nLayer": 5,
+              "nUnit": [8, 16, 32, 64],
+              "stride": [2, 2, 2, 2],
+              "fSize" : [3, 3, 3, 3, -1],
+              "padding" : [1, 1, 1, 1],
+              "act": "relu",
+              "BN": "None"
+            },
+            "LSTM": {
               "netCat": "LSTMNET",
               "nLayer": 1,
-              "hiddenSize":1024
+              "hiddenSize":512
             },
             "actor":{
                 "netCat":"MLP",
@@ -28,7 +38,7 @@
                 "BN":"None"
             }
   },
-  "updateStep":512,
+  "updateStep":256,
   "div":16,
 
   "lrFreq": 1,
@@ -52,19 +62,19 @@
   },
   "gamma": 0.99,
   "Lambda":0.95,
-  "epoch":10,
+  "epoch":20,
   "epsilon": 0.2,
   "entropyCoeff":0,
-  "initLogStd": -0.6,
-  "finLogStd":-1.7,
-  "annealingStep":1e6,
+  "initLogStd": -0.7,
+  "finLogStd":-2.5,
+  "annealingStep":5e5,
 
   "sPath": "./save/PPO/",
   "writeTMode":"True",
   "tPath": "./tensorboard/PPO/",
   "lPath":"None",
 
-  "device": "cuda",
+  "device": "cuda:0",
   "gpuOverload":"True",
   "inferMode": "False",
   "renderMode": "True"
