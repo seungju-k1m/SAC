@@ -70,7 +70,37 @@ class PPOOnPolicyTrainer(ONPolicy):
 
         self.replayMemory = [deque(maxlen=self.updateStep) for i in range(self.div)]
         self.epoch = self.data['epoch']
+
+        if self.writeTMode:
+            self.writeTrainInfo()
+
+    def writeTrainInfo(self):
+        super(PPOOnPolicyTrainer, self).writeTrainInfo()
         
+        if self.sMode:
+            self.info += """
+        sMode : True 
+        tau : {:3f} 
+            """.format(self.tau)
+        else:
+            self.info += """
+        sMode : False
+            """
+        
+        if self.fixedTemp:
+            self.info += """
+        fixedTemp : True
+        tempValue : {}
+            """.format(self.tempValue)
+        else:
+            self.info += """
+        fixedTemp : False
+        """
+
+        print(self.info)
+
+        self.writer.add_text('info', self.info, 0)    
+    
     def clear(self):
         for i in self.replayMemory:
             i.clear()
