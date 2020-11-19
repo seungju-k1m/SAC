@@ -7,7 +7,7 @@
   "imgMode":"False",
   "aSize": 2,
   "seed": 0,
-  "fixedSigma":"False",
+  "fixedSigma":"True",
 
   "agent": {
             "CNN1D": {
@@ -29,7 +29,7 @@
             "actor":{
                 "netCat":"MLP",
                 "nLayer":2,
-                "fSize":[256, 4],
+                "fSize":[256, 2],
                 "act":["relu", "linear"],
                 "BN":"None"
             },
@@ -43,7 +43,7 @@
             }
   },
   "updateStep":10,
-  "div":16,
+  "div":2,
 
   "lrFreq": 1,
   "rScaling": 1,

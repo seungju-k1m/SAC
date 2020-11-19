@@ -1,34 +1,36 @@
 {
   "envName":"./Env/Linux/Env16",
-  "sSize": [1, 96, 96],
+  "sSize": [1, 120],
+  "resolution":3,
   "nAgent": 48,
   "maxStack":1,
-  "imgMode":"True",
+  "imgMode":"False",
   "aSize": 2,
   "seed": 0,
-  "fixedSigma":"False",
+  "fixedSigma":"True",
 
   "agent": {
-            "CNN": {
-              "netCat": "CNET",
-              "nLayer": 5,
-              "nUnit": [8, 16, 32, 64],
-              "stride": [2, 2, 2, 2],
-              "fSize" : [3, 3, 3, 3, -1],
-              "padding" : [1, 1, 1, 1],
+            "CNN1D": {
+              "netCat": "CNN1D",
+              "nLayer": 1,
+              "nUnit": [256],
+              "stride": [2],
+              "fSize" : [3, -1],
+              "padding" : [1],
               "act": "relu",
-              "BN": "None"
+              "BN": "None",
+              "linear":"True"
             },
             "LSTM": {
               "netCat": "LSTMNET",
               "nLayer": 1,
-              "hiddenSize":512
+              "hiddenSize":256
             },
             "actor":{
                 "netCat":"MLP",
                 "nLayer":2,
-                "fSize":[256, 4],
-                "act":["tanh", "linear"],
+                "fSize":[256, 2],
+                "act":["relu", "linear"],
                 "BN":"None"
             },
 
@@ -36,12 +38,12 @@
                 "netCat":"MLP",
                 "nLayer":2,
                 "fSize":[256, 1],
-                "act":["tanh", "linear"],
+                "act":["relu", "linear"],
                 "BN":"None"
             }
   },
-  "updateStep":256,
-  "div":16,
+  "updateStep":10,
+  "div":1,
 
   "lrFreq": 1,
   "rScaling": 1,
@@ -49,24 +51,24 @@
   "optim": {
     "actor": {
       "name": "adam",
-      "lr": 3e-4,
-      "decay": 1e-6,
+      "lr": 1e-5,
+      "decay": 0,
       "eps": 1e-7,
       "clipping": "None"
     },
     "critic": {
       "name": "adam",
-      "lr": 3e-4,
-      "decay": 1e-6,
+      "lr": 1e-5,
+      "decay": 0,
       "clipping": "None",
       "eps": 1e-7
     }
   },
   "gamma": 0.99,
   "Lambda":0.95,
-  "epoch":5,
+  "epoch":80,
   "epsilon": 0.2,
-  "entropyCoeff":0.01,
+  "entropyCoeff":0.00,
   "initLogStd": -0.7,
   "finLogStd":-2.5,
   "annealingStep":5e5,

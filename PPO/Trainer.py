@@ -175,8 +175,8 @@ class PPOOnPolicyTrainer(ONPolicy):
         for r, l in state:
             rState.append(r)
             lidarPt.append(l)
-        rState = torch.cat(rState, dim=0)
-        lidarPt = torch.cat(lidarPt, dim=0)
+        rState = torch.cat(rState, dim=0).to(self.device)
+        lidarPt = torch.cat(lidarPt, dim=0).to(self.device)
         bSize = rState.shape[0]
         state = (rState, lidarPt)
 
@@ -267,7 +267,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             states,
             lstmState,
             actions,
-            gAE.detach()-critic
+            gT.detach() - critic
         )
         minusObj.backward()
         lossC.backward()
@@ -493,9 +493,9 @@ class PPOOnPolicyTrainer(ONPolicy):
                 for epoch in range(self.epoch):
                     for j in range(self.div):
                         self.train(step, j, epoch)
+                self.clear()
                 if k % 16 == 0:
                     self.oldAgent.update(self.agent)
-                    self.clear()
                     k = 0
             
             if step % 400 == 0:
