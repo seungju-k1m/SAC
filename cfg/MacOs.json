@@ -1,7 +1,8 @@
 {
-  "envName":"./Env/MacOs/Env01",
+  "envName":"./Env/MacOs/Env16",
   "sSize": [1, 120],
-  "nAgent": 3,
+  "resolution":3,
+  "nAgent": 48,
   "maxStack":1,
   "imgMode":"False",
   "aSize": 2,
@@ -10,19 +11,20 @@
 
   "agent": {
             "CNN1D": {
-              "netCat": "CNET1D",
+              "netCat": "CNN1D",
               "nLayer": 2,
-              "nUnit": [8, 16, 32, 64],
-              "stride": [2, 2, 2, 2],
-              "fSize" : [3, 3, 3, 3, -1],
-              "padding" : [1, 1, 1, 1],
+              "nUnit": [8, 16],
+              "stride": [2, 2],
+              "fSize" : [3, 3,-1],
+              "padding" : [1, 1],
               "act": "relu",
-              "BN": "None"
+              "BN": "None",
+              "linear":"True"
             },
             "LSTM": {
               "netCat": "LSTMNET",
               "nLayer": 1,
-              "hiddenSize":512
+              "hiddenSize":256
             },
             "actor":{
                 "netCat":"MLP",
@@ -40,8 +42,8 @@
                 "BN":"None"
             }
   },
-  "updateStep":256,
-  "div":1,
+  "updateStep":10,
+  "div":16,
 
   "lrFreq": 1,
   "rScaling": 1,
@@ -49,14 +51,14 @@
   "optim": {
     "actor": {
       "name": "adam",
-      "lr": 3e-4,
+      "lr": 3e-5,
       "decay": 0,
       "eps": 1e-7,
       "clipping": "None"
     },
     "critic": {
       "name": "adam",
-      "lr": 3e-4,
+      "lr": 3e-5,
       "decay": 0,
       "clipping": "None",
       "eps": 1e-7
@@ -72,7 +74,7 @@
   "annealingStep":5e5,
 
   "sPath": "./save/PPO/",
-  "writeTMode":"True",
+  "writeTMode":"False",
   "tPath": "./tensorboard/PPO/",
   "lPath":"None",
 

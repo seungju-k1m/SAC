@@ -48,16 +48,16 @@ class ppoAgent(baseAgent):
         self.iFeature02 = self.hiddenSize
         self.sSize = self.aData['sSize']
         div = 1
-        stride = self.aData['CNN']['stride']
-        fSize = self.aData['CNN']['nUnit'][-1]
+        stride = self.aData['CNN1D']['stride']
+        fSize = self.aData['CNN1D']['nUnit'][-1]
         for s in stride:
             div *= s
-        self.iFeature03 = int((self.sSize[-1]/div)**2*fSize)
+        self.iFeature03 = int((self.sSize[-1]/div)*fSize) + 6
     
     def buildModel(self):
         for netName in self.keyList:
             netData = self.aData[netName]
-            if netName == 'CNN':
+            if netName == 'CNN1D':
                 self.CNN = constructNet(netData, iSize=1, WH=96)
             elif netName == 'LSTM':
                 self.LSTM = constructNet(netData, iSize=self.iFeature03)
@@ -136,14 +136,17 @@ class ppoAgent(baseAgent):
                 dtype:(critic01, critic02)
                 shape:[batch, 1] for each state
         """
-        bSize = state.shape[0]
-        state = state.to(self.device)
+        rState = state[0]
+        lidarPt = state[1]
+        bSize = rState.shape[0]
         if lstmState is None:
             hAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
             cAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
         else:
             hAState, cAState = lstmState
-        cnnF = self.CNN(state)
+            hAState, cAState = hAState.to(self.device), cAState.to(self.device)
+        cnnF = self.CNN(lidarPt)
+        cnnF = torch.cat((rState, cnnF), dim=1)
         cnnF = torch.unsqueeze(cnnF, dim=0)
        
         Feature, (hA, cA) = self.LSTM(cnnF, (hAState, cAState))
@@ -155,8 +158,8 @@ class ppoAgent(baseAgent):
     def actorForward(self, state, lstmState=None):
         """
         input:
-            state:[tensor]
-                shape:[batch, 726]
+            state:list
+                shape:[(tensor[1, 6], tensor[1, 120]), ...]
             lstmState:[tuple]
                 dtype:(hs1, cs1)
                 shape :[1, bath, 512] for each state
@@ -167,15 +170,18 @@ class ppoAgent(baseAgent):
                 dtype:(hs1, cs1)
                 shape :[1, bath, 512] for each state
         """
-        state = state.to(self.device)
-        bSize = state.shape[0]
+        rState = state[0]
+        lidarPt = state[1]
+        bSize = rState.shape[0]
         if lstmState is None:
             hAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
             cAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
         else:
             hAState, cAState = lstmState
             hAState, cAState = hAState.to(self.device), cAState.to(self.device)
-        cnnF = self.CNN(state)
+        lidarPt = torch.unsqueeze(lidarPt, dim=1)
+        cnnF = self.CNN(lidarPt)
+        cnnF = torch.cat((rState, cnnF), dim=1)
         cnnF = torch.unsqueeze(cnnF, dim=0)
        
         Feature, (hA, cA) = self.LSTM(cnnF, (hAState, cAState))
@@ -211,15 +217,18 @@ class ppoAgent(baseAgent):
         return (-obj).mean(), entropy
 
     def calLogProb(self, state, action, lstmState=None):
-        state = state.to(self.device)
-        bSize = state.shape[0]
+
+        rState = state[0]
+        lidarPt = state[1]
+        bSize = rState.shape[0]
         if lstmState is None:
             hAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
             cAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
         else:
             hAState, cAState = lstmState
             hAState, cAState = hAState.to(self.device), cAState.to(self.device)
-        cnnF = self.CNN(state)
+        cnnF = self.CNN(lidarPt)
+        cnnF = torch.cat((rState, cnnF), dim=1)
         cnnF = torch.unsqueeze(cnnF, dim=0)
        
         Feature, (hA, cA) = self.LSTM(cnnF, (hAState, cAState))

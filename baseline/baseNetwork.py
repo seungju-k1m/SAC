@@ -108,7 +108,7 @@ class CNET(nn.Module):
         else:
             self.linear = netData['linear'] == "True"
         if self.linear:
-            act[-1] = "linear"
+            self.act[-1] = "linear"
 
         self.buildModel()
         
@@ -184,3 +184,88 @@ class LSTMNET(nn.Module):
         output, (hn, cn) = self.rnn(state, lstmState)
         # output consists of output, hidden, cell state
         return output, (hn, cn)
+
+
+class CNN1D(nn.Module):
+
+    def __init__(
+        self,
+        netData,
+        iSize=1,
+        WH=120
+    ):
+        super(CNN1D, self).__init__()
+        self.netData = netData
+        self.iSize = iSize
+        keyList = list(netData.keys())
+        self.L = WH
+
+        if "BN" in keyList:
+            self.BN = netData['BN'] == "True"
+        else:
+            self.BN = False
+        self.nLayer = netData['nLayer']
+        self.fSize = netData['fSize']
+        self.nUnit = netData['nUnit']
+        self.padding = netData['padding']
+        self.stride = netData['stride']
+        act = netData['act']
+        if not isinstance(act, list):
+            act = [act for i in range(self.nLayer)]
+        self.act = act
+        if 'linear' not in netData.keys():
+            self.linear = False
+        else:
+            self.linear = netData['linear'] == "True"
+        if self.linear:
+            self.act.append("linear")
+        self.buildModel()
+    
+    def buildModel(self):
+        iSize = self.iSize
+        mode = True
+        for i, fSize in enumerate(self.fSize):
+            if fSize == -1:
+                mode = False
+            if mode:
+                self.add_module(
+                    "conv1D_"+str(i+1),
+                    nn.Conv1d(
+                        iSize,
+                        self.nUnit[i],
+                        fSize,
+                        stride=self.stride[i],
+                        padding=self.padding[i],
+                        bias=False)
+                )
+                iSize = self.nUnit[i]
+            elif fSize == -1:
+                self.add_module(
+                    "Flatten",
+                    nn.Flatten())
+                iSize = self.getSize()
+            else:
+                self.add_module(
+                    "MLP_"+str(i+1),
+                    nn.Linear(iSize, fSize, bias=False)
+                )
+                iSize = fSize
+            
+            act = getActivation(self.act[i])
+            if act is not None and fSize != -1:
+                self.add_module(
+                    "act_"+str(i+1),
+                    act
+                )
+        
+    def getSize(self):
+        ze = torch.zeros((1, self.iSize, self.L))
+        k = self.forward(ze)
+        k = k.view((1, -1))
+        size = k.shape[-1]
+        return size
+    
+    def forward(self, x):
+        for layer in self.children():
+            x = layer(x)
+        return x

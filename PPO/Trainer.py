@@ -121,13 +121,11 @@ class PPOOnPolicyTrainer(ONPolicy):
             lidarImg[0, 0, :6] = rState
             return lidarImg
         else:
-            rState, lidarPt = obs[:6], obs[7:727]
+            rState, lidarPt = obs[:6], obs[7:127]
             rState = torch.tensor(rState).view((1, -1))
             lidarPt = torch.tensor(lidarPt).view((1, -1))
 
-            state = torch.cat((rState, lidarPt), dim=1).float().to(self.device)
-
-            return state
+            return (rState, lidarPt)
 
     def annealingLogStd(self, step):
         alpha = step / self.annealingStep
@@ -173,7 +171,14 @@ class PPOOnPolicyTrainer(ONPolicy):
                 dtype:tuple ((tensor, tensor), (tensor, tensor), (tensor, tensor))
                 shape:[1, nAgent, 512] for each state
         """
-        bSize = state.shape[0]
+        rState, lidarPt = [], []
+        for r, l in state:
+            rState.append(r)
+            lidarPt.append(l)
+        rState = torch.cat(rState, dim=0)
+        lidarPt = torch.cat(lidarPt, dim=0)
+        bSize = rState.shape[0]
+        state = (rState, lidarPt)
 
         if lstmState is None:
             hAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
@@ -196,29 +201,43 @@ class PPOOnPolicyTrainer(ONPolicy):
         before training, shift the device of idx network and data
 
         """
-        states, hA, cA,  actions, rewards, dones = \
-            [], [], [], [], [], []
-        nstates, nhA, ncA = \
-            [], [], []
+        rState, lidarPt, hA, cA,  actions, rewards, dones = \
+            [], [], [], [], [], [], []
+        nrState, nlidarPt, nhA, ncA = \
+            [], [], [], []
         for data in self.replayMemory[k]:
-            states.append(data[0][0])
-            hA.append(data[0][1][0])
-            cA.append(data[0][1][1])
+            state = data[0]
+            state, (h, c) = state
+            for r, l in state:
+                rState.append(r)
+                lidarPt.append(l)
+            hA.append(h)
+            cA.append(c)
 
             actions.append(data[1])
             rewards.append(data[2])
 
             dones.append(data[4])
 
-            nstates.append(data[3][0])
-            nhA.append(data[3][1][0])
-            ncA.append(data[3][1][1])
+            nstate = data[3]
+            nstate, (nh, nc) = nstate
+            for r, l in nstate:
+                nrState.append(r)
+                nlidarPt.append(l)
+            nhA.append(nh)
+            ncA.append(nc)
 
-        states = torch.cat(states, dim=0).to(self.device)  # states step, nAgent
+        rState = torch.cat(rState, dim=0).to(self.device).detach()  # states step, nAgent
+        lidarPt = torch.cat(lidarPt, dim=0).to(self.device).detach()
+        lidarPt = torch.unsqueeze(lidarPt, dim=1)
+        states = (rState, lidarPt)
         hA = torch.cat(hA, dim=1).to(self.device).detach()
         cA = torch.cat(cA, dim=1).to(self.device).detach()
 
-        nstates = torch.cat(nstates, dim=0).to(self.device)
+        nrState = torch.cat(nrState, dim=0).to(self.device).detach()
+        nlidarPt = torch.cat(nlidarPt, dim=0).to(self.device).detach()
+        nlidarPt = torch.unsqueeze(nlidarPt, dim=1)
+        nstates = (nrState, nlidarPt)
         nhA = torch.cat(nhA, dim=1).to(self.device).detach()
         ncA = torch.cat(ncA, dim=1).to(self.device).detach()
         
@@ -237,7 +256,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         
         self.zeroGrad()
         lossC = self.agent.calQLoss(
-            states.detach(),
+            states,
             lstmState,
             gT.detach(),
             
@@ -245,7 +264,7 @@ class PPOOnPolicyTrainer(ONPolicy):
 
         minusObj, entropy = self.agent.calAObj(
             self.oldAgent,
-            states.detach(),
+            states,
             lstmState,
             actions,
             gAE.detach()-critic
@@ -420,6 +439,7 @@ class PPOOnPolicyTrainer(ONPolicy):
 
     def run(self):
         episodeReward = []
+        k = 0
         Rewards = np.zeros(self.nAgent)
         
         obs = self.getObs(init=True)
@@ -428,7 +448,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             ob = obs[b]
             state = self.ppState(ob)
             stateT.append(state)
-        stateT = torch.stack(stateT, dim=0)
+        # stateT = torch.stack(stateT, dim=0)
         lstmState = self.zeroLSTMState()
         action, nlstmState = self.getAction(stateT, lstmState=lstmState)
         step = 1
@@ -442,7 +462,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 ob = obs[b]
                 state = self.ppState(ob)
                 nStateT.append(state)
-            nStateT = torch.stack(nStateT, dim=0).to(self.device)
+            # nStateT = torch.stack(nStateT, dim=0).to(self.device)
             nAction, nnlstmState = self.getAction(nStateT, lstmState=nlstmState)
             u = 0
             for z in range(self.div):
@@ -469,11 +489,14 @@ class PPOOnPolicyTrainer(ONPolicy):
             step += 1
             self.annealingLogStd(step)
             if step % self.updateStep == 0:
+                k += 1
                 for epoch in range(self.epoch):
                     for j in range(self.div):
                         self.train(step, j, epoch)
-                self.oldAgent.update(self.agent)
-                self.clear()
+                if k % 16 == 0:
+                    self.oldAgent.update(self.agent)
+                    self.clear()
+                    k = 0
             
             if step % 400 == 0:
                 episodeReward = np.array(episodeReward)

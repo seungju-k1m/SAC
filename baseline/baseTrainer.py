@@ -52,9 +52,11 @@ class ONPolicy:
         engineChannel = EngineConfigurationChannel()
         engineChannel.set_configuration_parameters(time_scale=2)
         setChannel = EnvironmentParametersChannel()
+        resolution = self.data['resolution']
         imgMode = self.data['imgMode'] == "True"
         maxStack = self.data['maxStack']
         setChannel.set_float_parameter("maxStack", maxStack)
+        setChannel.set_float_parameter('resolution', resolution)
         self.imgMode = imgMode
         if imgMode:
             setChannel.set_float_parameter("imgMode", 1.0)
