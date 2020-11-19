@@ -1,0 +1,115 @@
+{
+    "__comment":"This is reference json file for understanding the program.",
+
+    "__comment01":"Env cfg",
+    "envName":"./Env/MacOs/Env01",
+    "nAgent": 3,
+    "maxStack":1,
+    "imgMode":false,
+    "resolution":3,
+
+    "__comment02":"Algorithm cfg",
+    "sSize": [1, 127],
+    "aSize": 2,
+    "fixedSigma":false,
+    "gamma": 0.99,
+    "Lambda":0.95,
+    "epoch":80,
+    "epsilon": 0.2,
+    "entropyCoeff":0.01,
+    "initLogStd": -0.7,
+    "finLogStd":-2.5,
+    "annealingStep":5e5,
+    "updateStep":256,
+    "div":1,
+    "lrFreq": 1,
+    "rScaling": 1,
+    
+    "__comment03":"Network cfg, the class of agent is branches!!", 
+    "agent": {
+      "EmbeddL01":{
+        "input":true,
+        "prior":-1,
+        "to":[0, 2]
+      },
+      "EmbeddL02":{
+        "LSTMinput":true,
+        "prior":-1,
+        "to":[0]
+      },
+      "branch01":{
+        "branch":true,
+        "prior":0,
+        "Modules":{
+          "module01":{
+            "netCat":"CNN1D",
+            "nLayer":1,
+            "nUnit":[8]
+          }
+        }
+      },
+      "branch02":{
+      },
+      "Module01": {
+        "netCat":"CNN1D",
+        "nLayer":1,
+        "nUnit": [8],
+        "stride": [2],
+        "fSize": [7],
+        "padding": [1],
+        "act": ["relu"],
+        "input":"True"
+      },
+      "Module02": {
+        "netCat":"Residul1D"
+      },
+      "Module03": {
+        "netCat": "Flatten"
+      },
+      "Module04": {
+        "netCat": "Cat",
+        "count":2,
+        "iSize":[-1, 6],
+        "input": "True"
+      },
+      "Module05": {
+        "netCat": "LSTMNET",
+        "hiddenSize": 256
+      },
+      "Module06": {
+        "netCat": "MLP",
+        "nLayer": 2,
+        "fSize": [256, 4],
+        "act": ["relu", "linear"],
+        "branch":"True"
+      },
+      "Module07": {
+        "neCat": "MLP",
+        "nLayer":2,
+        "fSize":[256, 1],
+        "act":["relu", "linear"],
+        "branch":"True"
+      }
+    },
+    
+  
+    "optim": {
+      "Module": {
+        "name": "adam",
+        "lr": 3e-4,
+        "decay": 0,
+        "eps": 1e-7,
+        "clipping": "None"
+      }
+    },
+    
+    "sPath": "./save/PPO/",
+    "writeTMode":"True",
+    "tPath": "./tensorboard/PPO/",
+    "lPath":"None",
+  
+    "device": "cpu",
+    "gpuOverload":"True",
+    "inferMode": "False",
+    "renderMode": "True"
+  }

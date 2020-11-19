@@ -1,44 +1,55 @@
 {
   "envName":"./Env/MacOs/Env01",
-  "sSize": [1, 96, 96],
+  "sSize": [1, 127],
   "nAgent": 3,
   "maxStack":1,
-  "imgMode":"True",
+  "imgMode":"False",
+  "resolution":3,
   "aSize": 2,
   "seed": 0,
   "fixedSigma":"False",
 
   "agent": {
-            "CNN": {
-              "netCat": "CNET",
-              "nLayer": 5,
-              "nUnit": [8, 16, 32, 64],
-              "stride": [2, 2, 2, 2],
-              "fSize" : [3, 3, 3, 3, -1],
-              "padding" : [1, 1, 1, 1],
-              "act": "relu",
-              "BN": "None"
-            },
-            "LSTM": {
-              "netCat": "LSTMNET",
-              "nLayer": 1,
-              "hiddenSize":512
-            },
-            "actor":{
-                "netCat":"MLP",
-                "nLayer":2,
-                "fSize":[256, 4],
-                "act":["relu", "linear"],
-                "BN":"None"
-            },
-
-            "critic":{
-                "netCat":"MLP",
-                "nLayer":2,
-                "fSize":[256, 1],
-                "act":["relu", "linear"],
-                "BN":"None"
-            }
+    "Module01": {
+      "netCat":"CNN1D",
+      "nLayer":1,
+      "nUnit": [8],
+      "stride": [2],
+      "fSize": [7],
+      "padding": [1],
+      "act": ["relu"],
+      "input":"True"
+    },
+    "Module02": {
+      "netCat":"Residul1D"
+    },
+    "Module03": {
+      "netCat": "Flatten"
+    },
+    "Module04": {
+      "netCat": "Cat",
+      "count":2,
+      "iSize":[-1, 6],
+      "input": "True"
+    },
+    "Module05": {
+      "netCat": "LSTMNET",
+      "hiddenSize": 256
+    },
+    "Module06": {
+      "netCat": "MLP",
+      "nLayer": 2,
+      "fSize": [256, 4],
+      "act": ["relu", "linear"],
+      "branch":"True"
+    },
+    "Module07": {
+      "neCat": "MLP",
+      "nLayer":2,
+      "fSize":[256, 1],
+      "act":["relu", "linear"],
+      "branch":"True"
+    }
   },
   "updateStep":256,
   "div":1,
@@ -47,19 +58,12 @@
   "rScaling": 1,
 
   "optim": {
-    "actor": {
+    "Module": {
       "name": "adam",
       "lr": 3e-4,
       "decay": 0,
       "eps": 1e-7,
       "clipping": "None"
-    },
-    "critic": {
-      "name": "adam",
-      "lr": 3e-4,
-      "decay": 0,
-      "clipping": "None",
-      "eps": 1e-7
     }
   },
   "gamma": 0.99,

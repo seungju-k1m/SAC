@@ -1,0 +1,37 @@
+{
+    "CNN1D":{
+        "prior":0,
+        "netCat":"CNN1D",
+        "nLayer":3,
+        "kSize":[3, 2, 2],
+        "nUnit":[8, 16, 32],
+        "stride":[2, 2, 2],
+        "padding":[0, 1, 1],
+        "act": "relu",
+        "__comment01":"act can be list such as ['relu', 'linear']"
+    },
+    "CNN2D":{
+        "prior":1,
+        "netCat":"CNN2D",
+        "nLayer":3,
+        "kSize":[3, 2, 2],
+        "nUnit":[8, 16, 32, -1],
+        "stride":[2, 2, 2],
+        "padding":[0, 1, 1],
+        "act": "relu"
+    },
+    "MLP":{
+        "prior":2,
+        "netCat":"MLP",
+        "nLayer":2,
+        "kSize":[256, 4],
+        "act":["relu", "linear"]
+    },
+    "LSTM":{
+        "prior":3,
+        "nLayer":2,
+        "hiddenSize":256
+    }
+
+
+}
