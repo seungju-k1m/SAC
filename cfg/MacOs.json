@@ -1,17 +1,17 @@
 {
   "envName":"./Env/MacOs/Env01",
-  "sSize": [1, 96, 96],
+  "sSize": [1, 120],
   "nAgent": 3,
   "maxStack":1,
-  "imgMode":"True",
+  "imgMode":"False",
   "aSize": 2,
   "seed": 0,
   "fixedSigma":"False",
 
   "agent": {
-            "CNN": {
-              "netCat": "CNET",
-              "nLayer": 5,
+            "CNN1D": {
+              "netCat": "CNET1D",
+              "nLayer": 2,
               "nUnit": [8, 16, 32, 64],
               "stride": [2, 2, 2, 2],
               "fSize" : [3, 3, 3, 3, -1],
