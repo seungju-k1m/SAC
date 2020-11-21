@@ -211,7 +211,7 @@ class ppoAgent(baseAgent):
         prob, entropy = self.calLogProb(state, action, lstmState=lstmState)
         oldProb, _ = old_agent.calLogProb(state, action, lstmState=lstmState)
         oldProb = oldProb.detach()
-        ratio = prob / oldProb
+        ratio = prob / (oldProb + 1e-4)
         obj = torch.min(ratio * gae, torch.clamp(ratio, 1-self.epsilon, 1.2) * gae) + self.coeff * entropy
 
         return (-obj).mean(), entropy

@@ -70,6 +70,7 @@ class PPOOnPolicyTrainer(ONPolicy):
 
         self.replayMemory = [deque(maxlen=self.updateStep) for i in range(self.div)]
         self.epoch = self.data['epoch']
+        self.updateOldP = self.data['updateOldP']
 
         if self.writeTMode:
             self.writeTrainInfo()
@@ -141,18 +142,20 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.critic = self.agent.critic.to(self.device)
         for optimKey in optimKeyList:
             if optimKey == 'actor':
-                self.aOptim = getOptim(self.optimData[optimKey], self.actor)
-                self.cnnOptim = getOptim(self.optimData[optimKey], self.CNN)
-                self.lOptim = getOptim(self.optimData[optimKey], self.LSTM)
+                # self.aOptim = getOptim(self.optimData[optimKey], self.actor)
+                # self.cnnOptim = getOptim(self.optimData[optimKey], self.CNN)
+                # self.lOptim = getOptim(self.optimData[optimKey], self.LSTM)
+                self.aOptim = getOptim(self.optimData[optimKey], (self.actor, self.CNN, self.LSTM))
 
             if optimKey == 'critic':
-                self.cOptim = getOptim(self.optimData[optimKey], self.critic)
+                # self.cOptim = getOptim(self.optimData[optimKey], self.critic)
+                self.cOptim = getOptim(self.optimData[optimKey], (self.critic, self.LSTM, self.CNN))
 
     def zeroGrad(self):
         self.aOptim.zero_grad()
-        self.cnnOptim.zero_grad()
+        # self.cnnOptim.zero_grad()
         self.cOptim.zero_grad()
-        self.lOptim.zero_grad()
+        # self.lOptim.zero_grad()
 
     def getAction(self, state, lstmState=None, dMode=False):
         """
@@ -261,6 +264,11 @@ class PPOOnPolicyTrainer(ONPolicy):
             gT.detach(),
             
         )
+        lossC.backward()
+        
+        self.cOptim.step()
+        normC = calGlobalNorm(self.critic) + calGlobalNorm(self.CNN) + calGlobalNorm(self.LSTM)
+        self.zeroGrad()
 
         minusObj, entropy = self.agent.calAObj(
             self.oldAgent,
@@ -270,18 +278,14 @@ class PPOOnPolicyTrainer(ONPolicy):
             gT.detach() - critic
         )
         minusObj.backward()
-        lossC.backward()
-        self.cOptim.step()
-        self.cnnOptim.step()
+
+        # self.cnnOptim.step()
         self.aOptim.step()
-        self.lOptim.step()
+        # self.lOptim.step()
         
         aN = calGlobalNorm(self.actor)
         aF1N = calGlobalNorm(self.LSTM) + calGlobalNorm(self.CNN)
         normA = aN + aF1N 
-
-        cN = calGlobalNorm(self.critic)
-        normC = cN
 
         norm = normA + normC
         obj = minusObj.cpu().sum().detach().numpy()
@@ -494,7 +498,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                     for j in range(self.div):
                         self.train(step, j, epoch)
                 self.clear()
-                if k % 16 == 0:
+                if k % self.updateOldP == 0:
                     self.oldAgent.update(self.agent)
                     k = 0
             

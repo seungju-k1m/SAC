@@ -1,0 +1,86 @@
+{
+    "envName":"./Env/Linux/Env16",
+    "sSize": [1, 120],
+    "resolution":3,
+    "nAgent": 48,
+    "maxStack":1,
+    "imgMode":"False",
+    "aSize": 2,
+    "seed": 0,
+    "fixedSigma":"False",
+  
+    "agent": {
+              "CNN1D": {
+                "netCat": "CNN1D",
+                "nLayer": 1,
+                "nUnit": [256],
+                "stride": [2],
+                "fSize" : [3, -1],
+                "padding" : [1],
+                "act": "relu",
+                "BN": "None",
+                "linear":"True"
+              },
+              "LSTM": {
+                "netCat": "LSTMNET",
+                "nLayer": 1,
+                "hiddenSize":256
+              },
+              "actor":{
+                  "netCat":"MLP",
+                  "nLayer":2,
+                  "fSize":[256, 4],
+                  "act":["relu", "linear"],
+                  "BN":"None"
+              },
+  
+              "critic":{
+                  "netCat":"MLP",
+                  "nLayer":2,
+                  "fSize":[256, 1],
+                  "act":["relu", "linear"],
+                  "BN":"None"
+              }
+    },
+    "updateStep":200,
+    "div":4,
+  
+    "lrFreq": 1,
+    "rScaling": 1,
+  
+    "optim": {
+      "actor": {
+        "name": "adam",
+        "lr": 1e-5,
+        "decay": 0,
+        "eps": 1e-7,
+        "clipping": "None"
+      },
+      "critic": {
+        "name": "adam",
+        "lr": 5e-5,
+        "decay": 0,
+        "clipping": "None",
+        "eps": 1e-7
+      }
+    },
+    "gamma": 0.99,
+    "Lambda":0.95,
+    "epoch":10,
+    "epsilon": 0.2,
+    "entropyCoeff":0.01,
+    "initLogStd": -10,
+    "finLogStd":-12.5,
+    "annealingStep":5e5,
+    "updateOldP":1,
+  
+    "sPath": "./save/PPO/",
+    "writeTMode":"True",
+    "tPath": "./tensorboard/PPO/",
+    "lPath":"None",
+  
+    "device": "cuda:0",
+    "gpuOverload":"True",
+    "inferMode": "False",
+    "renderMode": "True"
+  }

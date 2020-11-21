@@ -37,7 +37,12 @@ def getOptim(optimData, agent, floatV=False):
         decay = 0 if 'decay' not in keyList else optimData['decay']
         eps = 1e-5 if 'eps' not in keyList else optimData['eps']
         if floatV:
-            inputD = agent
+            inputD = []
+        elif type(agent) == tuple:
+            inputD = []
+            for a in agent:
+                inputD += list(a.parameters())
+
         else:
             inputD = agent.parameters()
         if name == 'adam':

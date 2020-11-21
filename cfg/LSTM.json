@@ -7,7 +7,7 @@
   "imgMode":"False",
   "aSize": 2,
   "seed": 0,
-  "fixedSigma":"True",
+  "fixedSigma":"False",
 
   "agent": {
             "CNN1D": {
@@ -29,8 +29,8 @@
             "actor":{
                 "netCat":"MLP",
                 "nLayer":2,
-                "fSize":[256, 2],
-                "act":["relu", "linear"],
+                "fSize":[256, 4],
+                "act":["tanh", "linear"],
                 "BN":"None"
             },
 
@@ -38,12 +38,12 @@
                 "netCat":"MLP",
                 "nLayer":2,
                 "fSize":[256, 1],
-                "act":["relu", "linear"],
+                "act":["tanh", "linear"],
                 "BN":"None"
             }
   },
-  "updateStep":10,
-  "div":1,
+  "updateStep":200,
+  "div":4,
 
   "lrFreq": 1,
   "rScaling": 1,
@@ -51,27 +51,28 @@
   "optim": {
     "actor": {
       "name": "adam",
-      "lr": 1e-5,
-      "decay": 0,
+      "lr": 3e-4,
+      "decay": 1e-6,
       "eps": 1e-7,
       "clipping": "None"
     },
     "critic": {
       "name": "adam",
-      "lr": 1e-5,
-      "decay": 0,
+      "lr": 1e-3,
+      "decay": 1e-6,
       "clipping": "None",
       "eps": 1e-7
     }
   },
   "gamma": 0.99,
   "Lambda":0.95,
-  "epoch":80,
+  "epoch":10,
   "epsilon": 0.2,
-  "entropyCoeff":0.00,
-  "initLogStd": -0.7,
-  "finLogStd":-2.5,
+  "entropyCoeff":0.01,
+  "initLogStd": -10,
+  "finLogStd":-12.5,
   "annealingStep":5e5,
+  "updateOldP":1,
 
   "sPath": "./save/PPO/",
   "writeTMode":"True",
