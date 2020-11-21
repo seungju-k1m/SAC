@@ -137,12 +137,13 @@ class PPOOnPolicyTrainer(ONPolicy):
     def genOptim(self):
         optimKeyList = list(self.optimData.keys())
         self.CNN = self.agent.CNN.to(self.device)
+        self.CNNF = self.agent.CNNF.to(self.device)
         self.LSTM = self.agent.LSTM.to(self.device)
         self.actor = self.agent.actor.to(self.device)
         self.critic = self.agent.critic.to(self.device)
         for optimKey in optimKeyList:
             if optimKey == 'actor':
-                # self.aOptim = getOptim(self.optimData[optimKey], self.actor)
+                # self.aOptim = getOptim(self.optimData[optimKey], self.actor)ß
                 # self.cnnOptim = getOptim(self.optimData[optimKey], self.CNN)
                 # self.lOptim = getOptim(self.optimData[optimKey], self.LSTM)
                 # self.aOptim = getOptim(self.optimData[optimKey], (self.actor))
@@ -151,7 +152,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             if optimKey == 'critic':
                 # self.cOptim = getOptim(self.optimData[optimKey], self.critic)
                 # self.cOptim = getOptim(self.optimData[optimKey], (self.critic, self.LSTM, self.CNN))
-                self.cOptim = getOptim(self.optimData[optimKey], (self.critic))
+                self.cOptim = getOptim(self.optimData[optimKey], (self.critic, self.CNNF))
 
     def zeroGrad(self):
         self.aOptim.zero_grad()
@@ -254,22 +255,21 @@ class PPOOnPolicyTrainer(ONPolicy):
         dones = np.array(dones)
 
         with torch.no_grad():
-            critic = self.oldAgent.criticForward(states, lstmState)
-            nCritic = self.oldAgent.criticForward(nstates, nlstmState)
+            critic = self.oldAgent.criticForward(states)
+            nCritic = self.oldAgent.criticForward(nstates)
 
         gT, gAE = self.getReturn(rewards, critic, nCritic, dones)  # step, nAgent
         
         self.zeroGrad()
         lossC = self.agent.calQLoss(
             states,
-            lstmState,
             gT.detach(),
             
         )
         lossC.backward()
         
         self.cOptim.step()
-        normC = calGlobalNorm(self.critic) + calGlobalNorm(self.CNN) + calGlobalNorm(self.LSTM)
+        normC = calGlobalNorm(self.critic) + calGlobalNorm(self.CNNF)
         self.zeroGrad()
 
         minusObj, entropy = self.agent.calAObj(

@@ -35,6 +35,7 @@ class ppoAgent(baseAgent):
         self.actor.load_state_dict(Agent.actor.state_dict())
         self.LSTM.load_state_dict(Agent.LSTM.state_dict())
         self.critic.load_state_dict(Agent.critic.state_dict())
+        self.CNNF.load_state_dict(Agent.CNNF.state_dict())
     
     def to(self, device):
         self.device = device
@@ -42,6 +43,7 @@ class ppoAgent(baseAgent):
         self.CNN = self.CNN.to(device)
         self.actor = self.actor.to(device)
         self.critic = self.critic.to(device)
+        self.CNNF = self.CNNF.to(device)
 
     def getISize(self):
         self.iFeature01 = self.aData['sSize'][-1]
@@ -59,12 +61,13 @@ class ppoAgent(baseAgent):
             netData = self.aData[netName]
             if netName == 'CNN1D':
                 self.CNN = constructNet(netData, iSize=1, WH=120)
+                self.CNNF = constructNet(netData, iSize=1, WH=120)
             elif netName == 'LSTM':
                 self.LSTM = constructNet(netData, iSize=self.iFeature03)
             elif netName == 'actor':
                 self.actor = constructNet(netData, iSize=self.iFeature02)
             elif netName == 'critic':
-                self.critic = constructNet(netData, iSize=self.iFeature02)
+                self.critic = constructNet(netData, iSize=self.iFeature03)
     
     def forward(self, state, lstmState=None):
         """
@@ -122,7 +125,7 @@ class ppoAgent(baseAgent):
         critic = self.critic(Feature)
         return action, logProb, critic, entropy, (hA, cA)
     
-    def criticForward(self, state, lstmState=None):
+    def criticForward(self, state):
         """
         input:
             state:[tensor]
@@ -138,21 +141,11 @@ class ppoAgent(baseAgent):
         """
         rState = state[0]
         lidarPt = state[1]
-        bSize = rState.shape[0]
-        if lstmState is None:
-            hAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
-            cAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
-        else:
-            hAState, cAState = lstmState
-            hAState, cAState = hAState.to(self.device), cAState.to(self.device)
-        cnnF = self.CNN(lidarPt)
-        cnnF = torch.cat((rState, cnnF), dim=1)
-        cnnF = torch.unsqueeze(cnnF, dim=0)
-       
-        Feature, (hA, cA) = self.LSTM(cnnF, (hAState, cAState))
-        Feature = torch.squeeze(Feature, dim=0)
 
-        critic = self.critic(Feature)
+        cnnF = self.CNNF(lidarPt)
+        cnnF = torch.cat((rState, cnnF), dim=1)
+
+        critic = self.critic(cnnF)
         return critic
 
     def actorForward(self, state, lstmState=None):
@@ -199,9 +192,9 @@ class ppoAgent(baseAgent):
 
         return action, (hA, cA)
 
-    def calQLoss(self, state, lstmState, target):
+    def calQLoss(self, state, target):
 
-        critic = self.criticForward(state, lstmState)
+        critic = self.criticForward(state)
         lossCritic1 = torch.mean((critic-target).pow(2)/2)
 
         return lossCritic1
@@ -212,7 +205,7 @@ class ppoAgent(baseAgent):
         oldProb, _ = old_agent.calLogProb(state, action, lstmState=lstmState)
         oldProb = oldProb.detach()
         ratio = prob / (oldProb + 1e-4)
-        obj = torch.min(ratio * gae, torch.clamp(ratio, 1-self.epsilon, 1.2) * gae) + self.coeff * entropy
+        obj = torch.min(ratio * gae, torch.clamp(ratio, 1-self.epsilon, 1+self.epsilon) * gae) + self.coeff * entropy
 
         return (-obj).mean(), entropy
 
