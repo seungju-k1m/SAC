@@ -58,7 +58,7 @@ class ppoAgent(baseAgent):
         for netName in self.keyList:
             netData = self.aData[netName]
             if netName == 'CNN1D':
-                self.CNN = constructNet(netData, iSize=1, WH=96)
+                self.CNN = constructNet(netData, iSize=1, WH=120)
             elif netName == 'LSTM':
                 self.LSTM = constructNet(netData, iSize=self.iFeature03)
             elif netName == 'actor':

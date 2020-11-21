@@ -58,7 +58,7 @@
     },
     "critic": {
       "name": "adam",
-      "lr": 1e-3,
+      "lr": 3e-4,
       "decay": 1e-6,
       "clipping": "None",
       "eps": 1e-7

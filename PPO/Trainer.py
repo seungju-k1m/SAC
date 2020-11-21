@@ -145,11 +145,13 @@ class PPOOnPolicyTrainer(ONPolicy):
                 # self.aOptim = getOptim(self.optimData[optimKey], self.actor)
                 # self.cnnOptim = getOptim(self.optimData[optimKey], self.CNN)
                 # self.lOptim = getOptim(self.optimData[optimKey], self.LSTM)
-                self.aOptim = getOptim(self.optimData[optimKey], (self.actor, self.CNN, self.LSTM))
+                # self.aOptim = getOptim(self.optimData[optimKey], (self.actor))
+                self.aOptim = getOptim(self.optimData[optimKey], (self.actor, self.LSTM, self.CNN))
 
             if optimKey == 'critic':
                 # self.cOptim = getOptim(self.optimData[optimKey], self.critic)
-                self.cOptim = getOptim(self.optimData[optimKey], (self.critic, self.LSTM, self.CNN))
+                # self.cOptim = getOptim(self.optimData[optimKey], (self.critic, self.LSTM, self.CNN))
+                self.cOptim = getOptim(self.optimData[optimKey], (self.critic))
 
     def zeroGrad(self):
         self.aOptim.zero_grad()
