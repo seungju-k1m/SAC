@@ -1,22 +1,23 @@
 {
-  "envName":"./Env/MacOs/Env16",
+  "envName":"./Env/MacOs/Env01",
   "sSize": [1, 120],
+  "Count":1024,
   "resolution":3,
-  "nAgent": 48,
+  "nAgent": 3,
   "maxStack":1,
   "imgMode":"False",
   "aSize": 2,
   "seed": 0,
-  "fixedSigma":"True",
+  "fixedSigma":"False",
 
   "agent": {
             "CNN1D": {
               "netCat": "CNN1D",
-              "nLayer": 2,
-              "nUnit": [8, 16],
-              "stride": [2, 2],
-              "fSize" : [3, 3,-1],
-              "padding" : [1, 1],
+              "nLayer": 1,
+              "nUnit": [256],
+              "stride": [2],
+              "fSize" : [3, -1],
+              "padding" : [1],
               "act": "relu",
               "BN": "None",
               "linear":"True"
@@ -29,7 +30,7 @@
             "actor":{
                 "netCat":"MLP",
                 "nLayer":2,
-                "fSize":[256, 2],
+                "fSize":[256, 4],
                 "act":["relu", "linear"],
                 "BN":"None"
             },
@@ -42,7 +43,7 @@
                 "BN":"None"
             }
   },
-  "updateStep":10,
+  "updateStep":256,
   "div":2,
 
   "lrFreq": 1,
@@ -58,7 +59,7 @@
     },
     "critic": {
       "name": "adam",
-      "lr": 3e-5,
+      "lr": 3e-4,
       "decay": 0,
       "clipping": "None",
       "eps": 1e-7
@@ -66,15 +67,16 @@
   },
   "gamma": 0.99,
   "Lambda":0.95,
-  "epoch":80,
+  "epoch":5,
   "epsilon": 0.2,
   "entropyCoeff":0.01,
-  "initLogStd": -0.7,
-  "finLogStd":-2.5,
+  "initLogStd": -10,
+  "finLogStd":-12.5,
   "annealingStep":5e5,
+  "updateOldP":1,
 
   "sPath": "./save/PPO/",
-  "writeTMode":"False",
+  "writeTMode":"True",
   "tPath": "./tensorboard/PPO/",
   "lPath":"None",
 
