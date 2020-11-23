@@ -64,7 +64,9 @@ class ONPolicy:
             setChannel.set_float_parameter("imgMode", 0)
         name = self.data['envName']
         self.nAgent = self.data['nAgent']
+        Count = self.data['Count']
         setChannel.set_float_parameter("nAgent", self.nAgent)
+        setChannel.set_float_parameter("Count", Count)
         self.env = UnityEnvironment(
             name, worker_id=id_, 
             side_channels=[setChannel, engineChannel])

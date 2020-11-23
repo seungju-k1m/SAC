@@ -196,7 +196,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 pass
             else:
                 action, lstmState = \
-                    self.agent.actorForward(state, lstmState=lstmState)
+                    self.oldAgent.actorForward(state, lstmState=lstmState)
             action = action.cpu().numpy()
         return action, lstmState
 
@@ -277,7 +277,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             states,
             lstmState,
             actions,
-            gT.detach() - critic
+            gAE.detach()
         )
         minusObj.backward()
 
@@ -401,7 +401,10 @@ class PPOOnPolicyTrainer(ONPolicy):
             state = np.array(state)
             obsState[i] = state
             done[i] = True
-            reward[i] = treward[k]
+            if treward[k] > -5:
+                reward[i] = -15
+            else:
+                reward[i] = treward[k]
             k += 1
         if init:
             return obsState
