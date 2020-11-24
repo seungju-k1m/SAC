@@ -1,14 +1,19 @@
 {
   "envName":"./Env/Linux/Env16",
   "sSize": [1, 120],
-  "Count":1024,
+  "Count":2048,
   "resolution":3,
   "nAgent": 48,
-  "maxStack":4,
+  "maxStack":8,
   "imgMode":"False",
   "aSize": 2,
   "seed": 0,
   "fixedSigma":"False",
+  "coeffAngV":-2.2,
+  "coeffMAngV":0,
+  "coeffDDist":2.2,
+  "endReward":-15.0,
+  "objRewardN":10,
 
   "agent": {
             "CNN1D": {
@@ -43,7 +48,7 @@
                 "BN":"None"
             }
   },
-  "updateStep":32,
+  "updateStep":16,
   "div":1,
 
   "lrFreq": 1,
@@ -73,7 +78,7 @@
   "initLogStd": -10,
   "finLogStd":-12.5,
   "annealingStep":5e5,
-  "updateOldP":16,
+  "updateOldP":32,
 
   "sPath": "./save/PPO/",
   "writeTMode":"True",

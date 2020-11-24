@@ -8,6 +8,11 @@
     "aSize": 2,
     "seed": 0,
     "fixedSigma":"False",
+    "coeffAngV":-1.2,
+    "coeffMAngV":-0.02,
+    "coeffDDist":1.1,
+    "endReward":-15.0,
+    "objRewardN":10,
   
     "agent": {
               "CNN1D": {

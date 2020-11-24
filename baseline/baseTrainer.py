@@ -55,8 +55,20 @@ class ONPolicy:
         resolution = self.data['resolution']
         imgMode = self.data['imgMode'] == "True"
         maxStack = self.data['maxStack']
+        coeffMAngV = self.data['coeffMAngV']
+        coeffAngV = self.data['coeffAngV']
+        coeffDDist = self.data['coeffDDist']
+        endReward = self.data['endReward']
+        objRewardN = self.data['objRewardN']
+
         setChannel.set_float_parameter("maxStack", maxStack)
         setChannel.set_float_parameter('resolution', resolution)
+        setChannel.set_float_parameter('coeffMAngV', coeffMAngV)
+        setChannel.set_float_parameter('coeffAngV', coeffAngV)
+        setChannel.set_float_parameter('coeffDDist', coeffDDist)
+        setChannel.set_float_parameter('endReward', endReward)
+        setChannel.set_float_parameter('objRewardN', objRewardN)
+        
         self.imgMode = imgMode
         if imgMode:
             setChannel.set_float_parameter("imgMode", 1.0)
