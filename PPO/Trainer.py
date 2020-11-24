@@ -522,7 +522,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                     self.oldAgent.update(self.agent)
                     k = 0
             
-            if step % 400 == 0:
+            if step % 3000 == 0:
                 episodeReward = np.array(episodeReward)
                 reward = episodeReward.mean()
                 if self.writeTMode:
