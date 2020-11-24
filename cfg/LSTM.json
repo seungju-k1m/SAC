@@ -4,7 +4,7 @@
   "Count":1024,
   "resolution":3,
   "nAgent": 48,
-  "maxStack":1,
+  "maxStack":4,
   "imgMode":"False",
   "aSize": 2,
   "seed": 0,
@@ -43,8 +43,8 @@
                 "BN":"None"
             }
   },
-  "updateStep":256,
-  "div":4,
+  "updateStep":32,
+  "div":1,
 
   "lrFreq": 1,
   "rScaling": 1,
@@ -67,13 +67,13 @@
   },
   "gamma": 0.99,
   "Lambda":0.95,
-  "epoch":5,
+  "epoch":1,
   "epsilon": 0.2,
   "entropyCoeff":0.01,
   "initLogStd": -10,
   "finLogStd":-12.5,
   "annealingStep":5e5,
-  "updateOldP":1,
+  "updateOldP":16,
 
   "sPath": "./save/PPO/",
   "writeTMode":"True",

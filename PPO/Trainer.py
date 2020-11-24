@@ -160,7 +160,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.cOptim.zero_grad()
         # self.lOptim.zero_grad()
 
-    def getAction(self, state, lstmState=None, dMode=False):
+    def getAction(self, state, oldLstmState=None, lstmState=None, dMode=False):
         """
         input:
             state:
@@ -191,14 +191,22 @@ class PPOOnPolicyTrainer(ONPolicy):
             cAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
             lstmState = (hAState, cAState)
 
+        if oldLstmState is None:
+            ohAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
+            ocAState = torch.zeros(1, bSize, self.hiddenSize).to(self.device)
+            oldLstmState = (ohAState, ocAState)
+
         with torch.no_grad():
             if dMode:
                 pass
             else:
-                action, lstmState = \
-                    self.oldAgent.actorForward(state, lstmState=lstmState)
+                action, oldLstmState = \
+                    self.oldAgent.actorForward(state, lstmState=oldLstmState)
+                
+                _, lstmState = \
+                    self.agent.actorForward(state, lstmState=lstmState)
             action = action.cpu().numpy()
-        return action, lstmState
+        return action, oldLstmState, lstmState
 
     def train(self, step, k, epoch):
         """
@@ -392,9 +400,11 @@ class PPOOnPolicyTrainer(ONPolicy):
         
         for i, state in zip(agentId, obs):
             state = np.array(state)
+            aV = state[4]
+            # print(aV)
             obsState[i] = state
             done[i] = False
-            reward[i] = rewards[k]
+            reward[i] = rewards[k] - 0.01 * aV*aV
             k += 1
         k = 0
         for i, state in zip(tAgentId, tobs):
@@ -459,7 +469,8 @@ class PPOOnPolicyTrainer(ONPolicy):
             stateT.append(state)
         # stateT = torch.stack(stateT, dim=0)
         lstmState = self.zeroLSTMState()
-        action, nlstmState = self.getAction(stateT, lstmState=lstmState)
+        action, onlstmState, nlstmState = self.getAction(
+            stateT, lstmState=lstmState, oldLstmState=lstmState)
         step = 1
         while 1:
             self.checkStep(action)
@@ -472,7 +483,8 @@ class PPOOnPolicyTrainer(ONPolicy):
                 state = self.ppState(ob)
                 nStateT.append(state)
             # nStateT = torch.stack(nStateT, dim=0).to(self.device)
-            nAction, nnlstmState = self.getAction(nStateT, lstmState=nlstmState)
+            nAction, onnlstmState, nnlstmState = self.getAction(
+                nStateT, lstmState=nlstmState, oldLstmState=onlstmState)
             u = 0
             for z in range(self.div):
                 uu = u + int(self.nAgent/self.div)
@@ -486,14 +498,17 @@ class PPOOnPolicyTrainer(ONPolicy):
                 u = uu
             for i, d in enumerate(done):
                 if d:
-                    nlstmState = self.setZeroLSTMState(nlstmState, i)
+                    nnlstmState = self.setZeroLSTMState(nnlstmState, i)
+                    onnlstmState = self.setZeroLSTMState(onnlstmState, i)
                     episodeReward.append(Rewards[i])
                     Rewards[i] = 0
 
             action = nAction
             stateT = nStateT
             lstmState = nlstmState
+
             nlstmState = nnlstmState
+            onlstmState = onnlstmState
 
             step += 1
             self.annealingLogStd(step)
