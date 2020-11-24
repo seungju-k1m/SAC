@@ -404,17 +404,14 @@ class PPOOnPolicyTrainer(ONPolicy):
             # print(aV)
             obsState[i] = state
             done[i] = False
-            reward[i] = rewards[k] - 0.01 * aV*aV
+            reward[i] = rewards[k]
             k += 1
         k = 0
         for i, state in zip(tAgentId, tobs):
             state = np.array(state)
             obsState[i] = state
             done[i] = True
-            if treward[k] > -5:
-                reward[i] = -15
-            else:
-                reward[i] = treward[k]
+            reward[i] = treward[k]
             k += 1
         if init:
             return obsState

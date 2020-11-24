@@ -9,9 +9,9 @@
   "aSize": 2,
   "seed": 0,
   "fixedSigma":"False",
-  "coeffAngV":-2.2,
-  "coeffMAngV":0,
-  "coeffDDist":2.2,
+  "coeffAngV":0,
+  "coeffMAngV":-0.005,
+  "coeffDDist":5.0,
   "endReward":-15.0,
   "objRewardN":10,
 
@@ -48,8 +48,8 @@
                 "BN":"None"
             }
   },
-  "updateStep":16,
-  "div":1,
+  "updateStep":128,
+  "div":4,
 
   "lrFreq": 1,
   "rScaling": 1,
@@ -57,8 +57,8 @@
   "optim": {
     "actor": {
       "name": "adam",
-      "lr": 3e-5,
-      "decay": 0,
+      "lr": 1e-5,
+      "decay": 1e-6,
       "eps": 1e-7,
       "clipping": "None"
     },
@@ -78,7 +78,7 @@
   "initLogStd": -10,
   "finLogStd":-12.5,
   "annealingStep":5e5,
-  "updateOldP":32,
+  "updateOldP":16,
 
   "sPath": "./save/PPO/",
   "writeTMode":"True",
