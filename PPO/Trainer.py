@@ -77,8 +77,15 @@ class PPOOnPolicyTrainer(ONPolicy):
 
     def writeTrainInfo(self):
         super(PPOOnPolicyTrainer, self).writeTrainInfo()
+        key = self.data.keys()
+        for k in key:
+            if k == 'agent' or k == 'optim':
+                pass
+            else:
+                data = self.data[k]
+                self.info += """{}:{}
+                """.format(k, data)
         print(self.info)
-
         self.writer.add_text('info', self.info, 0)    
     
     def clear(self):
@@ -517,7 +524,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                     self.oldAgent.update(self.agent)
                     k = 0
             
-            if step % 3000 == 0:
+            if step % 400 == 0:
                 episodeReward = np.array(episodeReward)
                 reward = episodeReward.mean()
                 if self.writeTMode:
