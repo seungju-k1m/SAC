@@ -400,8 +400,6 @@ class PPOOnPolicyTrainer(ONPolicy):
         
         for i, state in zip(agentId, obs):
             state = np.array(state)
-            aV = state[4]
-            # print(aV)
             obsState[i] = state
             done[i] = False
             reward[i] = rewards[k]
