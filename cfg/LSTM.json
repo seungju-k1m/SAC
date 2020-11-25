@@ -1,7 +1,7 @@
 {
   "envName":"./Env/Linux/Env16",
   "sSize": [1, 120],
-  "Count":2048,
+  "Count":1024,
   "resolution":3,
   "nAgent": 48,
   "maxStack":8,
@@ -9,9 +9,9 @@
   "aSize": 2,
   "seed": 0,
   "fixedSigma":"False",
-  "coeffAngV":0,
-  "coeffMAngV":-0.005,
-  "coeffDDist":5.0,
+  "coeffAngV":-0.7,
+  "coeffMAngV":-0.002,
+  "coeffDDist":1.7,
   "endReward":-15.0,
   "objRewardN":10,
 
@@ -48,8 +48,8 @@
                 "BN":"None"
             }
   },
-  "updateStep":128,
-  "div":4,
+  "updateStep":32,
+  "div":1,
 
   "lrFreq": 1,
   "rScaling": 1,
@@ -57,7 +57,7 @@
   "optim": {
     "actor": {
       "name": "adam",
-      "lr": 1e-5,
+      "lr": 3e-5,
       "decay": 1e-6,
       "eps": 1e-7,
       "clipping": "None"
