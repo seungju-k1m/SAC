@@ -1,5 +1,5 @@
 {
-  "envName":"./Env/Linux/Env16",
+  "envName":"./Env/Linux/LongEnv16",
   "sSize": [1, 120],
   "Count":1000,
   "resolution":3,
@@ -51,7 +51,7 @@
                 "BN":"None"
             }
   },
-  "updateStep":128,
+  "updateStep":32,
   "div":1,
 
   "lrFreq": 1,
@@ -81,7 +81,7 @@
   "initLogStd": -10,
   "finLogStd":-12.5,
   "annealingStep":5e5,
-  "updateOldP":8,
+  "updateOldP":32,
 
   "sPath": "./save/PPO/",
   "writeTMode":"True",
