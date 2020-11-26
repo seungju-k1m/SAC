@@ -144,8 +144,8 @@ class sacAgent(baseAgent):
     def criticForward(self, state, action):
         rState, lState = state
 
-        cSS1 = self.criticFeature01(lState)
-        cSS2 = self.criticFeature02(lState)
+        cSS1 = self.cF1(lState)
+        cSS2 = self.cF2(lState)
 
         cat1 = torch.cat((action, rState, cSS1), dim=1)
         cat2 = torch.cat((action, rState, cSS2), dim=1)

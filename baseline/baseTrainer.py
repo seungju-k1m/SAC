@@ -1,4 +1,3 @@
-import gym
 import torch
 import datetime
 import numpy as np

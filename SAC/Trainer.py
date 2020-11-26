@@ -34,10 +34,7 @@ class sacTrainer(OFFPolicy):
         else:
             self.devic = torch.device("cpu")
         self.tAgent.load_state_dict(self.agent.state_dict())
-        if 'gpuOverload' in self.data.keys():
-            self.gpuOverload = self.data['gpuOverload']
-        else:
-            self.gpuOverload = False
+        self.gpuOverload = self.data['gpuOverload']
 
         self.obsSets = []
         for i in range(self.nAgent):
@@ -168,26 +165,25 @@ class sacTrainer(OFFPolicy):
         """
         Update the target Network
         """
-        if self.sMode:
-            with torch.no_grad():
-                for tC1, tC2, C1, C2, tcF1, tcF2, cF1, cF2 in zip(
-                        self.tCritic01.parameters(), 
-                        self.tCritic02.parameters(), 
-                        self.critic01.parameters(), 
-                        self.critic02.parameters(),
-                        self.tCF1.parameters(),
-                        self.tCF2.parameters(),
-                        self.cF1.parameters(),
-                        self.cF2.parameters()):
-                    temp1 = self.tau * C1 + (1 - self.tau) * tC1
-                    temp2 = self.tau * C2 + (1 - self.tau) * tC2
-                    temp3 = self.tau * cF1 + (1 - self.tau) * tcF1
-                    temp4 = self.tau * cF2 + (1 - self.tau) * tcF2
+        with torch.no_grad():
+            for tC1, tC2, C1, C2, tcF1, tcF2, cF1, cF2 in zip(
+                    self.tCritic01.parameters(), 
+                    self.tCritic02.parameters(), 
+                    self.critic01.parameters(), 
+                    self.critic02.parameters(),
+                    self.tCF1.parameters(),
+                    self.tCF2.parameters(),
+                    self.cF1.parameters(),
+                    self.cF2.parameters()):
+                temp1 = self.tau * C1 + (1 - self.tau) * tC1
+                temp2 = self.tau * C2 + (1 - self.tau) * tC2
+                temp3 = self.tau * cF1 + (1 - self.tau) * tcF1
+                temp4 = self.tau * cF2 + (1 - self.tau) * tcF2
 
-                    tC1.copy_(temp1)
-                    tC2.copy_(temp2)
-                    tcF1.copy_(temp3)
-                    tcF2.copy_(temp4)
+                tC1.copy_(temp1)
+                tC2.copy_(temp2)
+                tcF1.copy_(temp3)
+                tcF2.copy_(temp4)
 
     def appendMemory(self, data):
         return self.replayMemory.append(data)

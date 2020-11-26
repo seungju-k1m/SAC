@@ -48,7 +48,7 @@
     },
   
     "tau": 0.005,
-    "startStep": 10000,
+    "startStep": 1000,
   
     "fixedTemp": true,
     "tempValue": 0.2,
@@ -82,6 +82,7 @@
     "lPath":"None",
   
     "device": "cpu",
+    "gpuOverload":false,
     "inferMode": false,
     "renderMode": true
   }
