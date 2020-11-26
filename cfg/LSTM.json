@@ -1,7 +1,7 @@
 {
-  "envName":"./Env/Linux/LongEnv16",
+  "envName":"./Env/Linux/Env16",
   "sSize": [1, 120],
-  "Count":512,
+  "Count":1000,
   "resolution":3,
   "nAgent": 48,
   "maxStack":4,
@@ -11,8 +11,8 @@
   "fixedSigma":"False",
   "coeffAngV":-0.2,
   "coeffMAngV":-0,
-  "coeffDDist":1.2,
-  "endReward":-15.0,
+  "coeffDDist":2.2,
+  "endReward":-25.0,
   "objRewardN":8,
 
   "agent": {
@@ -48,7 +48,7 @@
                 "BN":"None"
             }
   },
-  "updateStep":4,
+  "updateStep":128,
   "div":1,
 
   "lrFreq": 1,
@@ -58,7 +58,7 @@
     "actor": {
       "name": "adam",
       "lr": 3e-5,
-      "decay": 0,
+      "decay": 1e-6,
       "eps": 1e-7,
       "clipping": "None"
     },
@@ -78,7 +78,7 @@
   "initLogStd": -10,
   "finLogStd":-12.5,
   "annealingStep":5e5,
-  "updateOldP":64,
+  "updateOldP":8,
 
   "sPath": "./save/PPO/",
   "writeTMode":"True",

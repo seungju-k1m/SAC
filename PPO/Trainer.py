@@ -279,10 +279,10 @@ class PPOOnPolicyTrainer(ONPolicy):
         lossC = self.agent.calQLoss(
             states,
             gT.detach(),
-            
+        
         )
         lossC.backward()
-        
+    
         self.cOptim.step()
         normC = calGlobalNorm(self.critic) + calGlobalNorm(self.CNNF)
         self.zeroGrad()

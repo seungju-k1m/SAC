@@ -50,7 +50,7 @@ class ONPolicy:
         # 5. unity env setting
         id_ = np.random.randint(10, 100, 1)[0]
         engineChannel = EngineConfigurationChannel()
-        engineChannel.set_configuration_parameters(time_scale=2)
+        engineChannel.set_configuration_parameters(time_scale=4)
         setChannel = EnvironmentParametersChannel()
         resolution = self.data['resolution']
         imgMode = self.data['imgMode'] == "True"
