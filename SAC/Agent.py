@@ -1,6 +1,6 @@
 import torch
-import numpy as np
-from baseline.baseNetwork import MLP, CNET, baseAgent
+from baseline.utils import constructNet
+from baseline.baseNetwork import baseAgent
 
 
 class sacAgent(baseAgent):
@@ -20,77 +20,74 @@ class sacAgent(baseAgent):
         self.aSize = self.aData['aSize']
         self.inputSize1 = self.sSize[0]
         div = 1
-        stride = self.aData['actorFeature']['stride']
-        fSize = self.aData['actorFeature']['nUnit'][-1]
+        stride = self.aData['CNN1D']['stride']
+        fSize = self.aData['CNN1D']['nUnit'][-1]
         for s in stride:
             div *= s
-        self.inputSize2 = int((self.sSize[-1]/div)**2*fSize) + 6
+        self.inputSize2 = int((self.sSize[-1]/div)*fSize) + 6
         self.inputSize3 = self.inputSize2 + self.aSize
 
     def buildModel(self):
         for netName in self.keyList:
             
+            if netName == "CNN1D":
+                netData = self.aData[netName]
+                self.aF = \
+                    constructNet(
+                        netData,
+                        iSize=self.inputSize1
+                        )
+                self.cF1 = \
+                    constructNet(
+                        netData,
+                        iSize=self.inputSize1
+                        )
+                self.cF2 = \
+                    constructNet(
+                        netData,
+                        iSize=self.inputSize1
+                        )
+                        
             if netName == "actor":
                 netData = self.aData[netName]
+                netCat = netData['netCat']
                 self.actor = \
-                    MLP(
+                    constructNet(
                         netData, 
                         iSize=self.inputSize2)
-                        
-            if netName == "actorFeature":
-                netData = self.aData[netName]
-                netCat = netData['netCat']
-                self.actorFeature = \
-                    CNET(
-                        netData, 
-                        iSize=self.sSize[0], 
-                        WH=self.sSize[1])
 
             if netName == "critic":
                 netData = self.aData[netName]
                 netCat = netData['netCat']
                 if netCat == "MLP":
                     self.critic01 = \
-                        MLP(
+                        constructNet(
                             netData, 
                             iSize=self.inputSize3)
                     self.critic02 = \
-                        MLP(
+                        constructNet(
                             netData, 
                             iSize=self.inputSize3)
-            if netName == "criticFeature":
-                netData = self.aData[netName]
-                self.criticFeature01 = \
-                    CNET(
-                        netData, 
-                        iSize=self.sSize[0], 
-                        WH=self.sSize[1])
-                self.criticFeature02 = \
-                    CNET(
-                        netData, 
-                        iSize=self.sSize[0], 
-                        WH=self.sSize[1])
 
         self.temperature = torch.zeros(1, requires_grad=True, device=self.aData['device'])
     
     def forward(self, state):
         
-        state, lidarImg = state
+        rState, lidarImg = state
 
-        if torch.is_tensor(state):
-
-            state = state.to(self.device).float()
+        if torch.is_tensor(rState):
+            rState = rState.to(self.device).float()
             lidarImg = lidarImg.to(self.device).float()
         else:
-            state = torch.tensor(state).to(self.device).float()
+            rState = torch.tensor(rState).to(self.device).float()
             lidarImg = torch.tensor(lidarImg).to(self.device).float()
 
-        if lidarImg.dim() == 3:
+        if lidarImg.dim() == 2:
             lidarImg = torch.unsqueeze(lidarImg, 0)
-            state = torch.unsqueeze(state, 0)
+            rState = torch.unsqueeze(rState, 0)
 
-        actorFeature = self.actorFeature(lidarImg)
-        ss = torch.cat((state, actorFeature), dim=1)
+        actorFeature = self.aF(lidarImg)
+        ss = torch.cat((rState, actorFeature), dim=1)
         output = self.actor(ss)
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
@@ -103,42 +100,45 @@ class sacAgent(baseAgent):
         logProb -= torch.log(1-action.pow(2)+1e-6).sum(1, keepdim=True)
         entropy = (torch.log(std * (2 * 3.14)**0.5)+0.5).sum(1, keepdim=True)
 
-        cSS1 = self.criticFeature01(lidarImg)
-        cSS2 = self.criticFeature02(lidarImg)
-        cat1 = torch.cat((action, state, cSS1), dim=1)
-        cat2 = torch.cat((action, state, cSS2), dim=1)
+        cSS1 = self.cF1(lidarImg)
+        cSS2 = self.cF2(lidarImg)
+        cat1 = torch.cat((action, rState, cSS1), dim=1)
+        cat2 = torch.cat((action, rState, cSS2), dim=1)
         critic01 = self.critic01.forward(cat1)
         critic02 = self.critic02.forward(cat2)
 
         return action, logProb, (critic01, critic02), entropy
 
     def actorForward(self, state, dMode=False):
-        state, lidarImg = state
-        if torch.is_tensor(state):
-    
-            state = state.to(self.device).float()
+        rState, lidarImg = state
+
+        if torch.is_tensor(rState):
+            rState = rState.to(self.device).float()
             lidarImg = lidarImg.to(self.device).float()
         else:
-            state = torch.tensor(state).to(self.device).float()
+            rState = torch.tensor(rState).to(self.device).float()
             lidarImg = torch.tensor(lidarImg).to(self.device).float()
 
-        if lidarImg.dim() == 3:
+        if lidarImg.dim() == 2:
             lidarImg = torch.unsqueeze(lidarImg, 0)
-            state = torch.unsqueeze(state, 0)
+            rState = torch.unsqueeze(rState, 0)
 
-        actorFeature = self.actorFeature(lidarImg)
-        ss = torch.cat((state, actorFeature), dim=1)
+        actorFeature = self.aF(lidarImg)
+        ss = torch.cat((rState, actorFeature), dim=1)
         output = self.actor(ss)
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
 
+        gaussianDist = torch.distributions.Normal(mean, std)
+        x_t = gaussianDist.rsample()
         if dMode:
             action = torch.tanh(mean)
         else:
             gaussianDist = torch.distributions.Normal(mean, std)
             x_t = gaussianDist.rsample()
             action = torch.tanh(x_t) 
+        
         return action
 
     def criticForward(self, state, action):

@@ -1,23 +1,33 @@
 {
-    "envName":"./Env/MacOs/Env16",
-    "unityEnv": "True",
-    "imgMode":"True",
-    "sSize": [1, 96, 96],
-    "nAgent": 48,
+    "envName":"./Env/MacOs/Env01",
+    "imgMode":false,
+    "sSize": [1, 120],
+    "resolution":3,
+    "nAgent": 4,
+    "maxStack":4,
     "Count": 1000,
     "aSize": 2,
     "seed": 0,
+    "coeffAngV":-0.2,
+    "coeffMAngV":-0,
+    "coeffDDist":1.0,
+    "endReward":-25.0,
+    "objRewardN":8,
+    "nUpdateDist":1,
+    "coeffInnerProduct":0,
+    "coeffIntegral":0,
   
     "agent": {
-      "actorFeature": {
-        "netCat": "CNET",
-        "nLayer": 5,
-        "nUnit": [8, 16, 32, 64],
-        "stride": [2, 2, 2, 2],
-        "fSize" : [3, 3, 3, 3, -1],
-        "padding" : [1, 1, 1, 1],
+      "CNN1D": {
+        "netCat": "CNN1D",
+        "nLayer": 1,
+        "nUnit": [256],
+        "stride": [2],
+        "fSize" : [3, -1],
+        "padding" : [1],
         "act": "relu",
-        "BN": "None"
+        "BN": false,
+        "linear":true
       },
 
       "actor":{
@@ -25,18 +35,7 @@
         "nLayer": 2,
         "fSize": [256, 4],
         "act": ["relu", "linear"],
-        "BN": "None"
-      },
-
-      "criticFeature": {
-        "netCat": "CNET",
-        "nLayer": 5,
-        "nUnit": [8, 16, 32, 64],
-        "stride": [2, 2, 2, 2],
-        "padding": [1, 1, 1, 1],
-        "fSize" : [3, 3, 3, 3, -1],
-        "act": "relu",
-        "BN": "None"
+        "BN": false
       },
 
       "critic": {
@@ -44,15 +43,14 @@
         "nLayer": 2,
         "fSize":[256, 1],
         "act": ["relu", "linear"],
-        "BN":"None"
+        "BN":false
       }
     },
   
     "tau": 0.005,
-    "sMode": "True",
     "startStep": 10000,
   
-    "fixedTemp": "True",
+    "fixedTemp": true,
     "tempValue": 0.2,
   
     "nReplayMemory": 1e6,
@@ -66,24 +64,24 @@
         "lr": 3e-4,
         "decay": 0,
         "eps": 1e-7,
-        "clipping": "None"
+        "clipping": false
       },
       "critic": {
         "name": "adam",
         "lr": 3e-4,
         "decay": 0,
-        "clipping": "None",
+        "clipping": false,
         "eps": 1e-7
       }
     },
     "gamma": 0.99,
   
     "sPath": "./save/SAC/",
-    "writeTMode":"False",
+    "writeTMode":true,
     "tPath": "./tensorboard/SAC/",
-    "lPath":"./save/SAC/4096_-1.pth",
+    "lPath":"None",
   
     "device": "cpu",
-    "inferMode": "True",
-    "renderMode": "True"
+    "inferMode": false,
+    "renderMode": true
   }

@@ -3,6 +3,8 @@ import numpy as np
 import json
 import torchvision.transforms.functional as TF
 
+from baseline.baseNetwork import MLP, CNET, LSTMNET, CNN1D
+
 
 def showLidarImg(img):
     img = torch.tensor(img).float()
@@ -36,6 +38,11 @@ def getOptim(optimData, agent, floatV=False):
         eps = 1e-5 if 'eps' not in keyList else optimData['eps']
         if floatV:
             inputD = agent
+        elif type(agent) == tuple:
+            inputD = []
+            for a in agent:
+                inputD += list(a.parameters())
+
         else:
             inputD = agent.parameters()
         if name == 'adam':
@@ -79,6 +86,28 @@ def getActivation(actName, **kwargs):
         act = None
     
     return act
+
+
+def constructNet(netData, iSize=1, WH=-1):
+    netCat = netData['netCat']
+    Net = [MLP, CNET, LSTMNET, CNN1D]
+    netName = ["MLP", "CNET", "LSTMNET", "CNN1D"]
+    ind = netName.index(netCat)
+
+    baseNet = Net[ind]
+    if WH is -1:
+        network = baseNet(
+            netData,
+            iSize=iSize
+        )
+    else:
+        network = baseNet(
+            netData,
+            iSize=iSize,
+            WH=WH
+        )
+
+    return network
 
 
 class jsonParser:

@@ -13,6 +13,7 @@ from torch.utils.tensorboard import SummaryWriter
 class OFFPolicy:
 
     def __init__(self, fName):
+        # 1. load parser
         parser = jsonParser(fName)
         self.data = parser.loadParser()
         self.aData = parser.loadAgentParser()
@@ -21,13 +22,9 @@ class OFFPolicy:
         keyList = list(self.data.keys())
         torch.manual_seed(self.data['seed'])
 
-        self.uMode = False if 'unityEnv' not in keyList else self.data['unityEnv'] == "True"
-        self.sMode = False if 'sMode' not in keyList else self.data['sMode'] == "True"
+        # 2. set Hyper-parameter
 
-        if self.sMode:
-            self.tau = self.data['tau']
-        else:
-            self.udateP = self.data['updateP']
+        self.tau = self.data['tau']
         
         name = self.data['envName']
         
@@ -38,45 +35,66 @@ class OFFPolicy:
         self.lrFreq = self.data['lrFreq']
         self.startStep = self.data['startStep']
 
+        # 3. load/save path configuration
+
         self.sPath = self.data['sPath']
-        self.writeTMode = \
-            True if 'writeTMode' not in keyList else self.data['writeTMode'] == "True"
+        self.writeTMode = self.data['writeTMode']
         if self.writeTMode:
             time = datetime.datetime.now().strftime("%Y%m%d-%H-%M-%S")
             self.tPath = self.data['tPath'] + self.data['envName']+time
             self.writer = SummaryWriter(self.tPath)
         self.lPath = self.data['lPath']
+
+        # 4. miscelleous configuration
         self.device = self.data['device']
-        self.inferMode = self.data['inferMode'] == "True"
-        self.renderMode = self.data['renderMode'] == "True"
-        
+        self.inferMode = self.data['inferMode']
+        self.renderMode = self.data['renderMode']
         self.keyList = keyList
         self.aSize = self.data['aSize']
         self.sSize = self.data['sSize']
         self.nAgent = self.data['nAgent']
-        assert ~(self.uMode is False and self.nAgent > 1), "nAgent must be 1,"
 
-        if self.uMode:
-            id_ = np.random.randint(10, 100, 1)[0]
-            engineChannel = EngineConfigurationChannel()
-            engineChannel.set_configuration_parameters(time_scale=1)
-            setChannel = EnvironmentParametersChannel()
-            imgMode = self.data['imgMode'] == 'True'
-            Count = self.data['Count']
-            setChannel.set_float_parameter("Count", Count)
-            if imgMode:
-                setChannel.set_float_parameter("imgMode", 1.0)
-            else:
-                setChannel.set_float_parameter("imgMode", 0.0)
-            setChannel.set_float_parameter("nAgent", self.nAgent)
-            self.env = UnityEnvironment(
-                name, worker_id=id_, 
-                side_channels=[setChannel, engineChannel])
-            self.env.reset()
-            self.behaviorNames = list(self.env.behavior_specs._dict.keys())[0]
+        # 5. Unity Setting
+        id_ = np.random.randint(10, 100, 1)[0]
+        engineChannel = EngineConfigurationChannel()
+        engineChannel.set_configuration_parameters(time_scale=2)
+        setChannel = EnvironmentParametersChannel()
+        resolution = self.data['resolution']
+        imgMode = self.data['imgMode'] == "True"
+        maxStack = self.data['maxStack']
+        coeffMAngV = self.data['coeffMAngV']
+        coeffAngV = self.data['coeffAngV']
+        coeffDDist = self.data['coeffDDist']
+        coeffInnerProduct = self.data['coeffInnerProduct']
+        coeffIntegral = self.data['coeffIntegral']
+        endReward = self.data['endReward']
+        objRewardN = self.data['objRewardN']
+        
+        setChannel.set_float_parameter("coeffIntegral", coeffIntegral)
+        setChannel.set_float_parameter("maxStack", maxStack)
+        setChannel.set_float_parameter('resolution', resolution)
+        setChannel.set_float_parameter('coeffMAngV', coeffMAngV)
+        setChannel.set_float_parameter('coeffAngV', coeffAngV)
+        setChannel.set_float_parameter('coeffDDist', coeffDDist)
+        setChannel.set_float_parameter('endReward', endReward)
+        setChannel.set_float_parameter('objRewardN', objRewardN)
+        setChannel.set_float_parameter('coeffInnerProduct', coeffInnerProduct)
+        
+        self.imgMode = imgMode
+        if imgMode:
+            setChannel.set_float_parameter("imgMode", 1.0)
         else:
-            self.env = gym.make(name)
-            self.evalEnv = gym.make(name)
+            setChannel.set_float_parameter("imgMode", 0)
+        name = self.data['envName']
+        self.nAgent = self.data['nAgent']
+        Count = self.data['Count']
+        setChannel.set_float_parameter("nAgent", self.nAgent)
+        setChannel.set_float_parameter("Count", Count)
+        self.env = UnityEnvironment(
+            name, worker_id=id_, 
+            side_channels=[setChannel, engineChannel])
+        self.env.reset()
+        self.behaviorNames = list(self.env.behavior_specs._dict.keys())[0]
 
     def reset(self):
         pass
@@ -113,18 +131,7 @@ class OFFPolicy:
         pass
 
     def writeTrainInfo(self):
-        self.info = """
-        envName:{}
-        startStep:{:3d}
-        nReplayMemory:{:5d}
-        bSize:{:3d}
-        lrFreq:{:3d}
-        rScaling:{:3d}
-        gamma:{}
-        """.format(
-            self.data['envName'], self.startStep,
-            self.nReplayMemory, self.bSize, self.lrFreq,
-            self.rScaling, self.gamma)
+        self.info = "Configuration of this Experiment"
         optimKeyList = list(self.optimData.keys())
         for key in optimKeyList[:3]:
             self.info += """
@@ -136,7 +143,7 @@ class OFFPolicy:
                 {}:{}
                 """.format(data, self.optimData[key][data])
         networkKeyList = list(self.aData.keys())[:4]
-        for key in networkKeyList:
+        for key in networkKeyList[:-1]:
             self.info += """
         network_{}:
         """.format(key)
