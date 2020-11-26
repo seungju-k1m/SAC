@@ -10,10 +10,10 @@
     "seed": 0,
     "coeffAngV":-0.2,
     "coeffMAngV":-0,
-    "coeffDDist":1.0,
-    "endReward":-25.0,
+    "coeffDDist":2.2,
+    "endReward":0,
     "objRewardN":8,
-    "nUpdateDist":1,
+    "nUpdateDist":5,
     "coeffInnerProduct":0,
     "coeffIntegral":0,
   

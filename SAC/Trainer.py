@@ -227,7 +227,14 @@ class sacTrainer(OFFPolicy):
         with torch.no_grad():
             nActionsT, logProb, __, entropy = \
                 self.agent.forward((nRStatesT, nLStatesT))
-            target1, target2 = self.tAgent.criticForward((nRStatesT, nLStatesT), nActionsT)
+            cs1, cs2 = \
+                self.tCF1(nLStatesT), self.tCF2(nLStatesT)
+            
+            c1, c2 = \
+                torch.cat((nActionsT, nRStatesT, cs1), dim=1), torch.cat((nActionsT, nRStatesT, cs2))
+            
+            target1, target2 = \
+                self.critic01(c1), self.critic02(c2)
             mintarget = torch.min(target1, target2)
             if self.fixedTemp:
                 alpha = self.tempValue
