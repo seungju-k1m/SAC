@@ -1,5 +1,5 @@
 {
-    "envName":"./Env/MacOs/Env01",
+    "envName":"./Env/MacOs/simEnv01",
     "imgMode":false,
     "sSize": [1, 120],
     "resolution":3,
@@ -48,7 +48,7 @@
     },
   
     "tau": 0.005,
-    "startStep": 1000,
+    "startStep": 10000,
   
     "fixedTemp": true,
     "tempValue": 0.2,
