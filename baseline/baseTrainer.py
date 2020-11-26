@@ -50,7 +50,7 @@ class ONPolicy:
         # 5. unity env setting
         id_ = np.random.randint(10, 100, 1)[0]
         engineChannel = EngineConfigurationChannel()
-        engineChannel.set_configuration_parameters(time_scale=4)
+        engineChannel.set_configuration_parameters(time_scale=2)
         setChannel = EnvironmentParametersChannel()
         resolution = self.data['resolution']
         imgMode = self.data['imgMode'] == "True"
@@ -58,9 +58,12 @@ class ONPolicy:
         coeffMAngV = self.data['coeffMAngV']
         coeffAngV = self.data['coeffAngV']
         coeffDDist = self.data['coeffDDist']
+        coeffInnerProduct = self.data['coeffInnerProduct']
+        coeffIntegral = self.data['coeffIntegral']
         endReward = self.data['endReward']
         objRewardN = self.data['objRewardN']
-
+        
+        setChannel.set_float_parameter("coeffIntegral", coeffIntegral)
         setChannel.set_float_parameter("maxStack", maxStack)
         setChannel.set_float_parameter('resolution', resolution)
         setChannel.set_float_parameter('coeffMAngV', coeffMAngV)
@@ -68,6 +71,7 @@ class ONPolicy:
         setChannel.set_float_parameter('coeffDDist', coeffDDist)
         setChannel.set_float_parameter('endReward', endReward)
         setChannel.set_float_parameter('objRewardN', objRewardN)
+        setChannel.set_float_parameter('coeffInnerProduct', coeffInnerProduct)
         
         self.imgMode = imgMode
         if imgMode:

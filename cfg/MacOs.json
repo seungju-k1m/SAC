@@ -1,19 +1,22 @@
 {
   "envName":"./Env/MacOs/Env01",
   "sSize": [1, 120],
-  "Count":1024,
+  "Count":1000,
   "resolution":3,
   "nAgent": 3,
-  "maxStack":1,
+  "maxStack":4,
   "imgMode":"False",
   "aSize": 2,
   "seed": 0,
   "fixedSigma":"False",
-  "coeffAngV":-2.2,
-  "coeffMAngV":0,
-  "coeffDDist":2.2,
-  "endReward":-15.0,
-  "objRewardN":10,
+  "coeffAngV":-0.2,
+  "coeffMAngV":-0,
+  "coeffDDist":1.0,
+  "endReward":-25.0,
+  "objRewardN":8,
+  "nUpdateDist":1,
+  "coeffInnerProduct":0.05,
+  "coeffIntegral":-0.1,
 
   "agent": {
             "CNN1D": {
@@ -48,8 +51,8 @@
                 "BN":"None"
             }
   },
-  "updateStep":256,
-  "div":2,
+  "updateStep":32,
+  "div":1,
 
   "lrFreq": 1,
   "rScaling": 1,
@@ -58,7 +61,7 @@
     "actor": {
       "name": "adam",
       "lr": 3e-5,
-      "decay": 0,
+      "decay": 1e-6,
       "eps": 1e-7,
       "clipping": "None"
     },
@@ -72,13 +75,13 @@
   },
   "gamma": 0.99,
   "Lambda":0.95,
-  "epoch":5,
+  "epoch":1,
   "epsilon": 0.2,
   "entropyCoeff":0.01,
   "initLogStd": -10,
   "finLogStd":-12.5,
   "annealingStep":5e5,
-  "updateOldP":1,
+  "updateOldP":32,
 
   "sPath": "./save/PPO/",
   "writeTMode":"True",

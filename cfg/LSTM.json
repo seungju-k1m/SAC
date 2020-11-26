@@ -11,9 +11,12 @@
   "fixedSigma":"False",
   "coeffAngV":-0.2,
   "coeffMAngV":-0,
-  "coeffDDist":2.2,
+  "coeffDDist":1.0,
   "endReward":-25.0,
   "objRewardN":8,
+  "nUpdateDist":1,
+  "coeffInnerProduct":0.05,
+  "coeffIntegral":-0.1,
 
   "agent": {
             "CNN1D": {
