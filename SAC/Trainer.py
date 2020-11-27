@@ -312,7 +312,7 @@ class sacTrainer(OFFPolicy):
         return loss, entropy
     
     def getObs(self, init=False):
-        obsState = np.zeros((self.nAgent, 1447))
+        obsState = np.zeros((self.nAgent, self.data['sSize'][-1]))
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
         rewards, treward = decisionStep.reward, terminalStep.reward
@@ -324,14 +324,14 @@ class sacTrainer(OFFPolicy):
         k = 0
         
         for i, state in zip(agentId, obs):
-            state = np.array(state)
+            state = np.array(state[:self.data['sSize'][-1]])
             obsState[i] = state
             done[i] = False
             reward[i] = rewards[k]
             k += 1
         k = 0
         for i, state in zip(tAgentId, tobs):
-            state = np.array(state)
+            state = np.array(state[:self.data['sSize'][-1]])
             obsState[i] = state
             done[i] = True
             reward[i] = treward[k]
@@ -403,7 +403,7 @@ class sacTrainer(OFFPolicy):
 
             stateT = nState
             step += 1
-            if (step % 100 == 0) and step > int(self.startStep/self.nAgent):
+            if (step % 1000 == 0) and step > int(self.startStep/self.nAgent):
 
                 reward = np.array(episodicReward).mean()
                 if self.writeTMode:

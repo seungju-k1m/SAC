@@ -1,11 +1,11 @@
 {
-    "envName":"./Env/MacOs/v4",
+    "envName":"./Env/MacOs/simEnv01",
     "unityEnv": "True",
     "workId":102,
-    "sSize": [1,727],
+    "sSize": [1,127],
     "best" : 100,
      
-    "nAgent": 3,
+    "nAgent": 5,
     "aSize": 2,
     "seed": 0,
   
@@ -35,7 +35,7 @@
     "evalP":5000,
     "episodeP": 20,
   
-    "fixedTemp": "True",
+    "fixedTemp": "False",
     "tempValue": 0.2,
   
     "nReplayMemory": 1e6,
@@ -52,6 +52,13 @@
         "clipping": "None"
       },
       "critic": {
+        "name": "adam",
+        "lr": 3e-4,
+        "decay": 0,
+        "clipping": "None",
+        "eps": 1e-7
+      },
+      "temperature": {
         "name": "adam",
         "lr": 3e-4,
         "decay": 0,
