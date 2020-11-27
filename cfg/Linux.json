@@ -1,5 +1,5 @@
 {
-  "envName":"./Env/MacOs/simEnv01",
+  "envName":"./Env/Linux/simEnv01",
   "imgMode":false,
   "sSize": [1, 120],
   "resolution":3,
@@ -81,8 +81,8 @@
   "tPath": "./tensorboard/SAC/",
   "lPath":"None",
 
-  "device": "cpu",
-  "gpuOverload":false,
+  "device": "cuda:0",
+  "gpuOverload":true,
   "inferMode": false,
   "renderMode": true
 }
