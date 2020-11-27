@@ -10,21 +10,18 @@
   "seed": 0,
   "coeffAngV":-0.2,
   "coeffMAngV":-0,
-  "coeffDDist":1.2,
+  "coeffDDist":2.2,
   "endReward":0,
   "objRewardN":8,
   "nUpdateDist":1,
-  "coeffInnerProduct":0.04,
-  "coeffIntegral":-0.1,
+  "coeffInnerProduct":0,
+  "coeffIntegral":0,
 
   "agent": {
     "CNN1D": {
-      "netCat": "CNN1D",
-      "nLayer": 1,
-      "nUnit": [256],
-      "stride": [2],
-      "fSize" : [3, -1],
-      "padding" : [1],
+      "netCat": "Res1D",
+      "nBlock": 1,
+      "iSize":32,
       "act": "relu",
       "BN": false,
       "linear":true
@@ -32,17 +29,17 @@
 
     "actor":{
       "netCat": "MLP",
-      "nLayer": 3,
-      "fSize": [256, 256, 4],
-      "act": ["relu", "relu", "linear"],
+      "nLayer": 2,
+      "fSize": [256, 4],
+      "act": ["tanh", "linear"],
       "BN": false
     },
 
     "critic": {
       "netCat": "MLP",
-      "nLayer": 3,
-      "fSize":[256, 256, 1],
-      "act": ["relu", "relu", "linear"],
+      "nLayer": 2,
+      "fSize":[256, 1],
+      "act": ["tanh", "linear"],
       "BN":false
     }
   },
@@ -61,14 +58,14 @@
   "optim": {
     "actor": {
       "name": "adam",
-      "lr": 3e-5,
+      "lr": 3e-4,
       "decay": 0,
       "eps": 1e-7,
       "clipping": false
     },
     "critic": {
       "name": "adam",
-      "lr": 3e-5,
+      "lr": 3e-4,
       "decay": 0,
       "clipping": false,
       "eps": 1e-7
@@ -89,7 +86,7 @@
   "lPath":"None",
 
   "device": "cuda:0",
-  "gpuOverload":true,
+  "gpuOverload":false,
   "inferMode": false,
   "renderMode": true
 }
