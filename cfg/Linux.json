@@ -1,5 +1,5 @@
 {
-  "envName":"./Env/Linux/Env01",
+  "envName":"./Env/MacOs/simEnv01",
   "imgMode":false,
   "sSize": [1, 120],
   "resolution":3,
@@ -10,9 +10,9 @@
   "seed": 0,
   "coeffAngV":-0.2,
   "coeffMAngV":-0,
-  "coeffDDist":1.0,
+  "coeffDDist":2.2,
   "endReward":0,
-  "objRewardN":100,
+  "objRewardN":8,
   "nUpdateDist":1,
   "coeffInnerProduct":0,
   "coeffIntegral":0,
@@ -48,7 +48,7 @@
   },
 
   "tau": 0.005,
-  "startStep": 1000,
+  "startStep": 10000,
 
   "fixedTemp": true,
   "tempValue": 0.2,
@@ -56,7 +56,7 @@
   "nReplayMemory": 1e6,
   "bSize": 256,
   "lrFreq": 1,
-  "rScaling": 1,
+  "rScaling": 15,
 
   "optim": {
     "actor": {
@@ -81,7 +81,7 @@
   "tPath": "./tensorboard/SAC/",
   "lPath":"None",
 
-  "device": "cuda:0",
+  "device": "cpu",
   "gpuOverload":false,
   "inferMode": false,
   "renderMode": true
