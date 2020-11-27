@@ -269,3 +269,93 @@ class CNN1D(nn.Module):
         for layer in self.children():
             x = layer(x)
         return x
+
+
+def conv1D(
+    in_num,
+    out_num,
+    kernel_size=3, padding=1, stride=1, 
+    eps=1e-5, momentum=0.1,  
+    is_linear=False, 
+    is_batch=False
+):
+    
+    if is_linear:
+        temp = nn.Sequential(nn.Conv1d(in_num, out_num, kernel_size=kernel_size, 
+                             padding=padding, stride=stride, bias=False))
+    else:
+        
+        if is_batch:
+            temp = nn.Sequential(
+                nn.Conv1d(in_num, out_num, kernel_size=kernel_size, 
+                          padding=padding, stride=stride, bias=False),
+                nn.BatchNorm1d(out_num, eps=eps, momentum=momentum),
+                nn.ReLU()
+                )
+        else:
+            temp = nn.Sequential(
+                nn.Conv1d(in_num, out_num, kernel_size=kernel_size, 
+                          padding=padding, stride=stride, bias=False),
+                nn.ReLU()
+                )
+
+    return temp
+
+
+class ResidualConv(nn.Module):
+    
+    def __init__(self, in_num):
+        super(ResidualConv, self).__init__()
+
+        mid_num = int(in_num / 2)
+
+        self.layer1 = conv1D(in_num, mid_num, kernel_size=1, padding=0)
+        self.layer2 = conv1D(mid_num, in_num)
+
+    def forward(self, x):
+        
+        residual = x
+        
+        out = self.layer1(x)
+        z = self.layer2(out)
+
+        z += residual
+
+        return z
+
+
+class Res1D(nn.Module):
+
+    def __init__(
+        self,
+        aData,
+        iSize=1
+    ):
+        super(Res1D, self).__init__()
+
+        self.aData = aData
+        self.iSize = self.aData['iSize']
+        self.nBlock = self.aData['nBlock']
+        self.isLinear = self.aData['linear']
+        
+        self.Model = self.buildModel()
+        self.conv = conv1D(1, 32)
+    
+    def buildModel(self):
+        iSize = self.iSize
+        layers = []
+
+        for i in range(self.nBlock):
+            layers.append(ResidualConv(iSize))
+        
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        
+        y = self.conv(x)
+        z = self.Model.forward(y)
+        if self.isLinear:
+            batchSize = z.shape[0]
+            z = z.view((batchSize, -1))
+        
+        return z

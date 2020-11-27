@@ -19,12 +19,9 @@
   
     "agent": {
       "CNN1D": {
-        "netCat": "CNN1D",
-        "nLayer": 1,
-        "nUnit": [256],
-        "stride": [2],
-        "fSize" : [3, -1],
-        "padding" : [1],
+        "netCat": "Res1D",
+        "nBlock": 1,
+        "iSize":32,
         "act": "relu",
         "BN": false,
         "linear":true

@@ -19,12 +19,7 @@ class sacAgent(baseAgent):
         self.sSize = self.aData['sSize']
         self.aSize = self.aData['aSize']
         self.inputSize1 = self.sSize[0]
-        div = 1
-        stride = self.aData['CNN1D']['stride']
-        fSize = self.aData['CNN1D']['nUnit'][-1]
-        for s in stride:
-            div *= s
-        self.inputSize2 = int((self.sSize[-1]/div)*fSize) + 6
+        self.inputSize2 = self.sSize[1] * self.aData['CNN1D']['iSize'] + 6
         self.inputSize3 = self.inputSize2 + self.aSize
 
     def buildModel(self):

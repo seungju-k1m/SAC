@@ -3,7 +3,7 @@ import numpy as np
 import json
 import torchvision.transforms.functional as TF
 
-from baseline.baseNetwork import MLP, CNET, LSTMNET, CNN1D
+from baseline.baseNetwork import MLP, CNET, LSTMNET, CNN1D, Res1D
 
 
 def showLidarImg(img):
@@ -90,8 +90,8 @@ def getActivation(actName, **kwargs):
 
 def constructNet(netData, iSize=1, WH=-1):
     netCat = netData['netCat']
-    Net = [MLP, CNET, LSTMNET, CNN1D]
-    netName = ["MLP", "CNET", "LSTMNET", "CNN1D"]
+    Net = [MLP, CNET, LSTMNET, CNN1D, Res1D]
+    netName = ["MLP", "CNET", "LSTMNET", "CNN1D", "Res1D"]
     ind = netName.index(netCat)
 
     baseNet = Net[ind]
