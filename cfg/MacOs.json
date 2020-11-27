@@ -3,7 +3,7 @@
     "imgMode":false,
     "sSize": [1, 120],
     "resolution":3,
-    "nAgent": 4,
+    "nAgent": 3,
     "maxStack":4,
     "Count": 1000,
     "aSize": 2,
@@ -13,7 +13,7 @@
     "coeffDDist":2.2,
     "endReward":0,
     "objRewardN":8,
-    "nUpdateDist":5,
+    "nUpdateDist":1,
     "coeffInnerProduct":0,
     "coeffIntegral":0,
   

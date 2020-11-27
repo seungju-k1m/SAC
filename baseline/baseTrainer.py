@@ -59,7 +59,7 @@ class OFFPolicy:
         engineChannel.set_configuration_parameters(time_scale=2)
         setChannel = EnvironmentParametersChannel()
         resolution = self.data['resolution']
-        imgMode = self.data['imgMode'] == "True"
+        imgMode = self.data['imgMode']
         maxStack = self.data['maxStack']
         coeffMAngV = self.data['coeffMAngV']
         coeffAngV = self.data['coeffAngV']
@@ -78,6 +78,7 @@ class OFFPolicy:
         setChannel.set_float_parameter('endReward', endReward)
         setChannel.set_float_parameter('objRewardN', objRewardN)
         setChannel.set_float_parameter('coeffInnerProduct', coeffInnerProduct)
+        setChannel.set_float_parameter('resolution', resolution)
         
         self.imgMode = imgMode
         if imgMode:
