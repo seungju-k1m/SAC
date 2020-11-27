@@ -231,7 +231,7 @@ class sacTrainer(OFFPolicy):
                 self.tCF1(nLStatesT), self.tCF2(nLStatesT)
             
             c1, c2 = \
-                torch.cat((nActionsT, nRStatesT, cs1), dim=1), torch.cat((nActionsT, nRStatesT, cs2))
+                torch.cat((nActionsT, nRStatesT, cs1), dim=1), torch.cat((nActionsT, nRStatesT, cs2), dim=1)
             
             target1, target2 = \
                 self.critic01(c1), self.critic02(c2)

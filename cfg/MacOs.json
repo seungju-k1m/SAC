@@ -56,7 +56,7 @@
     "nReplayMemory": 1e6,
     "bSize": 256,
     "lrFreq": 1,
-    "rScaling": 1,
+    "rScaling": 15,
   
     "optim": {
       "actor": {
