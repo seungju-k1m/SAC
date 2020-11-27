@@ -409,7 +409,7 @@ class sacTrainer(OFFPolicy):
 
             stateT = nState
             step += 1
-            if (step % 400 == 0) and step > int(self.startStep/self.nAgent):
+            if (step % 1000 == 0) and step > int(self.startStep/self.nAgent):
                 reward = np.array(episodicReward).mean()
                 if self.writeTMode:
                     self.writer.add_scalar('Reward', reward, step)
