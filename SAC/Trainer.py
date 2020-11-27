@@ -395,11 +395,11 @@ class sacTrainer(OFFPolicy):
                     episodicReward.append(episodeReward[b])
                     episodeReward[b] = 0
 
-                if step >= int(self.startStep/self.nAgent) and self.inferMode is False:
-                    loss, entropy =\
-                        self.train(step)
-                    Loss.append(loss)
-                    self.targetNetUpdate()
+            if step >= int(self.startStep/self.nAgent) and self.inferMode is False:
+                loss, entropy =\
+                    self.train(step)
+                Loss.append(loss)
+                self.targetNetUpdate()
 
             stateT = nState
             step += 1

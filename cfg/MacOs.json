@@ -1,11 +1,11 @@
 {
-    "envName":"./Env/MacOs/16MostSimpleEnv",
+    "envName":"./Env/MacOs/v4",
     "unityEnv": "True",
     "workId":102,
     "sSize": [1,727],
     "best" : 100,
      
-    "nAgent": 48,
+    "nAgent": 3,
     "aSize": 2,
     "seed": 0,
   
