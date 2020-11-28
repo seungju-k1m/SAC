@@ -35,7 +35,7 @@ class baseAgent(nn.Module):
 
 class MLP(nn.Module):
 
-    def __init__(self, netData, iSize=1):
+    def __init__(self, netData):
         super(MLP, self).__init__()
         self.netData = netData
         self.nLayer = netData['nLayer']
@@ -49,7 +49,7 @@ class MLP(nn.Module):
         else:
             self.linear = netData['linear']
         self.BN = netData['BN']
-        self.iSize = iSize
+        self.iSize = self.netData['iSize']
         self.buildModel()
 
     def buildModel(self):
@@ -82,13 +82,12 @@ class MLP(nn.Module):
 
 class CNET(nn.Module):
 
-    def __init__(self, netData, iSize=3, WH=96):
+    def __init__(self, netData):
         super(CNET, self).__init__()
 
         self.netData = netData
-        self.iSize = iSize
+        self.iSize = self.netData['iSize']
         keyList = list(netData.keys())
-        self.WH = WH
 
         if "BN" in keyList:
             self.BN = netData['BN']
@@ -158,13 +157,6 @@ class CNET(nn.Module):
                     act
                 )
 
-    def getSize(self):
-        ze = torch.zeros((1, self.iSize, self.WH, self.WH))
-        k = self.forward(ze)
-        k = k.view((1, -1))
-        size = k.shape[-1]
-        return size
-
     def forward(self, x):
         for layer in self.children():
             x = layer(x)
@@ -173,12 +165,13 @@ class CNET(nn.Module):
 
 class LSTMNET(nn.Module):
 
-    def __init__(self, netData, iSize=1):
+    def __init__(self, netData):
         super(LSTMNET, self).__init__()
         self.netData = netData
         self.hiddenSize = netData['hiddenSize']
         self.nLayer = netData['nLayer']
-        self.rnn = nn.LSTM(iSize, self.hiddenSize, self.nLayer)
+        self.iSize = self.netData['iSize']
+        self.rnn = nn.LSTM(self.iSize, self.hiddenSize, self.nLayer)
 
     def forward(self, state, lstmState):
         output, (hn, cn) = self.rnn(state, lstmState)
@@ -190,15 +183,12 @@ class CNN1D(nn.Module):
 
     def __init__(
         self,
-        netData,
-        iSize=1,
-        WH=120
+        netData
     ):
         super(CNN1D, self).__init__()
         self.netData = netData
-        self.iSize = iSize
+        self.iSize = self.netData['iSize']
         keyList = list(netData.keys())
-        self.L = WH
 
         if "BN" in keyList:
             self.BN = netData['BN']
@@ -257,13 +247,6 @@ class CNN1D(nn.Module):
                     "act_"+str(i+1),
                     act
                 )
-        
-    def getSize(self):
-        ze = torch.zeros((1, self.iSize, self.L))
-        k = self.forward(ze)
-        k = k.view((1, -1))
-        size = k.shape[-1]
-        return size
     
     def forward(self, x):
         for layer in self.children():
@@ -328,8 +311,7 @@ class Res1D(nn.Module):
 
     def __init__(
         self,
-        aData,
-        iSize=1
+        aData
     ):
         super(Res1D, self).__init__()
 

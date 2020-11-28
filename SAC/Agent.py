@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from baseline.utils import constructNet
 from baseline.baseNetwork import baseAgent
 
@@ -12,64 +13,40 @@ class sacAgent(baseAgent):
         self.keyList = list(self.aData.keys())
         device = self.aData['device']
         self.device = torch.device(device)
-        self.getSize()
         self.buildModel()
-    
-    def getSize(self):
-        self.sSize = self.aData['sSize']
-        self.aSize = self.aData['aSize']
-        self.inputSize1 = self.sSize[0]
-        self.inputSize2 = self.sSize[1] * self.aData['CNN1D']['iSize'] + 6
-        self.inputSize3 = self.inputSize2 + self.aSize
 
     def buildModel(self):
         for netName in self.keyList:
-            
-            if netName == "CNN1D":
-                netData = self.aData[netName]
-                self.aF = \
-                    constructNet(
-                        netData,
-                        iSize=self.inputSize1
-                        )
-                self.cF1 = \
-                    constructNet(
-                        netData,
-                        iSize=self.inputSize1
-                        )
-                self.cF2 = \
-                    constructNet(
-                        netData,
-                        iSize=self.inputSize1
-                        )
-                        
             if netName == "actor":
                 netData = self.aData[netName]
-                netCat = netData['netCat']
-                self.actor = \
-                    constructNet(
-                        netData, 
-                        iSize=self.inputSize2)
+                layers = []
+                for key in netData.keys():
+                    netD = netData[key]
+                    layers.append(
+                        constructNet(
+                            netD
+                        )
+                    )
+                self.actor = nn.Sequential(*layers)
 
             if netName == "critic":
                 netData = self.aData[netName]
-                netCat = netData['netCat']
-                if netCat == "MLP":
-                    self.critic01 = \
+                layers = []
+                for key in netData.keys():
+                    netD = netData[key]
+                    layers.append(
                         constructNet(
-                            netData, 
-                            iSize=self.inputSize3)
-                    self.critic02 = \
-                        constructNet(
-                            netData, 
-                            iSize=self.inputSize3)
+                            netD
+                        )
+                    )
+                self.critic01 = nn.Sequential(*layers)
+                self.critic02 = nn.Sequential(*layers)
 
         self.temperature = torch.zeros(1, requires_grad=True, device=self.aData['device'])
     
     def forward(self, state):
         
         rState, lidarImg = state
-
         if torch.is_tensor(rState):
             rState = rState.to(self.device).float()
             lidarImg = lidarImg.to(self.device).float()
