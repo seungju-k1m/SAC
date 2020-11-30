@@ -1,12 +1,12 @@
 {
     "sSize": [1, 120],
     "aSize":2,
-    "envName":"./Env/MacOs/testEnv01",
+    "envName":"./Env/MacOs/Env16",
   
     "env":{
       "imgMode":false,
       "resolution":3,
-      "nAgent": 3,
+      "nAgent": 48,
       "maxStack":4,
       "Count": 1000,
       "coeffAngV":-0.05,
@@ -14,7 +14,7 @@
       "coeffDDist":-0.01,
       "coeffVelo":-0.01,
       "refVelo":2,
-      "endReward":0,
+      "endReward":-15,
       "objRewardN":8,
       "nUpdateDist":1
     },
@@ -36,9 +36,9 @@
       "critic": {
         "module01":{
           "netCat": "MLP",
-          "nLayer": 2,
-          "fSize": [256, 1],
-          "act": ["relu", "linear"],
+          "nLayer": 3,
+          "fSize": [256, 256, 1],
+          "act": ["relu", "relu", "linear"],
           "BN": false,
           "iSize":127,
           "output":true,
@@ -50,17 +50,17 @@
     "gamma": 0.99,
     "lambda":0.995,
     "rScaling": 1,
-    "entropyCoeff":0.01,
+    "entropyCoeff":0.001,
     "epsilon":0.2,
-    "updateStep":32,
+    "updateStep":16,
     "div":1,
     "epoch":1,
-    "updateOldP":16,
+    "updateOldP":10,
   
     "optim": {
       "actor": {
         "name": "adam",
-        "lr": 3e-4,
+        "lr": 3e-5,
         "decay": 0,
         "eps": 1e-7,
         "clipping": false
