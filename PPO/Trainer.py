@@ -150,10 +150,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             gAE.detach()
         )
         minusObj.backward()
-
-        # self.cnnOptim.step()
-        self.aOptim.step()
-        # self.lOptim.step()
+        self.aOptim.step() 
         
         normA = self.agent.actor.calculateNorm().cpu().detach().numpy()
 
