@@ -1,0 +1,87 @@
+{
+    "sSize": [1, 120],
+    "aSize":2,
+    "envName":"./Env/Linux/Env01",
+  
+    "env":{
+      "imgMode":false,
+      "resolution":3,
+      "nAgent": 3,
+      "maxStack":4,
+      "Count": 1000,
+      "coeffAngV":-0.05,
+      "coeffMAngV":-0,
+      "coeffDDist":-0.01,
+      "coeffVelo":-0.01,
+      "refVelo":2,
+      "endReward":0,
+      "objRewardN":8,
+      "nUpdateDist":1
+    },
+    
+    "agent": {
+      "actor":{
+        "module01":{
+          "netCat": "MLP",
+          "nLayer": 3,
+          "fSize": [256, 256, 4],
+          "act": ["relu", "relu", "linear"],
+          "BN": false,
+          "iSize":127,
+          "output":true,
+          "input":[0]
+        }
+      },
+  
+      "critic": {
+        "module01":{
+          "netCat": "MLP",
+          "nLayer": 2,
+          "fSize": [256, 1],
+          "act": ["relu", "linear"],
+          "BN": false,
+          "iSize":127,
+          "output":true,
+          "input":[0]
+        }
+      }
+    },
+  
+    "gamma": 0.99,
+    "lambda":0.995,
+    "rScaling": 1,
+    "entropyCoeff":0.01,
+    "epsilon":0.2,
+    "updateStep":32,
+    "div":1,
+    "epoch":20,
+    "updateOldP":16,
+  
+    "optim": {
+      "actor": {
+        "name": "adam",
+        "lr": 3e-4,
+        "decay": 0,
+        "eps": 1e-7,
+        "clipping": false
+      },
+      "critic": {
+        "name": "adam",
+        "lr": 3e-4,
+        "decay": 0,
+        "clipping": false,
+        "eps": 1e-7
+      }
+    },
+    
+  
+    "sPath": "./save/PPO/",
+    "writeTMode":true,
+    "tPath": "./tensorboard/PPO/",
+    "lPath":"None",
+  
+    "device": "cuda:0",
+    "gpuOverload":false,
+    "inferMode": false,
+    "renderMode": true
+  }

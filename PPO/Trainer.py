@@ -337,7 +337,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                     self.writer.add_scalar('Reward', reward, step)
 
                 print("""
-                Step : {:5d} // Reward : {:3f}  
+                Step : {:5d} // Reward : {:.3f}  
                 """.format(step, reward))
                 episodeReward = []
                 torch.save(self.agent.state_dict(), self.sPath)

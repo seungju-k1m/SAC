@@ -51,7 +51,7 @@ class OFFPolicy:
         # 5. Unity Setting
         id_ = np.random.randint(10, 100, 1)[0]
         engineChannel = EngineConfigurationChannel()
-        engineChannel.set_configuration_parameters(time_scale=4)
+        engineChannel.set_configuration_parameters(time_scale=2)
         setChannel = EnvironmentParametersChannel()
         envData = self.data['env']
         for key in envData.keys():
