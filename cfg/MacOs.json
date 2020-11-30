@@ -54,7 +54,7 @@
   "tau": 0.005,
   "gamma": 0.99,
   "startStep": 10000,
-  "fixedTemp": false,
+  "fixedTemp": true,
   "tempValue": 0.2,
   "nReplayMemory": 1e6,
   "bSize": 256,
