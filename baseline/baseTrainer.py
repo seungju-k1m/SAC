@@ -96,3 +96,46 @@ class OFFPolicy:
 
     def eval(self):
         pass
+
+    def writeDict(self, data, key, n=0):
+        tab = ""
+        for _ in range(n):
+            tab += '\t'
+        if type(data) == dict:
+            for k in data.keys():
+                dK = data[k]
+                if type(dK) == dict:
+                    self.info +=\
+                """
+            {}{}:
+                """.format(tab, k)
+                    self.writeDict(dK, k, n=n+1)
+                else:
+                    self.info += \
+            """
+            {}{}:{}
+            """.format(tab, k, dK)
+        else:
+            self.info +=\
+            """
+            {}:{}
+            """.format(key, data)
+    
+    def writeTrainInfo(self):
+        self.info = """
+        Configuration for this experiment
+        """
+        key = self.data.keys()
+        for k in key:
+            data = self.data[k]
+            if type(data) == dict:
+                self.info +=\
+            """
+            {}:
+            """.format(k)
+                self.writeDict(data, k, n=1)
+            else:
+                self.writeDict(data, k)
+
+        print(self.info)
+        self.writer.add_text('info', self.info, 0)  
