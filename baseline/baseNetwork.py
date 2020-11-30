@@ -76,7 +76,7 @@ class MLP(nn.Module):
     
     def forward(self, x, shortcut=None):
         for i, layer in enumerate(self.children()):
-            x = layer(x)
+            x = layer.forward(x)
         return x
 
 

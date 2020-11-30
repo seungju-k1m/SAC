@@ -1,11 +1,35 @@
 import torch
 import random
+import datetime
 import numpy as np
 
 from baseline.baseTrainer import OFFPolicy
 from SAC.Agent import sacAgent
-from baseline.utils import getOptim, calGlobalNorm
+from baseline.utils import getOptim
 from collections import deque
+
+
+def preprocessBatch(f):
+    def wrapper(self, step):
+        miniBatch = random.sample(self.replayMemory, self.bSize)
+
+        state, action, reward, nstate, done = \
+            [], [], [], [], []
+        
+        for i in range(self.bSize):
+            state.append(miniBatch[i][0][0])
+            action.append(miniBatch[i][1])
+            reward.append(miniBatch[i][2])
+            nstate.append(miniBatch[i][3][0])
+            done.append(miniBatch[i][4])
+        state = tuple([torch.cat(state, dim=0).to(self.device).float()])
+        action = torch.tensor(action).to(self.device).float()
+        reward = torch.tensor(reward).to(self.device).float()
+        nstate = tuple([torch.cat(nstate, dim=0).to(self.device).float()])
+
+        loss, entropy = f(self, state, action, reward, nstate, done, step)
+        return loss, entropy
+    return wrapper
 
 
 class sacTrainer(OFFPolicy):
@@ -45,31 +69,52 @@ class sacTrainer(OFFPolicy):
         self.replayMemory = deque(maxlen=self.nReplayMemory)
         pureEnv = self.data['envName'].split('/')
         name = pureEnv[-1]
-        self.sPath += name + '_' + str(self.nAgent) + '_imgMode_'
-        if self.fixedTemp:
-            self.sPath += str(int(self.tempValue * 100)) + '.pth'
-        else:
-            self.sPath += '.pth'
-        
-        if self.fixedTemp:
-            self.sPath += \
-                str(self.nAgent)+self.data['envName'][-2:]+'_'+str(int(self.tempValue*100))+'.pth'
-        else:
-            self.sPath += '.pth'
+        time = datetime.datetime.now().strftime("%Y%m%d-%H-%M-%S")
+        self.sPath += name + '_' + str(time)+'.pth'
         
         if self.writeTMode:
             self.writeTrainInfo()
     
+    def writeDict(self, data, key, n=0):
+        tab = ""
+        for _ in range(n):
+            tab += '\t'
+        if type(data) == dict:
+            for k in data.keys():
+                dK = data[k]
+                if type(dK) == dict:
+                    self.info +=\
+                """
+            {}{}:
+                """.format(tab, k)
+                    self.writeDict(dK, k, n=n+1)
+                else:
+                    self.info += \
+            """
+            {}{}:{}
+            """.format(tab, k, dK)
+        else:
+            self.info +=\
+            """
+            {}:{}
+            """.format(key, data)
+    
     def writeTrainInfo(self):
-        super(sacTrainer, self).writeTrainInfo()
+        self.info = """
+        Configuration for this experiment
+        """
         key = self.data.keys()
         for k in key:
-            if k == 'agent' or k == 'optim':
-                pass
+            data = self.data[k]
+            if type(data) == dict:
+                self.info +=\
+            """
+            {}:
+            """.format(k)
+                self.writeDict(data, k, n=1)
             else:
-                data = self.data[k]
-                self.info += """{}:{}
-                """.format(k, data)
+                self.writeDict(data, k)
+
         print(self.info)
         self.writer.add_text('info', self.info, 0)   
 
@@ -82,36 +127,10 @@ class sacTrainer(OFFPolicy):
         for j in range(self.sSize[0]):
             self.obsSets[0].append(np.zeros(self.sSize[1:]))
     
-    def ppState(self, obs, lstmState=None):
-        """
-        args:
-            obs:[np.array]
-                observation
-                shape:[1447, ]
-        
-        output:
-            rState:[torch.tensor]
-                state of robot. each element corresponds to relative pos x, y, 
-                velocity, yaw rate and y_angle.
-                shape:[6, ]
-            lidarImg:[torch.tensor uint8]
-                project lidar point to lidar img.
-                shape:[1, 96, 96]
-        """
-        rState, lidarPt = obs[:6], obs[7:7 + self.sSize[-1]]
-        if self.gpuOverload:
-            rState = torch.tensor(rState).to(self.device)
-            rState = torch.unsqueeze(rState, dim=0)
-            lidarImg = torch.tensor(lidarPt).to(self.device).float()
-            lidarImg = torch.unsqueeze(lidarImg, dim=0)
-        else:
-            rState = torch.tensor(rState)
-            rState = torch.unsqueeze(rState, dim=0)
-            lidarImg = torch.tensor(lidarPt).float()
-            lidarImg = torch.unsqueeze(lidarImg, dim=0)
-        lidarImg = torch.unsqueeze(lidarImg, dim=0)
-
-        return (rState, lidarImg)
+    def ppState(self, obs):
+        state = torch.tensor(obs[:7 + self.sSize[-1]]).float().to(self.device)
+        state = torch.unsqueeze(state, dim=0)
+        return tuple([state])
 
     def genOptim(self):
         """
@@ -162,63 +181,38 @@ class sacTrainer(OFFPolicy):
         if self.fixedTemp is False:
             self.tOptim.zero_grad()
     
-    def train(self, step):
-        """
-        Train the network. it consists of 4 procedure.
-        1. preprocess the memory which comes from the replay buffer.
-        2. detach the memory from the computer's resource and then get the target value
-           for the state-action network update.
-        3. calculate the loss, then get the gradient.
-        4. Finally, log the statistics of the training, e.g norm, entropy
-        """
-        miniBatch = random.sample(self.replayMemory, self.bSize)
-        
-        rStates, lStates, actions, rewards, nRStates, nLStates, dones = \
-            [], [], [], [], [], [], []
-        
-        for i in range(self.bSize):
-            rStates.append(miniBatch[i][0][0])
-            lStates.append(miniBatch[i][0][1])
-            actions.append(miniBatch[i][1])
-            rewards.append(miniBatch[i][2])
-            nRStates.append(miniBatch[i][3][0])
-            nLStates.append(miniBatch[i][3][1])
-            dones.append(miniBatch[i][4])
-        
-        nRStatesT = torch.stack(nRStates, 0).to(self.device).float()
-        rStatesT = torch.stack(rStates, 0).to(self.device).float()
-        lStatesT = torch.stack(lStates, 0).to(self.device).float()
-        nLStatesT = torch.stack(nLStates, 0).to(self.device).float()
-        actionsT = torch.tensor(actions).to(self.device).float()
-
+    @preprocessBatch
+    def train(
+        self,
+        state,
+        action,
+        reward,
+        nState,
+        done, 
+        step
+    ):
         with torch.no_grad():
             nActionsT, logProb, __, entropy = \
-                self.agent.forward((nRStatesT, nLStatesT))
-            cs1, cs2 = \
-                self.tCF1(nLStatesT), self.tCF2(nLStatesT)
-            
-            c1, c2 = \
-                torch.cat((nActionsT, nRStatesT, cs1), dim=1), torch.cat((nActionsT, nRStatesT, cs2), dim=1)
-            
+                self.agent.forward(nState)
             target1, target2 = \
-                self.critic01(c1), self.critic02(c2)
+                self.tAgent.criticForward(nState, nActionsT)
             mintarget = torch.min(target1, target2)
             if self.fixedTemp:
                 alpha = self.tempValue
             else:
                 alpha = self.tempValue.exp()
         for i in range(self.bSize):
-            if dones[i]:
-                mintarget[i] = rewards[i]
+            if done[i]:
+                mintarget[i] = reward[i]
             else:
                 mintarget[i] = \
-                    rewards[i] + self.gamma * (mintarget[i] - alpha * logProb[i])
+                    reward[i] + self.gamma * (mintarget[i] - alpha * logProb[i])
 
         if self.fixedTemp:
             lossC1, lossC2 = self.agent.calQLoss(
-                (rStatesT.detach(), lStatesT.detach()),
+                state,
                 mintarget.detach(),
-                actionsT
+                action
             )
             self.zeroGrad()
             lossC1.backward()
@@ -227,7 +221,7 @@ class sacTrainer(OFFPolicy):
             self.cOptim2.step()
 
             lossP, lossT = self.agent.calALoss(
-                (rStatesT.detach(), lStatesT.detach()),
+                state,
                 alpha=self.tempValue)
             
             lossP.backward()
@@ -235,9 +229,9 @@ class sacTrainer(OFFPolicy):
 
         else:
             lossC1, lossC2 = self.agent.calQLoss(
-                (rStatesT.detach(), lStatesT.detach()),
+                state,
                 mintarget.detach(),
-                actionsT
+                action
             )
             self.zeroGrad()
             lossC1.backward()
@@ -246,7 +240,7 @@ class sacTrainer(OFFPolicy):
             self.cOptim2.step()
 
             lossP, lossT = self.agent.calALoss(
-                (rStatesT.detach(), lStatesT.detach())
+                state
                 )
             
             lossP.backward()
@@ -254,9 +248,9 @@ class sacTrainer(OFFPolicy):
             self.aOptim.step()
             self.tOptim.step()
 
-        normA = calGlobalNorm(self.actor) + calGlobalNorm(self.aF)
-        normC1 = calGlobalNorm(self.critic01) + calGlobalNorm(self.cF1)
-        normC2 = calGlobalNorm(self.critic02) + calGlobalNorm(self.cF2)
+        normA = self.agent.actor.calculateNorm().detach().numpy()
+        normC1 = self.agent.critic01.calculateNorm().detach().numpy()
+        normC2 = self.agent.critic02.calculateNorm().detach().numpy()
 
         norm = normA + normC1 + normC2
         entropy = entropy.mean().cpu().detach().numpy()
@@ -326,6 +320,10 @@ class sacTrainer(OFFPolicy):
             value = False
         self.env.step()
         return value
+
+    def targetNetUpdate(self):
+        self.tAgent.critic01.updateParameter(self.agent.critic01, self.tau)
+        self.tAgent.critic02.updateParameter(self.agent.critic02, self.tau)
 
     def run(self):
         step = 0

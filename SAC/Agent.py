@@ -1,5 +1,4 @@
 import torch
-import torch.nn as nn
 from baseline.utils import constructNet
 from baseline.baseNetwork import baseAgent, LSTMNET
 
@@ -14,6 +13,7 @@ class sacAgent(baseAgent):
         device = self.aData['device']
         self.device = torch.device(device)
         self.buildModel()
+        self.to(self.device)
     
     def buildModel(self):
         for netName in self.keyList:
@@ -28,9 +28,13 @@ class sacAgent(baseAgent):
 
         self.temperature = torch.zeros(1, requires_grad=True, device=self.aData['device'])
     
+    def to(self, device):
+        self.actor.to(device)
+        self.critic01.to(device)
+        self.critic02.to(device)
+
     def forward(self, state):
-        
-        output = self.actor.forward(state)
+        output = self.actor.forward(state)[0]
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
@@ -42,9 +46,7 @@ class sacAgent(baseAgent):
         logProb -= torch.log(1-action.pow(2)+1e-6).sum(1, keepdim=True)
         entropy = (torch.log(std * (2 * 3.14)**0.5)+0.5).sum(1, keepdim=True)
 
-        state = tuple(list(state).append(action))
-        critic01 = self.critic01.forward(state)
-        critic02 = self.critic02.forward(state)
+        critic01, critic02 = self.criticForward(state, action)
 
         return action, logProb, (critic01, critic02), entropy
 
@@ -64,9 +66,12 @@ class sacAgent(baseAgent):
         return action
 
     def criticForward(self, state, action):
-        state = tuple(list(state).append(action))
-        critic01 = self.critic01.forward(state)
-        critic02 = self.critic02.forward(state) 
+        state = list(state)
+        state.append(action)
+        state = tuple(state)
+        
+        critic01 = self.critic01.forward(state)[0]
+        critic02 = self.critic02.forward(state)[0]
     
         return critic01, critic02
 
@@ -174,6 +179,20 @@ class AgentV1:
                 tParameters = Agent.model[name].parameters()
                 for p, tp in zip(parameters, tParameters):
                     p.copy_(p * tau + (1-tau) * tp)
+    
+    def calculateNorm(self):
+        totalNorm = 0
+        for name in self.moduleNames:
+            parameters = self.model[name].parameters()
+            for p in parameters:
+                norm = p.grad.data.norm(2)
+                totalNorm += norm
+        
+        return totalNorm
+
+    def to(self, device):
+        for name in self.moduleNames:
+            self.model[name].to(device)
 
     def forward(self, inputs):
         inputSize = len(inputs)

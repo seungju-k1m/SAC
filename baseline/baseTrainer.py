@@ -1,4 +1,3 @@
-import torch
 import datetime
 import numpy as np
 
@@ -19,14 +18,10 @@ class OFFPolicy:
         self.optimData = parser.loadOptParser()
 
         keyList = list(self.data.keys())
-        torch.manual_seed(self.data['seed'])
 
         # 2. set Hyper-parameter
 
         self.tau = self.data['tau']
-        
-        name = self.data['envName']
-        
         self.nReplayMemory = int(self.data['nReplayMemory'])
         self.gamma = self.data['gamma']
         self.bSize = self.data['bSize']
@@ -51,45 +46,17 @@ class OFFPolicy:
         self.keyList = keyList
         self.aSize = self.data['aSize']
         self.sSize = self.data['sSize']
-        self.nAgent = self.data['nAgent']
+        self.nAgent = self.data['env']['nAgent']
 
         # 5. Unity Setting
         id_ = np.random.randint(10, 100, 1)[0]
         engineChannel = EngineConfigurationChannel()
-        engineChannel.set_configuration_parameters(time_scale=2)
+        engineChannel.set_configuration_parameters(time_scale=4)
         setChannel = EnvironmentParametersChannel()
-        resolution = self.data['resolution']
-        imgMode = self.data['imgMode']
-        maxStack = self.data['maxStack']
-        coeffMAngV = self.data['coeffMAngV']
-        coeffAngV = self.data['coeffAngV']
-        coeffDDist = self.data['coeffDDist']
-        coeffInnerProduct = self.data['coeffInnerProduct']
-        coeffIntegral = self.data['coeffIntegral']
-        endReward = self.data['endReward']
-        objRewardN = self.data['objRewardN']
-        
-        setChannel.set_float_parameter("coeffIntegral", coeffIntegral)
-        setChannel.set_float_parameter("maxStack", maxStack)
-        setChannel.set_float_parameter('resolution', resolution)
-        setChannel.set_float_parameter('coeffMAngV', coeffMAngV)
-        setChannel.set_float_parameter('coeffAngV', coeffAngV)
-        setChannel.set_float_parameter('coeffDDist', coeffDDist)
-        setChannel.set_float_parameter('endReward', endReward)
-        setChannel.set_float_parameter('objRewardN', objRewardN)
-        setChannel.set_float_parameter('coeffInnerProduct', coeffInnerProduct)
-        setChannel.set_float_parameter('resolution', resolution)
-        
-        self.imgMode = imgMode
-        if imgMode:
-            setChannel.set_float_parameter("imgMode", 1.0)
-        else:
-            setChannel.set_float_parameter("imgMode", 0)
+        envData = self.data['env']
+        for key in envData.keys():
+            setChannel.set_float_parameter(key, float(envData[key]))
         name = self.data['envName']
-        self.nAgent = self.data['nAgent']
-        Count = self.data['Count']
-        setChannel.set_float_parameter("nAgent", self.nAgent)
-        setChannel.set_float_parameter("Count", Count)
         self.env = UnityEnvironment(
             name, worker_id=id_, 
             side_channels=[setChannel, engineChannel])
@@ -129,26 +96,3 @@ class OFFPolicy:
 
     def eval(self):
         pass
-
-    def writeTrainInfo(self):
-        self.info = "Configuration of this Experiment"
-        optimKeyList = list(self.optimData.keys())
-        for key in optimKeyList[:3]:
-            self.info += """
-        optim_{}:
-            """.format(key)
-            optimList = list(self.optimData[key].keys())
-            for data in optimList:
-                self.info += """
-                {}:{}
-                """.format(data, self.optimData[key][data])
-        networkKeyList = list(self.aData.keys())[:4]
-        for key in networkKeyList[:-1]:
-            self.info += """
-        network_{}:
-        """.format(key)
-            netList = list(self.aData[key].keys())
-            for data in netList:
-                self.info += """
-                {}:{}
-                """.format(data, self.aData[key][data])
