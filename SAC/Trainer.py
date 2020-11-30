@@ -82,7 +82,7 @@ class sacTrainer(OFFPolicy):
         for j in range(self.sSize[0]):
             self.obsSets[0].append(np.zeros(self.sSize[1:]))
     
-    def ppState(self, obs):
+    def ppState(self, obs, lstmState=None):
         """
         args:
             obs:[np.array]
@@ -101,11 +101,14 @@ class sacTrainer(OFFPolicy):
         rState, lidarPt = obs[:6], obs[7:7 + self.sSize[-1]]
         if self.gpuOverload:
             rState = torch.tensor(rState).to(self.device)
+            rState = torch.unsqueeze(rState, dim=0)
             lidarImg = torch.tensor(lidarPt).to(self.device).float()
+            lidarImg = torch.unsqueeze(lidarImg, dim=0)
         else:
             rState = torch.tensor(rState)
+            rState = torch.unsqueeze(rState, dim=0)
             lidarImg = torch.tensor(lidarPt).float()
-        
+            lidarImg = torch.unsqueeze(lidarImg, dim=0)
         lidarImg = torch.unsqueeze(lidarImg, dim=0)
 
         return (rState, lidarImg)
@@ -115,24 +118,12 @@ class sacTrainer(OFFPolicy):
         Generate optimizer of each network.
         """
         optimKeyList = list(self.optimData.keys())
-        self.aF = self.agent.aF.to(self.device)
-        self.cF1 = self.agent.cF1.to(self.device)
-        self.cF2 = self.agent.cF2.to(self.device)
-        self.actor = self.agent.actor.to(self.device)
-        self.critic01 = self.agent.critic01.to(self.device)
-        self.critic02 = self.agent.critic02.to(self.device)
-
-        self.tCF1 = self.tAgent.cF1.to(self.device)
-        self.tCF2 = self.tAgent.cF2.to(self.device)
-        self.tCritic01 = self.tAgent.critic01.to(self.device)
-        self.tCritic02 = self.tAgent.critic02.to(self.device)
-        
         for optimKey in optimKeyList:
             if optimKey == 'actor':
-                self.aOptim = getOptim(self.optimData[optimKey], (self.aF, self.actor))
+                self.aOptim = getOptim(self.optimData[optimKey], self.agent.actor.buildOptim())
             if optimKey == 'critic':
-                self.cOptim1 = getOptim(self.optimData[optimKey], (self.cF1, self.critic01))
-                self.cOptim2 = getOptim(self.optimData[optimKey], (self.cF2, self.critic02))
+                self.cOptim1 = getOptim(self.optimData[optimKey], self.agent.critic01.buildOptim())
+                self.cOptim2 = getOptim(self.optimData[optimKey], self.agent.critic02.buildOptim())
             if optimKey == 'temperature':
                 if self.fixedTemp is False:
                     self.tOptim = getOptim(
@@ -160,30 +151,6 @@ class sacTrainer(OFFPolicy):
                 action, logProb, critics, _ = self.agent.forward(state)
 
         return action[0].cpu().detach().numpy()
-    
-    def targetNetUpdate(self):
-        """
-        Update the target Network
-        """
-        with torch.no_grad():
-            for tC1, tC2, C1, C2, tcF1, tcF2, cF1, cF2 in zip(
-                    self.tCritic01.parameters(), 
-                    self.tCritic02.parameters(), 
-                    self.critic01.parameters(), 
-                    self.critic02.parameters(),
-                    self.tCF1.parameters(),
-                    self.tCF2.parameters(),
-                    self.cF1.parameters(),
-                    self.cF2.parameters()):
-                temp1 = self.tau * C1 + (1 - self.tau) * tC1
-                temp2 = self.tau * C2 + (1 - self.tau) * tC2
-                temp3 = self.tau * cF1 + (1 - self.tau) * tcF1
-                temp4 = self.tau * cF2 + (1 - self.tau) * tcF2
-
-                tC1.copy_(temp1)
-                tC2.copy_(temp2)
-                tcF1.copy_(temp3)
-                tcF2.copy_(temp4)
 
     def appendMemory(self, data):
         return self.replayMemory.append(data)

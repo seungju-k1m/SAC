@@ -1,6 +1,7 @@
 import torch
+import torch.nn as nn
 from baseline.utils import constructNet
-from baseline.baseNetwork import baseAgent
+from baseline.baseNetwork import baseAgent, LSTMNET
 
 
 class sacAgent(baseAgent):
@@ -12,78 +13,24 @@ class sacAgent(baseAgent):
         self.keyList = list(self.aData.keys())
         device = self.aData['device']
         self.device = torch.device(device)
-        self.getSize()
         self.buildModel()
     
-    def getSize(self):
-        self.sSize = self.aData['sSize']
-        self.aSize = self.aData['aSize']
-        self.inputSize1 = self.sSize[0]
-        self.inputSize2 = self.sSize[1] * self.aData['CNN1D']['iSize'] + 6
-        self.inputSize3 = self.inputSize2 + self.aSize
-
     def buildModel(self):
         for netName in self.keyList:
-            
-            if netName == "CNN1D":
-                netData = self.aData[netName]
-                self.aF = \
-                    constructNet(
-                        netData,
-                        iSize=self.inputSize1
-                        )
-                self.cF1 = \
-                    constructNet(
-                        netData,
-                        iSize=self.inputSize1
-                        )
-                self.cF2 = \
-                    constructNet(
-                        netData,
-                        iSize=self.inputSize1
-                        )
-                        
             if netName == "actor":
                 netData = self.aData[netName]
-                netCat = netData['netCat']
-                self.actor = \
-                    constructNet(
-                        netData, 
-                        iSize=self.inputSize2)
+                self.actor = AgentV1(netData)
 
             if netName == "critic":
                 netData = self.aData[netName]
-                netCat = netData['netCat']
-                if netCat == "MLP":
-                    self.critic01 = \
-                        constructNet(
-                            netData, 
-                            iSize=self.inputSize3)
-                    self.critic02 = \
-                        constructNet(
-                            netData, 
-                            iSize=self.inputSize3)
+                self.critic01 = AgentV1(netData)
+                self.critic02 = AgentV1(netData)
 
         self.temperature = torch.zeros(1, requires_grad=True, device=self.aData['device'])
     
     def forward(self, state):
         
-        rState, lidarImg = state
-
-        if torch.is_tensor(rState):
-            rState = rState.to(self.device).float()
-            lidarImg = lidarImg.to(self.device).float()
-        else:
-            rState = torch.tensor(rState).to(self.device).float()
-            lidarImg = torch.tensor(lidarImg).to(self.device).float()
-
-        if lidarImg.dim() == 2:
-            lidarImg = torch.unsqueeze(lidarImg, 0)
-            rState = torch.unsqueeze(rState, 0)
-
-        actorFeature = self.aF(lidarImg)
-        ss = torch.cat((rState, actorFeature), dim=1)
-        output = self.actor(ss)
+        output = self.actor.forward(state)
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
@@ -95,38 +42,18 @@ class sacAgent(baseAgent):
         logProb -= torch.log(1-action.pow(2)+1e-6).sum(1, keepdim=True)
         entropy = (torch.log(std * (2 * 3.14)**0.5)+0.5).sum(1, keepdim=True)
 
-        cSS1 = self.cF1(lidarImg)
-        cSS2 = self.cF2(lidarImg)
-        cat1 = torch.cat((action, rState, cSS1), dim=1)
-        cat2 = torch.cat((action, rState, cSS2), dim=1)
-        critic01 = self.critic01.forward(cat1)
-        critic02 = self.critic02.forward(cat2)
+        state = tuple(list(state).append(action))
+        critic01 = self.critic01.forward(state)
+        critic02 = self.critic02.forward(state)
 
         return action, logProb, (critic01, critic02), entropy
 
     def actorForward(self, state, dMode=False):
-        rState, lidarImg = state
 
-        if torch.is_tensor(rState):
-            rState = rState.to(self.device).float()
-            lidarImg = lidarImg.to(self.device).float()
-        else:
-            rState = torch.tensor(rState).to(self.device).float()
-            lidarImg = torch.tensor(lidarImg).to(self.device).float()
-
-        if lidarImg.dim() == 2:
-            lidarImg = torch.unsqueeze(lidarImg, 0)
-            rState = torch.unsqueeze(rState, 0)
-
-        actorFeature = self.aF(lidarImg)
-        ss = torch.cat((rState, actorFeature), dim=1)
-        output = self.actor(ss)
+        output = self.actor.forward(state)
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
-
-        gaussianDist = torch.distributions.Normal(mean, std)
-        x_t = gaussianDist.rsample()
         if dMode:
             action = torch.tanh(mean)
         else:
@@ -137,15 +64,9 @@ class sacAgent(baseAgent):
         return action
 
     def criticForward(self, state, action):
-        rState, lState = state
-
-        cSS1 = self.cF1(lState)
-        cSS2 = self.cF2(lState)
-
-        cat1 = torch.cat((action, rState, cSS1), dim=1)
-        cat2 = torch.cat((action, rState, cSS2), dim=1)
-        critic01 = self.critic01.forward(cat1)
-        critic02 = self.critic02.forward(cat2) 
+        state = tuple(list(state).append(action))
+        critic01 = self.critic01.forward(state)
+        critic02 = self.critic02.forward(state) 
     
         return critic01, critic02
 
@@ -211,3 +132,90 @@ class sacAgent(baseAgent):
                 self.temperature.exp()*(-detachedLogProb+self.aData['aSize']))
         
         return lossCritic1, lossCritic2, lossPolicy, lossTemp
+
+
+class AgentV1:
+
+    def __init__(
+        self,
+        mData
+    ):
+        self.mData = mData
+        self.moduleNames = list(self.mData.keys())
+        self.moduleNames.sort()
+        self.buildModel()
+    
+    def buildModel(self):
+        self.model = {}
+        self.connect = {}
+        for _ in range(10):
+            self.connect[_] = []
+        
+        for name in self.moduleNames:
+            self.model[name] = constructNet(self.mData[name])
+            if 'input' in self.mData[name].keys():
+                inputs = self.mData[name]['input']
+                for i in inputs:
+                    self.connect[i].append(name)
+    
+    def buildOptim(self):
+        listLayer = []
+        for name in self.moduleNames:
+            layer = self.model[name]
+            if type(layer) is not None:
+                listLayer.append(layer)
+        return tuple(listLayer)
+    
+    def updateParameter(self, Agent, tau):
+
+        with torch.no_grad():
+            for name in self.moduleNames:
+                parameters = self.model[name].parameters()
+                tParameters = Agent.model[name].parameters()
+                for p, tp in zip(parameters, tParameters):
+                    p.copy_(p * tau + (1-tau) * tp)
+
+    def forward(self, inputs):
+        inputSize = len(inputs)
+        stopIdx = []
+
+        for i in range(inputSize):
+            idx = self.connect[i]
+            for i in idx:
+                stopIdx.append(self.moduleNames.index(i))
+        
+        flow = 0
+        forward = None
+        output = []
+        while 1:
+            name = self.moduleNames[flow]
+            layer = self.model[name]
+            if flow in stopIdx:
+                nInputs = self.mData[name]['input']
+                for nInput in nInputs:
+                    if forward is None:
+                        forward = inputs[nInput]
+                    else:
+                        if type(forward) == tuple:
+                            forward = list(forward)
+                            forward.append(inputs[nInput])
+                            forward = tuple(forward)
+                        else:
+                            forward = (forward, inputs[nInput])
+            
+            if layer is None:
+                pass
+            else:
+                if type(layer) == LSTMNET:
+                    forward, lstmState = layer.forward(forward)
+                    output.append(lstmState)
+                else:
+                    forward = layer.forward(forward)
+
+            if "output" in self.mData[name].keys():
+                if self.mData[name]['output']:
+                    output.append(forward)
+            flow += 1
+            if flow == len(self.moduleNames):
+                break
+        return tuple(output)

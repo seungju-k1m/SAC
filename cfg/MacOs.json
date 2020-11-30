@@ -1,46 +1,74 @@
 {
-    "envName":"./Env/MacOs/simEnv01",
-    "imgMode":false,
     "sSize": [1, 120],
-    "resolution":3,
-    "nAgent": 3,
-    "maxStack":4,
-    "Count": 1000,
-    "aSize": 2,
-    "seed": 0,
-    "coeffAngV":-0.2,
-    "coeffMAngV":-0,
-    "coeffDDist":2.2,
-    "endReward":0,
-    "objRewardN":8,
-    "nUpdateDist":1,
-    "coeffInnerProduct":0,
-    "coeffIntegral":0,
+    "aSize":2,
+
+    "env":{
+      "envName":"./Env/MacOs/simEnv01",
+      "imgMode":false,
+      "resolution":3,
+      "nAgent": 3,
+      "maxStack":4,
+      "Count": 1000,
+      "coeffAngV":-0.2,
+      "coeffMAngV":-0,
+      "coeffDDist":2.2,
+      "endReward":0,
+      "objRewardN":8,
+      "nUpdateDist":1,
+      "coeffInnerProduct":0,
+      "coeffIntegral":0
+    },
+    
   
     "agent": {
-      "CNN1D": {
-        "netCat": "Res1D",
-        "nBlock": 1,
-        "iSize":32,
-        "act": "relu",
-        "BN": false,
-        "linear":true
-      },
-
       "actor":{
-        "netCat": "MLP",
-        "nLayer": 2,
-        "fSize": [256, 4],
-        "act": ["relu", "linear"],
-        "BN": false
+        "module01":{
+          "netCat": "Res1D",
+          "nBlock": 1,
+          "iSize":32,
+          "act": "relu",
+          "BN": false,
+          "linear":true,
+          "input":[0]
+        },
+        "module02":{
+          "netCat":"Cat",
+          "input":[1]
+        },
+        "module03":{
+          "netCat": "MLP",
+          "nLayer": 2,
+          "fSize": [256, 4],
+          "act": ["relu", "linear"],
+          "BN": false,
+          "iSize":4326,
+          "output":true
+        }
       },
 
       "critic": {
-        "netCat": "MLP",
-        "nLayer": 2,
-        "fSize":[256, 1],
-        "act": ["relu", "linear"],
-        "BN":false
+        "module01":{
+          "netCat": "Res1D",
+          "nBlock": 1,
+          "iSize":32,
+          "act": "relu",
+          "BN": false,
+          "linear":true,
+          "input":[0]
+        },
+        "module02":{
+          "netCat":"Cat",
+          "input":[1, 2]
+        },
+        "module03":{
+          "netCat": "MLP",
+          "nLayer": 2,
+          "fSize": [256, 1],
+          "act": ["relu", "linear"],
+          "BN": false,
+          "iSize":4328,
+          "output":true
+        }
       }
     },
   

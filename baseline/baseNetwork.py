@@ -35,7 +35,7 @@ class baseAgent(nn.Module):
 
 class MLP(nn.Module):
 
-    def __init__(self, netData, iSize=1):
+    def __init__(self, netData):
         super(MLP, self).__init__()
         self.netData = netData
         self.nLayer = netData['nLayer']
@@ -49,7 +49,7 @@ class MLP(nn.Module):
         else:
             self.linear = netData['linear']
         self.BN = netData['BN']
-        self.iSize = iSize
+        self.iSize = netData['iSize']
         self.buildModel()
 
     def buildModel(self):
@@ -82,13 +82,12 @@ class MLP(nn.Module):
 
 class CNET(nn.Module):
 
-    def __init__(self, netData, iSize=3, WH=96):
+    def __init__(self, netData):
         super(CNET, self).__init__()
 
         self.netData = netData
-        self.iSize = iSize
+        self.iSize = netData['iSize']
         keyList = list(netData.keys())
-        self.WH = WH
 
         if "BN" in keyList:
             self.BN = netData['BN']
@@ -173,11 +172,12 @@ class CNET(nn.Module):
 
 class LSTMNET(nn.Module):
 
-    def __init__(self, netData, iSize=1):
+    def __init__(self, netData):
         super(LSTMNET, self).__init__()
         self.netData = netData
         self.hiddenSize = netData['hiddenSize']
         self.nLayer = netData['nLayer']
+        iSize = netData['iSize']
         self.rnn = nn.LSTM(iSize, self.hiddenSize, self.nLayer)
 
     def forward(self, state, lstmState):
@@ -191,14 +191,11 @@ class CNN1D(nn.Module):
     def __init__(
         self,
         netData,
-        iSize=1,
-        WH=120
     ):
         super(CNN1D, self).__init__()
         self.netData = netData
-        self.iSize = iSize
+        self.iSize = netData['iSize']
         keyList = list(netData.keys())
-        self.L = WH
 
         if "BN" in keyList:
             self.BN = netData['BN']
@@ -328,8 +325,7 @@ class Res1D(nn.Module):
 
     def __init__(
         self,
-        aData,
-        iSize=1
+        aData
     ):
         super(Res1D, self).__init__()
 
@@ -359,3 +355,14 @@ class Res1D(nn.Module):
             z = z.view((batchSize, -1))
         
         return z
+
+
+class Cat(nn.Module):
+
+    def __init__(self, data):
+        super(Cat, self).__init__()
+    
+    def forward(self, x):
+        return torch.cat(x, dim=-1)
+
+        
