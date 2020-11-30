@@ -1,36 +1,33 @@
-import math
 import torch
 import datetime
 import numpy as np
-from baseline.baseTrainer import OFFPolicy
+from baseline.baseTrainer import ONPolicy
 from PPO.Agent import ppoAgent
-from baseline.utils import getOptim, calGlobalNorm
+from baseline.utils import getOptim
 from collections import deque
 
 
 def preprocessBatch(f):
-    def wrapper(self, step):
-
+    def wrapper(self, step, k, epoch):
         state, action, reward, nstate, done = \
             [], [], [], [], []
-        
-        for i in range(self.bSize):
-            state.append(miniBatch[i][0][0])
-            action.append(miniBatch[i][1])
-            reward.append(miniBatch[i][2])
-            nstate.append(miniBatch[i][3][0])
-            done.append(miniBatch[i][4])
-        state = tuple([torch.cat(state, dim=0).to(self.device).float()])
-        action = torch.tensor(action).to(self.device).float()
-        reward = torch.tensor(reward).to(self.device).float()
-        nstate = tuple([torch.cat(nstate, dim=0).to(self.device).float()])
-
-        loss, entropy = f(self, state, action, reward, nstate, done, step)
-        return loss, entropy
+        for data in self.replayMemory[k]:
+            s, a, r, ns, d = data
+            state.append(s[0])
+            action.append(a)
+            reward.append(r)
+            nstate.append(ns[0])
+            done.append(d)
+        state = tuple([torch.cat(state, dim=0)])
+        nstate = tuple([torch.cat(nstate, dim=0)])
+        action = torch.tensor(action).to(self.device).view((-1, 2))
+        reward = np.array(reward)
+        done = np.array(done)
+        f(self, state, action, reward, nstate, done, step, epoch)
     return wrapper
 
 
-class PPOOnPolicyTrainer(OFFPolicy):
+class PPOOnPolicyTrainer(ONPolicy):
 
     def __init__(self, cfg):
         super(PPOOnPolicyTrainer, self).__init__(cfg)
@@ -54,17 +51,15 @@ class PPOOnPolicyTrainer(OFFPolicy):
             self.device = torch.device("cpu")
         self.entropyCoeff = self.data['entropyCoeff']
         self.epsilon = self.data['epsilon']
-        self.labmda = self.data['Lambda']
+        self.labmda = self.data['lambda']
 
         self.agent = ppoAgent(
-            self.aData, 
-            self.optimData, 
+            self.aData,
             coeff=self.entropyCoeff,
             epsilon=self.epsilon)
         self.agent.to(self.device)
         self.oldAgent = ppoAgent(
             self.aData,
-            self.optimData,
             coeff=self.entropyCoeff,
             epsilon=self.epsilon)
         self.oldAgent.to(self.device)
@@ -93,8 +88,7 @@ class PPOOnPolicyTrainer(OFFPolicy):
             i.clear()
 
     def ppState(self, obs):
-        state = torch.tensor(obs[:7 + self.sSize[-1]]).float().to(self.device)
-        state = torch.unsqueeze(state, dim=0)
+        state = torch.tensor(obs[:, :7 + self.sSize[-1]]).float().to(self.device)
         return tuple([state])
 
     def genOptim(self):
@@ -103,113 +97,56 @@ class PPOOnPolicyTrainer(OFFPolicy):
             if optimKey == 'actor':
                 self.aOptim = getOptim(self.optimData[optimKey], self.agent.actor.buildOptim())
             if optimKey == 'critic':
-                self.cOptim = getOptim(self.optimData[optimKey], self.agent.critic01.buildOptim())
+                self.cOptim = getOptim(self.optimData[optimKey], self.agent.critic.buildOptim())
                 
     def zeroGrad(self):
         self.aOptim.zero_grad()
         self.cOptim.zero_grad()
 
     def getAction(self, state, dMode=False):
-        """
-        input:
-            state:
-                dtype:tensor
-                shape:[nAgent, 726]
-            lstmState:
-                dtype:tuple, (hA, cA)
-                shape:[1, nAgent, hiddenSize] for each state
-        output:
-            action:
-                dtype:np.array
-                shape[nAgnet, 2]
-            lstmState:
-                dtype:tuple ((tensor, tensor), (tensor, tensor), (tensor, tensor))
-                shape:[1, nAgent, 512] for each state
-        """
         with torch.no_grad():
             if dMode:
                 pass
             else:
-                action, oldLstmState = \
+                action = \
                     self.oldAgent.actorForward(state)
             action = action.cpu().numpy()
         return action
 
-    def train(self, step, k, epoch):
-        """
-        this method is for training!!
-        before training, shift the device of idx network and data
-        """
-        rState, lidarPt, hA, cA,  actions, rewards, dones = \
-            [], [], [], [], [], [], []
-        nrState, nlidarPt, nhA, ncA = \
-            [], [], [], []
-        for data in self.replayMemory[k]:
-            state = data[0]
-            state, (h, c) = state
-            for r, l in state:
-                rState.append(r)
-                lidarPt.append(l)
-            hA.append(h)
-            cA.append(c)
-
-            actions.append(data[1])
-            rewards.append(data[2])
-
-            dones.append(data[4])
-
-            nstate = data[3]
-            nstate, (nh, nc) = nstate
-            for r, l in nstate:
-                nrState.append(r)
-                nlidarPt.append(l)
-            nhA.append(nh)
-            ncA.append(nc)
-
-        rState = torch.cat(rState, dim=0).to(self.device).detach()  # states step, nAgent
-        lidarPt = torch.cat(lidarPt, dim=0).to(self.device).detach()
-        lidarPt = torch.unsqueeze(lidarPt, dim=1)
-        states = (rState, lidarPt)
-        hA = torch.cat(hA, dim=1).to(self.device).detach()
-        cA = torch.cat(cA, dim=1).to(self.device).detach()
-
-        nrState = torch.cat(nrState, dim=0).to(self.device).detach()
-        nlidarPt = torch.cat(nlidarPt, dim=0).to(self.device).detach()
-        nlidarPt = torch.unsqueeze(nlidarPt, dim=1)
-        nstates = (nrState, nlidarPt)
-        nhA = torch.cat(nhA, dim=1).to(self.device).detach()
-        ncA = torch.cat(ncA, dim=1).to(self.device).detach()
-        
-        lstmState = (hA, cA)
-        nlstmState = (nhA, ncA)
-
-        actions = torch.tensor(actions).to(self.device).view((-1, 2))
-        rewards = np.array(rewards)
-        dones = np.array(dones)
+    @preprocessBatch
+    def train(
+        self, 
+        state,
+        action,
+        reward,
+        nstate,
+        done,
+        step,
+        epoch
+    ):
 
         with torch.no_grad():
-            critic = self.oldAgent.criticForward(states)
-            nCritic = self.oldAgent.criticForward(nstates)
+            critic = self.oldAgent.criticForward(state)
+            nCritic = self.oldAgent.criticForward(nstate)
 
-        gT, gAE = self.getReturn(rewards, critic, nCritic, dones)  # step, nAgent
+        gT, gAE = self.getReturn(reward, critic, nCritic, done)  # step, nAgent
         
         self.zeroGrad()
         lossC = self.agent.calQLoss(
-            states,
+            state,
             gT.detach(),
         
         )
         lossC.backward()
     
         self.cOptim.step()
-        normC = calGlobalNorm(self.critic) + calGlobalNorm(self.CNNF)
+        normC = self.agent.critic.calculateNorm().cpu().detach().numpy()
         self.zeroGrad()
 
         minusObj, entropy = self.agent.calAObj(
             self.oldAgent,
-            states,
-            lstmState,
-            actions,
+            state,
+            action,
             gAE.detach()
         )
         minusObj.backward()
@@ -218,9 +155,7 @@ class PPOOnPolicyTrainer(OFFPolicy):
         self.aOptim.step()
         # self.lOptim.step()
         
-        aN = calGlobalNorm(self.actor)
-        aF1N = calGlobalNorm(self.LSTM) + calGlobalNorm(self.CNN)
-        normA = aN + aF1N 
+        normA = self.agent.actor.calculateNorm().cpu().detach().numpy()
 
         norm = normA + normC
         obj = minusObj.cpu().sum().detach().numpy()
@@ -311,7 +246,7 @@ class PPOOnPolicyTrainer(OFFPolicy):
             done:[np.array]
                 shape[:nAgent, 1]
         """
-        obsState = np.zeros((self.nAgent, self.obsShape), dtype=np.float32)
+        obsState = np.zeros((self.nAgent, 1447), dtype=np.float32)
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
         rewards, treward = decisionStep.reward, terminalStep.reward
@@ -360,54 +295,31 @@ class PPOOnPolicyTrainer(OFFPolicy):
         Rewards = np.zeros(self.nAgent)
         
         obs = self.getObs(init=True)
-        stateT = []
-        for b in range(self.nAgent):
-            ob = obs[b]
-            state = self.ppState(ob)
-            stateT.append(state)
-        lstmState = self.zeroLSTMState()
+        stateT = self.ppState(obs)
         action = self.getAction(stateT)
         step = 1
         while 1:
             self.checkStep(action)
             obs, reward, done = self.getObs()
             Rewards += reward
-            nStateT = []
-
-            for b in range(self.nAgent):
-                ob = obs[b]
-                state = self.ppState(ob)
-                nStateT.append(state)
-            # nStateT = torch.stack(nStateT, dim=0).to(self.device)
-            nAction, onnlstmState, nnlstmState = self.getAction(
-                nStateT, lstmState=nlstmState, oldLstmState=onlstmState)
+            nStateT = self.ppState(obs)
+            nAction = self.getAction(nStateT)
             u = 0
             for z in range(self.div):
                 uu = u + int(self.nAgent/self.div)
-                temp = (lstmState[0][:, u:uu], lstmState[1][:, u:uu])
-                ntemp = (nlstmState[0][:, u:uu], nlstmState[1][:, u:uu])
                 self.replayMemory[z].append(
-                    ((stateT[u:uu], temp), action[u:uu].copy(),
-                        reward[u:uu]*self.rScaling, (nStateT[u:uu], ntemp),
-                        done[u:uu].copy())
-                )
+                        (stateT[u:uu], action[u:uu].copy(),
+                        reward[u:uu]*self.rScaling, nStateT[u:uu],
+                        done[u:uu].copy()))
                 u = uu
             for i, d in enumerate(done):
                 if d:
-                    nnlstmState = self.setZeroLSTMState(nnlstmState, i)
-                    onnlstmState = self.setZeroLSTMState(onnlstmState, i)
                     episodeReward.append(Rewards[i])
                     Rewards[i] = 0
 
             action = nAction
             stateT = nStateT
-            lstmState = nlstmState
-
-            nlstmState = nnlstmState
-            onlstmState = onnlstmState
-
             step += 1
-            self.annealingLogStd(step)
             if step % self.updateStep == 0:
                 k += 1
                 for epoch in range(self.epoch):

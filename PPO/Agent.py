@@ -48,13 +48,13 @@ class ppoAgent(baseAgent):
         logProb = gaussianDist.log_prob(x_t).sum(1, keepdim=True)
         logProb -= torch.log(1-action.pow(2)+1e-6).sum(1, keepdim=True)
         entropy = (torch.log(std * (2 * 3.14)**0.5)+0.5).sum(1, keepdim=True)
-        critic = self.criticForward(state, action)
+        critic = self.criticForward(state)
 
         return action, logProb, entropy, critic
 
     def actorForward(self, state, dMode=False):
 
-        output = self.actor.forward(state)
+        output = self.actor.forward(state)[0]
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
@@ -67,18 +67,13 @@ class ppoAgent(baseAgent):
         
         return action
 
-    def criticForward(self, state, action):
-        state = list(state)
-        state.append(action)
-        state = tuple(state)
-        
+    def criticForward(self, state):
         critic = self.critic.forward(state)[0]
-    
         return critic
 
-    def calQLoss(self, state, target, pastActions):
+    def calQLoss(self, state, target):
 
-        critic = self.criticForward(state, pastActions)
+        critic = self.criticForward(state)
         lossCritic = torch.mean((critic-target).pow(2)/2)
 
         return lossCritic
@@ -94,7 +89,7 @@ class ppoAgent(baseAgent):
 
     def calLogProb(self, state, action):
         
-        output = self.actor.forward(state)
+        output = self.actor.forward(state)[0]
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()

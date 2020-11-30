@@ -35,18 +35,14 @@
   
       "critic": {
         "module01":{
-          "netCat":"Cat",
-          "input":[0, 1]
-        },
-  
-        "module02":{
           "netCat": "MLP",
           "nLayer": 2,
           "fSize": [256, 1],
           "act": ["relu", "linear"],
           "BN": false,
-          "iSize":129,
-          "output":true
+          "iSize":127,
+          "output":true,
+          "input":[0]
         }
       }
     },
@@ -79,9 +75,9 @@
     },
     
   
-    "sPath": "./save/SAC/",
+    "sPath": "./save/PPO/",
     "writeTMode":true,
-    "tPath": "./tensorboard/SAC/",
+    "tPath": "./tensorboard/PPO/",
     "lPath":"None",
   
     "device": "cpu",
