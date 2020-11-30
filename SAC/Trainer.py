@@ -248,9 +248,9 @@ class sacTrainer(OFFPolicy):
             self.aOptim.step()
             self.tOptim.step()
 
-        normA = self.agent.actor.calculateNorm().detach().numpy()
-        normC1 = self.agent.critic01.calculateNorm().detach().numpy()
-        normC2 = self.agent.critic02.calculateNorm().detach().numpy()
+        normA = self.agent.actor.calculateNorm().cpu().detach().numpy()
+        normC1 = self.agent.critic01.calculateNorm().cpu().detach().numpy()
+        normC2 = self.agent.critic02.calculateNorm().cpu().detach().numpy()
 
         norm = normA + normC1 + normC2
         entropy = entropy.mean().cpu().detach().numpy()

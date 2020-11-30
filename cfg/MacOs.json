@@ -1,113 +1,98 @@
 {
-    "sSize": [1, 120],
-    "aSize":2,
+  "sSize": [1, 120],
+  "aSize":2,
+  "envName":"./Env/MacOs/simEnv01",
 
-    "env":{
-      "envName":"./Env/MacOs/simEnv01",
-      "imgMode":false,
-      "resolution":3,
-      "nAgent": 3,
-      "maxStack":4,
-      "Count": 1000,
-      "coeffAngV":-0.2,
-      "coeffMAngV":-0,
-      "coeffDDist":2.2,
-      "endReward":0,
-      "objRewardN":8,
-      "nUpdateDist":1,
-      "coeffInnerProduct":0,
-      "coeffIntegral":0
-    },
-    
+  "env":{
+    "imgMode":false,
+    "resolution":3,
+    "nAgent": 3,
+    "maxStack":4,
+    "Count": 1000,
+    "coeffAngV":-0.2,
+    "coeffMAngV":-0,
+    "coeffDDist":2.2,
+    "endReward":0,
+    "objRewardN":8,
+    "nUpdateDist":1,
+    "coeffInnerProduct":0,
+    "coeffIntegral":0
+  },
   
-    "agent": {
-      "actor":{
-        "module01":{
-          "netCat": "Res1D",
-          "nBlock": 1,
-          "iSize":32,
-          "act": "relu",
-          "BN": false,
-          "linear":true,
-          "input":[0]
-        },
-        "module02":{
-          "netCat":"Cat",
-          "input":[1]
-        },
-        "module03":{
-          "netCat": "MLP",
-          "nLayer": 2,
-          "fSize": [256, 4],
-          "act": ["relu", "linear"],
-          "BN": false,
-          "iSize":4326,
-          "output":true
-        }
-      },
-
-      "critic": {
-        "module01":{
-          "netCat": "Res1D",
-          "nBlock": 1,
-          "iSize":32,
-          "act": "relu",
-          "BN": false,
-          "linear":true,
-          "input":[0]
-        },
-        "module02":{
-          "netCat":"Cat",
-          "input":[1, 2]
-        },
-        "module03":{
-          "netCat": "MLP",
-          "nLayer": 2,
-          "fSize": [256, 1],
-          "act": ["relu", "linear"],
-          "BN": false,
-          "iSize":4328,
-          "output":true
-        }
+  "agent": {
+    "actor":{
+      "module01":{
+        "netCat": "MLP",
+        "nLayer": 3,
+        "fSize": [256, 256, 4],
+        "act": ["relu", "relu", "linear"],
+        "BN": false,
+        "iSize":127,
+        "output":true,
+        "input":[0]
       }
     },
-  
-    "tau": 0.005,
-    "startStep": 10000,
-  
-    "fixedTemp": true,
-    "tempValue": 0.2,
-  
-    "nReplayMemory": 1e6,
-    "bSize": 256,
-    "lrFreq": 1,
-    "rScaling": 15,
-  
-    "optim": {
-      "actor": {
-        "name": "adam",
-        "lr": 3e-4,
-        "decay": 0,
-        "eps": 1e-7,
-        "clipping": false
+
+    "critic": {
+      "module01":{
+        "netCat":"Cat",
+        "input":[0, 1]
       },
-      "critic": {
-        "name": "adam",
-        "lr": 3e-4,
-        "decay": 0,
-        "clipping": false,
-        "eps": 1e-7
+
+      "module02":{
+        "netCat": "MLP",
+        "nLayer": 2,
+        "fSize": [256, 1],
+        "act": ["relu", "linear"],
+        "BN": false,
+        "iSize":129,
+        "output":true
       }
+    }
+  },
+
+  "tau": 0.005,
+  "gamma": 0.99,
+  "startStep": 10000,
+  "fixedTemp": false,
+  "tempValue": 0.2,
+  "nReplayMemory": 1e6,
+  "bSize": 256,
+  "lrFreq": 1,
+  "rScaling": 1,
+
+  "optim": {
+    "actor": {
+      "name": "adam",
+      "lr": 3e-4,
+      "decay": 0,
+      "eps": 1e-7,
+      "clipping": false
     },
-    "gamma": 0.99,
+    "critic": {
+      "name": "adam",
+      "lr": 3e-4,
+      "decay": 0,
+      "clipping": false,
+      "eps": 1e-7
+    },
+    "temperature": {
+      "name": "adam",
+      "lr": 3e-4,
+      "decay": 0,
+      "clipping": false,
+      "eps": 1e-7
+    }
+  },
   
-    "sPath": "./save/SAC/",
-    "writeTMode":true,
-    "tPath": "./tensorboard/SAC/",
-    "lPath":"None",
-  
-    "device": "cpu",
-    "gpuOverload":false,
-    "inferMode": false,
-    "renderMode": true
-  }
+
+  "sPath": "./save/SAC/",
+  "writeTMode":true,
+  "tPath": "./tensorboard/SAC/",
+  "lPath":"None",
+
+  "device": "cpu",
+  "gpuOverload":false,
+  "inferMode": false,
+  "renderMode": true
+}
