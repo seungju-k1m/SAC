@@ -1,7 +1,7 @@
 {
   "sSize": [1, 120],
   "aSize":2,
-  "envName":"./Env/MacOs/simEnv01",
+  "envName":"./Env/MacOs/testEnv01",
 
   "env":{
     "imgMode":false,
@@ -9,14 +9,14 @@
     "nAgent": 3,
     "maxStack":4,
     "Count": 1000,
-    "coeffAngV":-0.2,
+    "coeffAngV":-0.05,
     "coeffMAngV":-0,
-    "coeffDDist":2.2,
+    "coeffDDist":-0.01,
+    "coeffVelo":-0.01,
+    "refVelo":2,
     "endReward":0,
     "objRewardN":8,
-    "nUpdateDist":1,
-    "coeffInnerProduct":0,
-    "coeffIntegral":0
+    "nUpdateDist":1
   },
   
   "agent": {
