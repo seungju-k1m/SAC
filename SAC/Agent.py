@@ -178,7 +178,7 @@ class AgentV1:
                 parameters = self.model[name].parameters()
                 tParameters = Agent.model[name].parameters()
                 for p, tp in zip(parameters, tParameters):
-                    p.copy_((1 - tau ) * tau + tau * tp)
+                    p.copy_((1 - tau) * p + tau * tp)
     
     def calculateNorm(self):
         totalNorm = 0
