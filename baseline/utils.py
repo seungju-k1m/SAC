@@ -36,7 +36,7 @@ def getOptim(optimData, agent, floatV=False):
         lr = optimData['lr']
         decay = 0 if 'decay' not in keyList else optimData['decay']
         eps = 1e-5 if 'eps' not in keyList else optimData['eps']
-        clipping = False if 'clipping' not in keyList else optimData['clipping']
+        
         if floatV:
             inputD = agent
         elif type(agent) == tuple:

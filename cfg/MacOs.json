@@ -1,20 +1,24 @@
 {
   "sSize": [1, 120],
   "aSize":2,
-  "envName":"./Env/MacOs/testEnv01",
+  "envName":"./Env/MacOs/Env01",
+  "ICMMode":false,
 
   "env":{
     "imgMode":false,
     "resolution":3,
     "nAgent": 3,
-    "maxStack":4,
+    "maxStack":20,
     "Count": 1000,
-    "coeffAngV":-0.05,
-    "coeffMAngV":-0,
-    "coeffDDist":-0.01,
-    "coeffVelo":-0.01,
+    "coeffAngV":-0.1,
+    "coeffMAngV":0,
+    "coeffDDist":-0,
+    "coeffVelo":0,
+    "coeffTDist":0.4,
     "refVelo":2,
     "endReward":0,
+    "rewardOffset":-0.01,
+    "bumpPenalty":-1,
     "objRewardN":8,
     "nUpdateDist":1
   },
@@ -48,13 +52,55 @@
         "iSize":129,
         "output":true
       }
+    },
+    "Forward":{
+      "module01":{
+        "netCat":"Cat",
+        "input":[0, 1]
+      },
+      "module02":{
+        "netCat":"MLP",
+        "nLayer":2,
+        "act":["relu", "linear"],
+        "fSize":[256, 256],
+        "BN":false,
+        "iSize":258,
+        "output":true
+      }
+    },
+    "Feature":{
+      "module01":{
+        "netCat":"MLP",
+        "nLayer":2,
+        "act":["relu", "linear"],
+        "fSize":[256, 256],
+        "BN":false,
+        "iSize":127,
+        "input":[0],
+        "output":true
+      }
+    },
+    "inverseModel":{
+      "module01":{
+        "netCat":"Cat",
+        "input":[0, 1]
+      },
+      "module02":{
+        "netCat":"MLP",
+        "nLayer":2,
+        "act":["relu", "linear"],
+        "fSize":[256, 2],
+        "BN":false,
+        "iSize":512,
+        "output":true
+      }
     }
   },
 
   "tau": 0.005,
   "gamma": 0.99,
   "startStep": 10000,
-  "fixedTemp": true,
+  "fixedTemp": false,
   "tempValue": 0.2,
   "nReplayMemory": 1e6,
   "bSize": 256,
@@ -66,26 +112,21 @@
       "name": "adam",
       "lr": 3e-4,
       "decay": 0,
-      "eps": 1e-7,
-      "clipping": true,
-      "norm":2
+      "eps": 1e-7
     },
     "critic": {
       "name": "adam",
       "lr": 3e-4,
       "decay": 0,
-      "clipping": false,
       "eps": 1e-7
     },
     "temperature": {
       "name": "adam",
       "lr": 3e-4,
       "decay": 0,
-      "clipping": false,
       "eps": 1e-7
     }
   },
-  
 
   "sPath": "./save/SAC/",
   "writeTMode":true,
