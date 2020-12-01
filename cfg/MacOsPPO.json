@@ -1,18 +1,19 @@
 {
     "sSize": [1, 120],
     "aSize":2,
-    "envName":"./Env/MacOs/Env16",
+    "envName":"./Env/MacOs/simEnv01",
   
     "env":{
       "imgMode":false,
       "resolution":3,
-      "nAgent": 48,
+      "nAgent": 3,
       "maxStack":4,
       "Count": 1000,
-      "coeffAngV":-0.05,
-      "coeffMAngV":-0,
-      "coeffDDist":-0.01,
-      "coeffVelo":-0.01,
+      "coeffAngV":-0.7,
+      "coeffMAngV":0,
+      "coeffDDist":-0,
+      "coeffVelo":0,
+      "coeffTDist":1.2,
       "refVelo":2,
       "endReward":-15,
       "objRewardN":8,
@@ -50,12 +51,12 @@
     "gamma": 0.99,
     "lambda":0.995,
     "rScaling": 1,
-    "entropyCoeff":0.001,
+    "entropyCoeff":0.01,
     "epsilon":0.2,
-    "updateStep":16,
+    "updateStep":160,
     "div":1,
-    "epoch":1,
-    "updateOldP":10,
+    "epoch":80,
+    "updateOldP":1,
   
     "optim": {
       "actor": {

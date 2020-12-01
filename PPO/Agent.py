@@ -91,18 +91,21 @@ class ppoAgent(baseAgent):
         
         output = self.actor.forward(state)[0]
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
+
+        # action = torch.clamp(action, -0.9999, 0.9999)
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
         gaussianDist = torch.distributions.Normal(mean, std)
         x = torch.atanh(action)
+        x = torch.max(torch.min(x, mean + 10 * std), mean - 10 * std)
+        # x = torch.clamp(x, mean - 3 * std, mean + 3 * std)
         log_prob = gaussianDist.log_prob(x).sum(1, keepdim=True)
-        # log_prob -= torch.log(1-action.pow(2)+1e-6).sum(1, keepdim=True)
+        log_prob -= torch.log(1-action.pow(2)+1e-6).sum(1, keepdim=True)
         entropy = gaussianDist.entropy().sum(1, keepdim=True)
         return log_prob.exp(), entropy.mean()
 
     def update(self, Agent):
         self.actor.updateParameter(Agent.actor, tau=1.0)
-        self.critic.updateParameter(Agent.critic, tau=1.0)
 
 
 class AgentV1:
@@ -155,6 +158,13 @@ class AgentV1:
                 totalNorm += norm
         
         return totalNorm
+    
+    def clippingNorm(self, norm):
+        p = self.buildOptim()
+        inputD = []
+        for a in p:
+            inputD += list(a.parameters())
+        torch.nn.utils.clip_grad_norm_(inputD, norm)
 
     def to(self, device):
         for name in self.moduleNames:

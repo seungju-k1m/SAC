@@ -126,8 +126,8 @@ class PPOOnPolicyTrainer(ONPolicy):
     ):
 
         with torch.no_grad():
-            critic = self.oldAgent.criticForward(state)
-            nCritic = self.oldAgent.criticForward(nstate)
+            critic = self.agent.criticForward(state)
+            nCritic = self.agent.criticForward(nstate)
 
         gT, gAE = self.getReturn(reward, critic, nCritic, done)  # step, nAgent
         
@@ -150,6 +150,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             gAE.detach()
         )
         minusObj.backward()
+        self.agent.actor.clippingNorm(200)
         self.aOptim.step() 
         
         normA = self.agent.actor.calculateNorm().cpu().detach().numpy()
