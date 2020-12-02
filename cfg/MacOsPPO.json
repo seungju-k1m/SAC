@@ -7,43 +7,66 @@
       "imgMode":false,
       "resolution":3,
       "nAgent": 3,
-      "maxStack":4,
+      "maxStack":200,
       "Count": 1000,
-      "coeffAngV":-0.7,
+      "coeffAngV":-0.1,
       "coeffMAngV":0,
       "coeffDDist":-0,
       "coeffVelo":0,
-      "coeffTDist":1.2,
+      "coeffTDist":0.4,
       "refVelo":2,
-      "endReward":-15,
+      "endReward":0,
+      "rewardOffset":-0.01,
+      "bumpPenalty":-1,
       "objRewardN":8,
       "nUpdateDist":1
     },
     
+    
     "agent": {
       "actor":{
         "module01":{
-          "netCat": "MLP",
-          "nLayer": 3,
-          "fSize": [256, 256, 4],
-          "act": ["relu", "relu", "linear"],
-          "BN": false,
-          "iSize":127,
-          "output":true,
+          "netCat": "Res1D",
+          "nBlock": 1,
+          "iSize":32,
+          "input":[1],
+          "linear":true
+        },
+        "module02":{
+          "netCat":"Cat",
           "input":[0]
+        },
+        "module03":{
+          "netCat":"MLP",
+          "iSize":3846,
+          "nLayer":3,
+          "fSize":[256, 256, 4],
+          "act":["relu", "relu", "linear"],
+          "BN":false,
+          "output":true
         }
       },
   
-      "critic": {
+      "critic":{
         "module01":{
-          "netCat": "MLP",
-          "nLayer": 3,
-          "fSize": [256, 256, 1],
-          "act": ["relu", "relu", "linear"],
-          "BN": false,
-          "iSize":127,
-          "output":true,
+          "netCat": "Res1D",
+          "nBlock": 1,
+          "iSize":32,
+          "input":[1],
+          "linear":true
+        },
+        "module02":{
+          "netCat":"Cat",
           "input":[0]
+        },
+        "module03":{
+          "netCat":"MLP",
+          "iSize":3846,
+          "nLayer":3,
+          "fSize":[256, 256, 1],
+          "act":["relu", "relu", "linear"],
+          "BN":false,
+          "output":true
         }
       }
     },

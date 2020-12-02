@@ -9,21 +9,33 @@ from collections import deque
 
 def preprocessBatch(f):
     def wrapper(self, step, k, epoch):
-        state, action, reward, nstate, done = \
-            [], [], [], [], []
+        rstate, lidarpt, action, reward, nrstate, nlidarpt, done = \
+            [], [], [], [], [], [], []
         for data in self.replayMemory[k]:
             s, a, r, ns, d = data
-            state.append(s[0])
+            rstate.append(s[0])
+            lidarpt.append(s[1])
             action.append(a)
             reward.append(r)
-            nstate.append(ns[0])
+            nrstate.append(ns[0])
+            nlidarpt.append(ns[1])
             done.append(d)
-        state = tuple([torch.cat(state, dim=0)])
-        nstate = tuple([torch.cat(nstate, dim=0)])
+        state = tuple([torch.cat(rstate, dim=0), torch.cat(lidarpt, dim=0)])
+        nstate = tuple([torch.cat(nrstate, dim=0), torch.cat(nlidarpt, dim=0)])
         action = torch.tensor(action).to(self.device).view((-1, 2))
         reward = np.array(reward)
         done = np.array(done)
         f(self, state, action, reward, nstate, done, step, epoch)
+    return wrapper
+
+
+def preprocessState(f):
+    def wrapper(self, obs):
+        rState = torch.tensor(obs[:, :6]).float().to(self.device)
+        lidarPt = torch.tensor(obs[:, 7:127]).float().to(self.device)
+        lidarPt = torch.unsqueeze(lidarPt, dim=1)
+        state = f(self, (rState, lidarPt))
+        return state
     return wrapper
 
 
@@ -87,9 +99,9 @@ class PPOOnPolicyTrainer(ONPolicy):
         for i in self.replayMemory:
             i.clear()
 
+    @preprocessState
     def ppState(self, obs):
-        state = torch.tensor(obs[:, :7 + self.sSize[-1]]).float().to(self.device)
-        return tuple([state])
+        return obs
 
     def genOptim(self):
         optimKeyList = list(self.optimData.keys())

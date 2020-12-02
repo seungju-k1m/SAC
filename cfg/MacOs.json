@@ -8,7 +8,7 @@
     "imgMode":false,
     "resolution":3,
     "nAgent": 3,
-    "maxStack":20,
+    "maxStack":200,
     "Count": 1000,
     "coeffAngV":-0.1,
     "coeffMAngV":0,
