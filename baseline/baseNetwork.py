@@ -31,10 +31,7 @@ class baseAgent(nn.Module):
     
     def forward(self):
         pass
-
-    def load_state_dict(self):
-        pass
-
+    
 
 class MLP(nn.Module):
 

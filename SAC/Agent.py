@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from baseline.utils import constructNet
 from baseline.baseNetwork import baseAgent, LSTMNET
 
@@ -179,12 +180,13 @@ class sacAgent(baseAgent):
         return reward
 
 
-class AgentV1:
+class AgentV1(nn.Module):
 
     def __init__(
         self,
         mData
     ):
+        super(AgentV1, self).__init__()
         self.mData = mData
         self.moduleNames = list(self.mData.keys())
         self.moduleNames.sort()

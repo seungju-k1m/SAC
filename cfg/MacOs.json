@@ -130,12 +130,12 @@
   },
 
   "sPath": "./save/SAC/",
-  "writeTMode":true,
+  "writeTMode":false,
   "tPath": "./tensorboard/SAC/",
   "lPath":"None",
 
   "device": "cpu",
   "gpuOverload":false,
-  "inferMode": false,
+  "inferMode": true,
   "renderMode": true
 }
