@@ -107,6 +107,10 @@ class ppoAgent(baseAgent):
     def update(self, Agent):
         self.actor.updateParameter(Agent.actor, tau=1.0)
 
+    def load_state_dict(self, path, map_location="cpu"):
+        loadAgent = torch.load(path, map_location=map_location)
+        self.actor.load_state_dict(loadAgent)
+        
 
 class AgentV1:
 
@@ -169,6 +173,9 @@ class AgentV1:
     def to(self, device):
         for name in self.moduleNames:
             self.model[name].to(device)
+    
+    def load_state_dict(self):
+        pass
 
     def forward(self, inputs):
         inputSize = len(inputs)
