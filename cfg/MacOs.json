@@ -8,19 +8,19 @@
     "imgMode":false,
     "resolution":3,
     "nAgent": 3,
-    "maxStack":200,
+    "maxStack":50,
     "Count": 1000,
-    "coeffAngV":-0.1,
+    "coeffAngV":0,
     "coeffMAngV":0,
     "coeffDDist":-0,
     "coeffVelo":0,
-    "coeffTDist":0.4,
+    "coeffTDist":0.5,
     "refVelo":2,
     "endReward":0,
-    "rewardOffset":-0.01,
-    "bumpPenalty":-1,
+    "rewardOffset":-0.05,
+    "bumpPenalty":-5,
     "objRewardN":8,
-    "nUpdateDist":1
+    "nUpdateDist":4
   },
   
   "agent": {
@@ -45,9 +45,9 @@
 
       "module02":{
         "netCat": "MLP",
-        "nLayer": 2,
-        "fSize": [256, 1],
-        "act": ["relu", "linear"],
+        "nLayer": 3,
+        "fSize": [256, 256, 1],
+        "act": ["relu", "relu", "linear"],
         "BN": false,
         "iSize":129,
         "output":true
@@ -100,8 +100,8 @@
   "tau": 0.005,
   "gamma": 0.99,
   "startStep": 10000,
-  "fixedTemp": false,
-  "tempValue": 0.2,
+  "fixedTemp": true,
+  "tempValue": 0.005,
   "nReplayMemory": 1e6,
   "bSize": 256,
   "lrFreq": 1,

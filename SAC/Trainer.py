@@ -37,7 +37,7 @@ class sacTrainer(OFFPolicy):
     def __init__(self, fName):
         super(sacTrainer, self).__init__(fName)
         self.ICMMode = self.data['ICMMode']
-        self.agent = sacAgent(self.aData, ICMMode)
+        self.agent = sacAgent(self.aData, self.ICMMode)
         self.tAgent = sacAgent(self.aData)
         if self.lPath != "None":
             self.agent.load_state_dict(
