@@ -8,33 +8,39 @@ from collections import deque
 
 
 def preprocessBatch(f):
-    def wrapper(self, step, k, epoch):
-        rstate, lidarpt, action, reward, nrstate, nlidarpt, done = \
-            [], [], [], [], [], [], []
-        for data in self.replayMemory[k]:
+    def wrapper(self, step, epoch):
+        rstate, action, reward, nrstate, done = \
+            [], [], [], [], []
+        for data in self.replayMemory[0]:
             s, a, r, ns, d = data
             rstate.append(s[0])
-            lidarpt.append(s[1])
             action.append(a)
             reward.append(r)
             nrstate.append(ns[0])
-            nlidarpt.append(ns[1])
             done.append(d)
-        state = tuple([torch.cat(rstate, dim=0), torch.cat(lidarpt, dim=0)])
-        nstate = tuple([torch.cat(nrstate, dim=0), torch.cat(nlidarpt, dim=0)])
+        state = tuple([torch.cat(rstate, dim=0)])
+        nstate = tuple([torch.cat(nrstate, dim=0)])
         action = torch.tensor(action).to(self.device).view((-1, 2))
         reward = np.array(reward)
         done = np.array(done)
-        f(self, state, action, reward, nstate, done, step, epoch)
+        with torch.no_grad():
+            critic = self.agent.criticForward(state)
+            nCritic = self.agent.criticForward(nstate)
+
+        gT, gAE = self.getReturn(reward, critic, nCritic, done)
+        for i in range(epoch): 
+            f(self, state, action, gT, gAE, step, i)
     return wrapper
 
 
 def preprocessState(f):
     def wrapper(self, obs):
-        rState = torch.tensor(obs[:, :6]).float().to(self.device)
-        lidarPt = torch.tensor(obs[:, 7:127]).float().to(self.device)
-        lidarPt = torch.unsqueeze(lidarPt, dim=1)
-        state = f(self, (rState, lidarPt))
+        # rState = torch.tensor(obs[:, :6]).float().to(self.device)
+        # lidarPt = torch.tensor(obs[:, 7:127]).float().to(self.device)
+        # lidarPt = torch.unsqueeze(lidarPt, dim=1)
+        state = torch.tensor(obs[:, :127]).float().to(self.device)
+        state = f(self, (state))
+        state = tuple([state])
         return state
     return wrapper
 
@@ -43,10 +49,7 @@ class PPOOnPolicyTrainer(ONPolicy):
 
     def __init__(self, cfg):
         super(PPOOnPolicyTrainer, self).__init__(cfg)
-        if self.lPath != "None":
-            self.agent.load_state_dict(
-                torch.load(self.lPath, map_location=self.device)
-            )
+        
         if 'fixedTemp' in self.keyList:
             self.fixedTemp = self.data['fixedTemp'] == "True"
             if self.fixedTemp:
@@ -64,16 +67,30 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.entropyCoeff = self.data['entropyCoeff']
         self.epsilon = self.data['epsilon']
         self.labmda = self.data['lambda']
+        initLogStd = torch.tensor(self.data['initLogStd']).to(self.device).float()
+        finLogStd = torch.tensor(self.data['finLogStd']).to(self.device).float()
+        annealingStep = self.data['annealingStep']
 
         self.agent = ppoAgent(
             self.aData,
             coeff=self.entropyCoeff,
-            epsilon=self.epsilon)
+            epsilon=self.epsilon,
+            initLogStd=initLogStd,
+            finLogStd=finLogStd,
+            annealingStep=annealingStep)
         self.agent.to(self.device)
+        if self.lPath != "None":
+            self.agent.load_state_dict(
+                torch.load(self.lPath, map_location=self.device)
+            )
+            self.agent.loadParameters()
         self.oldAgent = ppoAgent(
             self.aData,
             coeff=self.entropyCoeff,
-            epsilon=self.epsilon)
+            epsilon=self.epsilon,
+            initLogStd=initLogStd,
+            finLogStd=finLogStd,
+            annealingStep=annealingStep)
         self.oldAgent.to(self.device)
         self.oldAgent.update(self.agent)
         
@@ -130,19 +147,11 @@ class PPOOnPolicyTrainer(ONPolicy):
         self, 
         state,
         action,
-        reward,
-        nstate,
-        done,
+        gT,
+        gAE,
         step,
         epoch
     ):
-
-        with torch.no_grad():
-            critic = self.agent.criticForward(state)
-            nCritic = self.agent.criticForward(nstate)
-
-        gT, gAE = self.getReturn(reward, critic, nCritic, done)  # step, nAgent
-        
         self.zeroGrad()
         lossC = self.agent.calQLoss(
             state,
@@ -150,11 +159,9 @@ class PPOOnPolicyTrainer(ONPolicy):
         
         )
         lossC.backward()
-    
         self.cOptim.step()
         normC = self.agent.critic.calculateNorm().cpu().detach().numpy()
         self.zeroGrad()
-
         minusObj, entropy = self.agent.calAObj(
             self.oldAgent,
             state,
@@ -162,9 +169,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             gAE.detach()
         )
         minusObj.backward()
-        self.agent.actor.clippingNorm(200)
         self.aOptim.step() 
-        
         normA = self.agent.actor.calculateNorm().cpu().detach().numpy()
 
         norm = normA + normC
@@ -319,8 +324,8 @@ class PPOOnPolicyTrainer(ONPolicy):
                 uu = u + int(self.nAgent/self.div)
                 self.replayMemory[z].append(
                         (stateT[u:uu], action[u:uu].copy(),
-                        reward[u:uu]*self.rScaling, nStateT[u:uu],
-                        done[u:uu].copy()))
+                         reward[u:uu]*self.rScaling, nStateT[u:uu],
+                         done[u:uu].copy()))
                 u = uu
             for i, d in enumerate(done):
                 if d:
@@ -330,11 +335,11 @@ class PPOOnPolicyTrainer(ONPolicy):
             action = nAction
             stateT = nStateT
             step += 1
+            self.agent.decayingLogStd(step)
+            self.oldAgent.decayingLogStd(step)
             if step % self.updateStep == 0:
                 k += 1
-                for epoch in range(self.epoch):
-                    for j in range(self.div):
-                        self.train(step, j, epoch)
+                self.train(step, self.epoch)
                 self.clear()
                 if k % self.updateOldP == 0:
                     self.oldAgent.update(self.agent)

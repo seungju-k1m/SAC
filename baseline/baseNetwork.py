@@ -335,7 +335,7 @@ class Res1D(nn.Module):
         self.isLinear = self.aData['linear']
         
         self.Model = self.buildModel()
-        self.conv = conv1D(1, 32)
+        self.conv = conv1D(1, self.iSize)
     
     def buildModel(self):
         iSize = self.iSize

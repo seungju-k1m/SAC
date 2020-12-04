@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from baseline.utils import constructNet
 from baseline.baseNetwork import baseAgent, LSTMNET
 
@@ -10,10 +11,17 @@ class ppoAgent(baseAgent):
         aData,
         coeff=0.01,
         epsilon=0.2,
-        device='cpu'
+        device='cpu',
+        initLogStd=0,
+        finLogStd=-1,
+        annealingStep=1e6
         ):
         super(ppoAgent, self).__init__()
         
+        self.logStd = initLogStd
+        self.finLogTsd = finLogStd
+        self.deltaStd = (self.logStd - self.finLogTsd)/annealingStep
+        self.annealingStep = annealingStep
         self.aData = aData
         self.keyList = list(self.aData.keys())
         self.device = torch.device(device)
@@ -37,10 +45,8 @@ class ppoAgent(baseAgent):
         self.critic.to(device)
 
     def forward(self, state):
-        output = self.actor.forward(state)[0]
-        mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
-        log_std = torch.clamp(log_std, -20, 2)
-        std = log_std.exp()
+        mean = self.actor.forward(state)[0]
+        std = self.logStd.exp()
 
         gaussianDist = torch.distributions.Normal(mean, std)
         x_t = gaussianDist.rsample()
@@ -54,10 +60,8 @@ class ppoAgent(baseAgent):
 
     def actorForward(self, state, dMode=False):
 
-        output = self.actor.forward(state)[0]
-        mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
-        log_std = torch.clamp(log_std, -20, 2)
-        std = log_std.exp()
+        mean = self.actor.forward(state)[0]
+        std = self.logStd.exp()
         if dMode:
             action = torch.tanh(mean)
         else:
@@ -89,12 +93,9 @@ class ppoAgent(baseAgent):
 
     def calLogProb(self, state, action):
         
-        output = self.actor.forward(state)[0]
-        mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
-
+        mean = self.actor.forward(state)[0]
         # action = torch.clamp(action, -0.9999, 0.9999)
-        log_std = torch.clamp(log_std, -20, 2)
-        std = log_std.exp()
+        std = self.logStd.exp()
         gaussianDist = torch.distributions.Normal(mean, std)
         x = torch.atanh(action)
         x = torch.max(torch.min(x, mean + 10 * std), mean - 10 * std)
@@ -106,14 +107,23 @@ class ppoAgent(baseAgent):
 
     def update(self, Agent):
         self.actor.updateParameter(Agent.actor, tau=1.0)
+    
+    def loadParameters(self):
+        self.actor.loadParameters()
+        self.critic.loadParameters()
+    
+    def decayingLogStd(self, step):
+        if step < self.annealingStep:
+            self.logStd -= self.deltaStd
         
 
-class AgentV1:
-
+class AgentV1(nn.Module):
+    
     def __init__(
         self,
         mData
     ):
+        super(AgentV1, self).__init__()
         self.mData = mData
         self.moduleNames = list(self.mData.keys())
         self.moduleNames.sort()
@@ -121,16 +131,22 @@ class AgentV1:
     
     def buildModel(self):
         self.model = {}
+        self.listModel = []
         self.connect = {}
         for _ in range(10):
             self.connect[_] = []
         
-        for name in self.moduleNames:
+        for i, name in enumerate(self.moduleNames):
             self.model[name] = constructNet(self.mData[name])
+            setattr(self, '_'+str(i), self.model[name])
             if 'input' in self.mData[name].keys():
                 inputs = self.mData[name]['input']
                 for i in inputs:
                     self.connect[i].append(name)
+    
+    def loadParameters(self):
+        for i, name in enumerate(self.moduleNames):
+            self.model[name] = getattr(self, '_'+str(i))
     
     def buildOptim(self):
         listLayer = []
@@ -158,13 +174,6 @@ class AgentV1:
                 totalNorm += norm
         
         return totalNorm
-    
-    def clippingNorm(self, norm):
-        p = self.buildOptim()
-        inputD = []
-        for a in p:
-            inputD += list(a.parameters())
-        torch.nn.utils.clip_grad_norm_(inputD, norm)
 
     def to(self, device):
         for name in self.moduleNames:

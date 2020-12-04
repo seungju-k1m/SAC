@@ -26,7 +26,6 @@ def preprocessBatch(f):
         action = torch.tensor(action).to(self.device).float()
         reward = torch.tensor(reward).to(self.device).float()
         nstate = tuple([torch.cat(nstate, dim=0).to(self.device).float()])
-
         loss, entropy = f(self, state, action, reward, nstate, done, step)
         return loss, entropy
     return wrapper
