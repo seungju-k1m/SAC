@@ -8,17 +8,18 @@
     "imgMode":false,
     "resolution":3,
     "nAgent": 3,
-    "maxStack":50,
+    "maxStack":20,
     "Count": 1000,
-    "coeffAngV":-0.005,
+    "coeffAngV":0,
     "coeffMAngV":0,
     "coeffDDist":-0,
     "coeffVelo":0,
-    "coeffTDist":0.3,
+    "coeffTDist":0.5,
     "refVelo":2,
     "endReward":0,
-    "rewardOffset":-0.05,
-    "bumpPenalty":-5,
+    "rewardOffset":-0.01,
+    "bumpPenalty":-0.5,
+    "collisionPenalty":-2,
     "objRewardN":8,
     "nUpdateDist":4,
     "detectDistance":10
@@ -130,12 +131,12 @@
   },
 
   "sPath": "./save/SAC/",
-  "writeTMode":false,
+  "writeTMode":true,
   "tPath": "./tensorboard/SAC/",
   "lPath":"None",
 
   "device": "cpu",
   "gpuOverload":false,
-  "inferMode": true,
+  "inferMode": false,
   "renderMode": true
 }
