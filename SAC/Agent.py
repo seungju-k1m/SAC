@@ -179,6 +179,11 @@ class sacAgent(baseAgent):
 
         return reward
 
+    def loadParameters(self):
+        self.actor.loadParameters()
+        self.critic01.loadParameters()
+        self.critic02.loadParameters()
+
 
 class AgentV1(nn.Module):
 
@@ -194,16 +199,22 @@ class AgentV1(nn.Module):
     
     def buildModel(self):
         self.model = {}
+        self.listModel = []
         self.connect = {}
         for _ in range(10):
             self.connect[_] = []
         
-        for name in self.moduleNames:
+        for i, name in enumerate(self.moduleNames):
             self.model[name] = constructNet(self.mData[name])
+            setattr(self, '_'+str(i), self.model[name])
             if 'input' in self.mData[name].keys():
                 inputs = self.mData[name]['input']
                 for i in inputs:
                     self.connect[i].append(name)
+    
+    def loadParameters(self):
+        for i, name in enumerate(self.moduleNames):
+            self.model[name] = getattr(self, '_'+str(i))
     
     def buildOptim(self):
         listLayer = []

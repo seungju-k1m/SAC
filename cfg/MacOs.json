@@ -101,7 +101,7 @@
 
   "tau": 0.005,
   "gamma": 0.99,
-  "startStep": 10000,
+  "startStep": 1000,
   "fixedTemp": true,
   "tempValue": 0.005,
   "nReplayMemory": 1e6,
@@ -131,7 +131,7 @@
   },
 
   "sPath": "./save/SAC/",
-  "writeTMode":true,
+  "writeTMode":false,
   "tPath": "./tensorboard/SAC/",
   "lPath":"None",
 

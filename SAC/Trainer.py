@@ -43,6 +43,7 @@ class sacTrainer(OFFPolicy):
             self.agent.load_state_dict(
                 torch.load(self.lPath, map_location=self.device)
             )
+            self.agent.loadParameters()
         if 'fixedTemp' in self.keyList:
             self.fixedTemp = self.data['fixedTemp']
             if self.fixedTemp:
@@ -59,6 +60,7 @@ class sacTrainer(OFFPolicy):
         else:
             self.devic = torch.device("cpu")
         self.tAgent.load_state_dict(self.agent.state_dict())
+        self.tAgent.loadParameters()
         self.gpuOverload = self.data['gpuOverload']
 
         self.obsSets = []
@@ -72,7 +74,7 @@ class sacTrainer(OFFPolicy):
         name = pureEnv[-1]
         time = datetime.datetime.now().strftime("%Y%m%d-%H-%M-%S")
         self.sPath += name + '_' + str(time)+'.pth'
-        
+        j = self.agent.state_dict()
         if self.writeTMode:
             self.writeTrainInfo()
 
