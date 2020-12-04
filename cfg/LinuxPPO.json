@@ -7,42 +7,47 @@
       "imgMode":false,
       "resolution":3,
       "nAgent": 3,
-      "maxStack":4,
+      "maxStack":20,
       "Count": 1000,
-      "coeffAngV":-0.05,
-      "coeffMAngV":-0,
-      "coeffDDist":-0.01,
-      "coeffVelo":-0.01,
+      "coeffAngV":0,
+      "coeffMAngV":0,
+      "coeffDDist":-0,
+      "coeffVelo":0,
+      "coeffTDist":0.5,
       "refVelo":2,
-      "endReward":-15,
+      "endReward":0,
+      "rewardOffset":-0.01,
+      "bumpPenalty":-0.5,
+      "collisionPenalty":-2,
       "objRewardN":8,
-      "nUpdateDist":1
+      "nUpdateDist":4,
+      "detectDistance":10
     },
     
     "agent": {
       "actor":{
         "module01":{
-          "netCat": "MLP",
-          "nLayer": 3,
-          "fSize": [256, 256, 4],
-          "act": ["relu", "relu", "linear"],
-          "BN": false,
+          "netCat":"MLP",
           "iSize":127,
-          "output":true,
-          "input":[0]
+          "nLayer":3,
+          "fSize": [256, 256, 2],
+          "act":["relu", "relu", "linear"],
+          "BN":false,
+          "input":[0],
+          "output":true
         }
       },
   
-      "critic": {
+      "critic":{
         "module01":{
-          "netCat": "MLP",
-          "nLayer": 2,
-          "fSize": [256, 1],
-          "act": ["relu", "linear"],
-          "BN": false,
+          "netCat":"MLP",
           "iSize":127,
-          "output":true,
-          "input":[0]
+          "nLayer":3,
+          "fSize": [256, 256, 1],
+          "act":["relu", "relu", "linear"],
+          "BN":false,
+          "input":[0],
+          "output":true
         }
       }
     },
@@ -50,24 +55,27 @@
     "gamma": 0.99,
     "lambda":0.995,
     "rScaling": 1,
-    "entropyCoeff":0.01,
+    "entropyCoeff":0,
     "epsilon":0.2,
-    "updateStep":160,
+    "updateStep":512,
     "div":1,
-    "epoch":20,
-    "updateOldP":2,
+    "epoch":15,
+    "updateOldP":1,
+    "initLogStd":-0.7,
+    "finLogStd":-1.6,
+    "annealingStep":1e6,
   
     "optim": {
       "actor": {
         "name": "adam",
-        "lr": 3e-5,
+        "lr": 3e-4,
         "decay": 0,
         "eps": 1e-7,
         "clipping": false
       },
       "critic": {
         "name": "adam",
-        "lr": 3e-5,
+        "lr": 3e-4,
         "decay": 0,
         "clipping": false,
         "eps": 1e-7
