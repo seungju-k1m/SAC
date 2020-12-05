@@ -22,7 +22,7 @@ def preprocessBatch(f):
         nstate = tuple([torch.cat(nrstate, dim=0)])
         action = torch.tensor(action).to(self.device).view((-1, 2))
         reward = np.array(reward)
-        reward = (reward - np.mean(reward))/(np.std(reward)+1e-5)
+        # reward = (reward - np.mean(reward))/(np.std(reward)+1e-5)
         done = np.array(done)
         
         for i in range(epoch): 

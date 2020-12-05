@@ -1,12 +1,12 @@
 {
     "sSize": [1, 120],
     "aSize":2,
-    "envName":"./Env/Linux/Env01",
+    "envName":"./Env/Linux/Env16",
   
     "env":{
       "imgMode":false,
       "resolution":3,
-      "nAgent": 3,
+      "nAgent": 48,
       "maxStack":20,
       "Count": 1000,
       "coeffAngV":0,
@@ -16,7 +16,7 @@
       "coeffTDist":0.5,
       "refVelo":2,
       "endReward":0,
-      "rewardOffset":-0.01,
+      "rewardOffset":-0.05,
       "bumpPenalty":-0.5,
       "collisionPenalty":-2,
       "objRewardN":8,
@@ -57,7 +57,7 @@
     "rScaling": 1,
     "entropyCoeff":0,
     "epsilon":0.2,
-    "updateStep":512,
+    "updateStep":128,
     "div":1,
     "epoch":15,
     "updateOldP":1,
