@@ -73,7 +73,10 @@ class sacTrainer(OFFPolicy):
         name = pureEnv[-1]
         time = datetime.datetime.now().strftime("%Y%m%d-%H-%M-%S")
         self.sPath += name + '_' + str(time)+'.pth'
-        j = self.agent.state_dict()
+
+        self.Number_Episode = 0
+        self.Number_Sucess = 0
+
         if self.writeTMode:
             self.writeTrainInfo()
 
@@ -87,7 +90,9 @@ class sacTrainer(OFFPolicy):
             self.obsSets[0].append(np.zeros(self.sSize[1:]))
     
     def ppState(self, obs):
-        state = torch.tensor(obs[:7 + self.sSize[-1]]).float().to(self.device)
+        rState = torch.tensor(obs[:6]).float().to(self.device)
+        lidarPt = torch.tensor(obs[8:8+self.sSize[-1]]).float().to(self.device)
+        state = torch.cat((rState, lidarPt), dim=0)
         state = torch.unsqueeze(state, dim=0)
         return tuple([state])
 
@@ -106,6 +111,13 @@ class sacTrainer(OFFPolicy):
                 if self.fixedTemp is False:
                     self.tOptim = getOptim(
                         self.optimData[optimKey], [self.tempValue], floatV=True)
+    
+    def logSucessRate(self, step):
+        if self.writeTMode:
+            self.writer.add_scalar(
+                "Sucess Rate", self.Number_Sucess / (self.Number_Episode), step)
+            self.Number_Sucess = 0
+            self.Number_Episode = 0
                  
     def getAction(self, state, dMode=False):
         """
@@ -262,6 +274,9 @@ class sacTrainer(OFFPolicy):
             state = np.array(state)
             obsState[i] = state
             done[i] = True
+            self.Number_Episode += 1
+            if state[7] == 1:
+                self.Number_Sucess += 1
             reward[i] = treward[k]
             k += 1
         if init:
@@ -333,6 +348,8 @@ class sacTrainer(OFFPolicy):
 
             stateT = nState
             step += 1
+            if (step % 5000 == 0):
+                self.logSucessRate(step)
             if (step % 1000 == 0) and step > int(self.startStep/self.nAgent):
                 reward = np.array(episodicReward).mean()
                 if self.writeTMode:
