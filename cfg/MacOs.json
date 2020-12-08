@@ -6,23 +6,32 @@
 
   "env":{
     "ImgMode":false,
+    "IntervalStep":4,
+    "LidarMeasurementDistance":10,
     "Resolution_LidarAngle":3,
-    "Number_Agent": 3,
-    "Number_MaxCollision":20,
-    "MaxStep": 1000,
-    "Penallty_Maginitude_AngularVelocity":0,
     "RecommendedYawRate":0.7,
     "Velocity":3,
     "YawRate":1,
+    
+    "MaxStep": 3000,
+    "Size_Floor":1,
+
+    "Number_Agent": 3,
+    "Number_MaxCollision":20,
+    "Number_MaxArrivingReward":8,
+    "Number_DynamicObstacle":3,
+    "Number_StaticObstacle":7,
+    
+
     "Penalty_OverAngularVelocity":0,
-    "Reward_ReachingDestination":0.3,
     "Penalty_OverMaxStep":0,
     "Penalty_Time":-0.01,
     "Penalty_Collision_Wall":-0.5,
     "Penalty_Collision_Agent":-2,
-    "Number_MaxArrivingReward":8,
-    "IntervalStep":4,
-    "LidarMeasurementDistance":10
+    "Penallty_Maginitude_AngularVelocity":0,
+
+    "Reward_ReachingDestination":0.3
+
   },
   
   

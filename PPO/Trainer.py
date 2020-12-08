@@ -13,10 +13,10 @@ def preprocessBatch(f):
             [], [], [], [], []
         for data in self.replayMemory[0]:
             s, a, r, ns, d = data
-            rstate.append(s[0])
+            rstate.append(s)
             action.append(a)
             reward.append(r)
-            nrstate.append(ns[0])
+            nrstate.append(ns)
             done.append(d)
         state = tuple([torch.cat(rstate, dim=0)])
         nstate = tuple([torch.cat(nrstate, dim=0)])
@@ -39,9 +39,13 @@ def preprocessState(f):
         # rState = torch.tensor(obs[:, :6]).float().to(self.device)
         # lidarPt = torch.tensor(obs[:, 7:127]).float().to(self.device)
         # lidarPt = torch.unsqueeze(lidarPt, dim=1)
-        state = torch.tensor(obs[:, :127]).float().to(self.device)
-        state = f(self, (state))
-        state = tuple([state])
+        # state = torch.tensor(obs[:, :127]).float().to(self.device)
+        # state = f(self, (state))
+        # state = tuple([state])
+        rState = torch.tensor(obs[:, :6]).float().to(self.device)
+        lidarPt = torch.tensor(obs[:, 8:8+self.sSize[-1]]).float().to(self.device)
+        state = [torch.cat((rState, lidarPt), dim=1)]
+        # state = torch.unsqueeze(state, dim=0)
         return state
     return wrapper
 
@@ -109,6 +113,8 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.replayMemory = [deque(maxlen=self.updateStep) for i in range(self.div)]
         self.epoch = self.data['epoch']
         self.updateOldP = self.data['updateOldP']
+        self.Number_Episode = 0
+        self.Number_Sucess = 0
 
         if self.writeTMode:
             self.writeTrainInfo()
@@ -119,7 +125,7 @@ class PPOOnPolicyTrainer(ONPolicy):
 
     @preprocessState
     def ppState(self, obs):
-        return obs
+        return tuple([obs])
 
     def genOptim(self):
         optimKeyList = list(self.optimData.keys())
@@ -168,7 +174,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             self.oldAgent,
             state,
             action,
-            gT.detach() - critic.detach()
+            gAE.detach()
         )
         minusObj.backward()
         self.aOptim.step() 
@@ -272,20 +278,24 @@ class PPOOnPolicyTrainer(ONPolicy):
         
         done = [False for i in range(self.nAgent)]
         reward = [0 for i in range(self.nAgent)]
-        k = 0
+        obsState = np.array(obs)
+        reward = rewards
         
-        for i, state in zip(agentId, obs):
-            state = np.array(state)
-            obsState[i] = state
-            done[i] = False
-            reward[i] = rewards[k]
-            k += 1
+        # for i, state in zip(agentId, obs):
+        #     state = np.array(state)
+        #     obsState[i] = state
+        #     done[i] = False
+        #     reward[i] = rewards[k]
+        #     k += 1
         k = 0
         for i, state in zip(tAgentId, tobs):
             state = np.array(state)
             obsState[i] = state
             done[i] = True
+            self.Number_Episode += 1
             reward[i] = treward[k]
+            if (reward[i]>1):
+                self.Number_Sucess += 1
             k += 1
         if init:
             return obsState
@@ -305,6 +315,12 @@ class PPOOnPolicyTrainer(ONPolicy):
         if len(agentId) != 0:
             self.env.set_actions(self.behaviorNames, action)
         self.env.step()
+    
+    def LogSucessRate(self, step):
+        if self.writeTMode:
+            self.writer.add_scalar("Sucess Rate", (self.Number_Sucess/self.Number_Episode), step)
+            self.Number_Episode = 0
+            self.Number_Sucess = 0
 
     def run(self):
         episodeReward = []
@@ -325,8 +341,8 @@ class PPOOnPolicyTrainer(ONPolicy):
             for z in range(self.div):
                 uu = u + int(self.nAgent/self.div)
                 self.replayMemory[z].append(
-                        (stateT[u:uu], action[u:uu].copy(),
-                         reward[u:uu]*self.rScaling, nStateT[u:uu],
+                        (stateT[0][u:uu], action[u:uu].copy(),
+                         reward[u:uu]*self.rScaling, nStateT[0][u:uu],
                          done[u:uu].copy()))
                 u = uu
             for i, d in enumerate(done):
@@ -339,13 +355,16 @@ class PPOOnPolicyTrainer(ONPolicy):
             step += 1
             self.agent.decayingLogStd(step)
             self.oldAgent.decayingLogStd(step)
-            if step % self.updateStep == 0:
+            if step % self.updateStep == 0 and self.inferMode == False:
                 k += 1
                 self.train(step, self.epoch)
                 self.clear()
                 if k % self.updateOldP == 0:
                     self.oldAgent.update(self.agent)
                     k = 0
+            
+            if step % 2000 == 0:
+                self.LogSucessRate(step)
             
             if step % 2000 == 0:
                 episodeReward = np.array(episodeReward)

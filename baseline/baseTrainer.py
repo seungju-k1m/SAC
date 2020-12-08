@@ -173,7 +173,7 @@ class ONPolicy:
         self.keyList = keyList
         self.aSize = self.data['aSize']
         self.sSize = self.data['sSize']
-        self.nAgent = self.data['env']['nAgent']
+        self.nAgent = self.data['env']['Number_Agent']
 
         # 5. Unity Setting
         id_ = np.random.randint(10, 100, 1)[0]
