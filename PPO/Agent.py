@@ -14,7 +14,8 @@ class ppoAgent(baseAgent):
         device='cpu',
         initLogStd=0,
         finLogStd=-1,
-        annealingStep=1e6
+        annealingStep=1e6,
+        LSTMNum=-1
         ):
         super(ppoAgent, self).__init__()
         
@@ -23,6 +24,7 @@ class ppoAgent(baseAgent):
         self.deltaStd = (self.logStd - self.finLogTsd)/annealingStep
         self.annealingStep = annealingStep
         self.aData = aData
+        self.LSTMNum = LSTMNum
         self.keyList = list(self.aData.keys())
         self.device = torch.device(device)
         self.buildModel()
@@ -34,11 +36,11 @@ class ppoAgent(baseAgent):
         for netName in self.keyList:
             if netName == "actor":
                 netData = self.aData[netName]
-                self.actor = AgentV1(netData)
+                self.actor = AgentV1(netData, LSTMNum=self.LSTMNum)
 
             if netName == "critic":
                 netData = self.aData[netName]
-                self.critic = AgentV1(netData)
+                self.critic = AgentV1(netData, LSTMNum=self.LSTMNum)
     
     def to(self, device):
         self.actor.to(device)
@@ -115,19 +117,25 @@ class ppoAgent(baseAgent):
     def decayingLogStd(self, step):
         if step < self.annealingStep:
             self.logStd -= self.deltaStd
-        
+    
+    def clear(self, index):
+        self.actor.clear(index)
+        self.critic.clear(index)
+
 
 class AgentV1(nn.Module):
     
     def __init__(
         self,
-        mData
+        mData,
+        LSTMNum=-1
     ):
         super(AgentV1, self).__init__()
         self.mData = mData
         self.moduleNames = list(self.mData.keys())
         self.moduleNames.sort()
         self.buildModel()
+        self.LSTMNum = LSTMNum
     
     def buildModel(self):
         self.model = {}
@@ -178,6 +186,11 @@ class AgentV1(nn.Module):
     def to(self, device):
         for name in self.moduleNames:
             self.model[name].to(device)
+    
+    def clear(self, index, step=0):
+        if self.LSTMNum != -1:
+            lstmModuleName = self.moduleNames[self.LSTMNum]
+            self.model[lstmModuleName].clear(index, step)
 
     def forward(self, inputs):
         inputSize = len(inputs)
@@ -210,11 +223,7 @@ class AgentV1(nn.Module):
             if layer is None:
                 pass
             else:
-                if type(layer) == LSTMNET:
-                    forward, lstmState = layer.forward(forward)
-                    output.append(lstmState)
-                else:
-                    forward = layer.forward(forward)
+                forward = layer.forward(forward)
 
             if "output" in self.mData[name].keys():
                 if self.mData[name]['output']:

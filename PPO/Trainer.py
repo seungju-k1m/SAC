@@ -7,6 +7,33 @@ from baseline.utils import getOptim
 from collections import deque
 
 
+# def preprocessBatch(f):
+#     def wrapper(self, step, epoch):
+#         rstate, action, reward, nrstate, done = \
+#             [], [], [], [], []
+#         for data in self.replayMemory[0]:
+#             s, a, r, ns, d = data
+#             rstate.append(s)
+#             action.append(a)
+#             reward.append(r)
+#             nrstate.append(ns)
+#             done.append(d)
+#         state = tuple([torch.cat(rstate, dim=0)])
+#         nstate = tuple([torch.cat(nrstate, dim=0)])
+#         action = torch.tensor(action).to(self.device).view((-1, 2))
+#         reward = np.array(reward)
+#         # reward = (reward - np.mean(reward))/(np.std(reward)+1e-5)
+#         done = np.array(done)
+        
+#         for i in range(epoch): 
+#             with torch.no_grad():
+#                 critic = self.agent.criticForward(state)
+#                 nCritic = self.agent.criticForward(nstate)
+#             gT, gAE = self.getReturn(reward, critic, nCritic, done)
+#             f(self, state, action, gT, gAE, critic, step, i)
+#     return wrapper
+
+
 def preprocessBatch(f):
     def wrapper(self, step, epoch):
         rstate, action, reward, nrstate, done = \
@@ -18,19 +45,95 @@ def preprocessBatch(f):
             reward.append(r)
             nrstate.append(ns)
             done.append(d)
-        state = tuple([torch.cat(rstate, dim=0)])
-        nstate = tuple([torch.cat(nrstate, dim=0)])
-        action = torch.tensor(action).to(self.device).view((-1, 2))
-        reward = np.array(reward)
-        # reward = (reward - np.mean(reward))/(np.std(reward)+1e-5)
-        done = np.array(done)
+            # s, <nAgent, obs> 
         
+        State = torch.zeros((10, 0, 126)).to(self.device)
+        done = np.array(done)
+        done = np.transpose(done, (1, 0))
+        reward = np.array(reward)
+        reward = np.transpose(reward, (1, 0))
+        state = torch.cat(rstate, dim=0)  # <updateStep, nAgent,  obs>
+        state = state.permute(1, 0, 2).contiguous()  # nAgent, step, obs
+        action = np.array(action)
+        action = np.transpose(action, (1, 0, 2))
+        nstate = torch.cat(nrstate, dim=0)
+        nstate = nstate.permute(1, 0, 2).contiguous()
+        targetCritic = []
+        targetActor = []
+        CriticActor = []
+        Action = []
+        for s, ns, d, r, a in zip(state, nstate, done, reward, action):
+            index = np.where(d == True)[0]
+            index = list(index)
+            index.append(160)
+            index = np.array(index)
+            j = 0
+            for i in index:
+                if (i - j) < 10:
+                    j = i
+                    continue
+                ss = s[j:i]
+                rr = r[j:i]
+                gT, gAE = [], []
+                lastns = ns[i-1:i]
+                dd = d[i-1]
+                with torch.no_grad():
+                    if dd:
+                        ss = ss.view((-1, 1, 126))
+                        ss = tuple([ss])
+                        cc = self.agent.critic.forward(ss)[0]
+                        ncc = cc[1:]
+                        ncc = torch.cat((ncc, torch.zeros(1, 1)), dim=0)
+                    else:
+                        ss = torch.cat((ss, lastns), dim=0)
+                        ss = ss.view((-1, 1, 126))
+                        ss = tuple([ss])
+                        cc = self.agent.critic.forward(ss)[0]
+                        ncc = cc[1:]
+                        cc = cc[:-1]
+                    tdError = rr[-1] + self.gamma*ncc[-1] - cc[-1]
+                    discountedR = ncc[-1]
+                    CriticActor.append(cc)
+                    for r_, c_, nc_ in zip(
+                        reversed(rr), reversed(cc), reversed(ncc)):
+                        gT.append(discountedR)
+                        gAE.append(tdError)
+                        discountedR = r_ + self.gamma * discountedR
+                        error = r_ + self.gamma * nc_ - c_
+                        tdError = error + self.gamma * self.labmda * tdError
+                    
+                    gT = torch.tensor(gT[::-1])
+                    gAE = torch.tensor(gAE[::-1])
+                    
+                k = (i-j) % 10
+                sss = s[j:i-k]
+                sss = sss.view(10, -1, 126)
+                Action.append(a[j:i-k])
+                State = torch.cat((State, sss), dim=1)
+                targetCritic.append(gT[:i-j-k])
+                targetActor.append(gAE[:i-j-k])
+                if k != 0:
+                    ssss = ss[0][-10:]
+                    ssss = ssss.view(10, 1, 126)
+                    State = torch.cat((State, ssss), dim=1)
+                    Action.append(a[i-10:i])
+                    targetCritic.append(gT[-10:])
+                    targetActor.append(gAE[-10:])
+                j = i
+
+        # state = state.permute(1, 2, 0, 3).contiguous()  # <1, nAgent, updateStep, obs>  
+        State = tuple([State])
+        Action = np.concatenate(Action, axis=0)
+        Action = torch.tensor(Action).view((-1, 2)).to(self.device)
+        targetCritic = torch.cat(targetCritic, dim=0).to(self.device)
+        targetActor = torch.cat(targetActor, dim=0).to(self.device)
+        CriticActor = torch.cat(CriticActor, dim=0).to(self.device)
+
+        # reward = (reward - np.mean(reward))/(np.std(reward)+1e-5)
+
         for i in range(epoch): 
-            with torch.no_grad():
-                critic = self.agent.criticForward(state)
-                nCritic = self.agent.criticForward(nstate)
-            gT, gAE = self.getReturn(reward, critic, nCritic, done)
-            f(self, state, action, gT, gAE, critic, step, i)
+
+            f(self, State, Action, targetCritic, targetActor, CriticActor, step, i)
     return wrapper
 
 
@@ -44,7 +147,7 @@ def preprocessState(f):
         # state = tuple([state])
         rState = torch.tensor(obs[:, :6]).float().to(self.device)
         lidarPt = torch.tensor(obs[:, 8:8+self.sSize[-1]]).float().to(self.device)
-        state = [torch.cat((rState, lidarPt), dim=1)]
+        state = [torch.unsqueeze(torch.cat((rState, lidarPt), dim=1), dim=0)]
         # state = torch.unsqueeze(state, dim=0)
         return state
     return wrapper
@@ -75,14 +178,15 @@ class PPOOnPolicyTrainer(ONPolicy):
         initLogStd = torch.tensor(self.data['initLogStd']).to(self.device).float()
         finLogStd = torch.tensor(self.data['finLogStd']).to(self.device).float()
         annealingStep = self.data['annealingStep']
-
+        self.LSTMNum = self.data['LSTMNum']
         self.agent = ppoAgent(
             self.aData,
             coeff=self.entropyCoeff,
             epsilon=self.epsilon,
             initLogStd=initLogStd,
             finLogStd=finLogStd,
-            annealingStep=annealingStep)
+            annealingStep=annealingStep,
+            LSTMNum=self.LSTMNum)
         self.agent.to(self.device)
         if self.lPath != "None":
             self.agent.load_state_dict(
@@ -95,7 +199,8 @@ class PPOOnPolicyTrainer(ONPolicy):
             epsilon=self.epsilon,
             initLogStd=initLogStd,
             finLogStd=finLogStd,
-            annealingStep=annealingStep)
+            annealingStep=annealingStep,
+            LSTMNum=self.LSTMNum)
         self.oldAgent.to(self.device)
         self.oldAgent.update(self.agent)
         
@@ -137,7 +242,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 
     def zeroGrad(self):
         self.aOptim.zero_grad()
-        self.cOptim.zero_grad()
+        self.cOptim.zero_grad() 
 
     def getAction(self, state, dMode=False):
         with torch.no_grad():
@@ -167,6 +272,10 @@ class PPOOnPolicyTrainer(ONPolicy):
         
         )
         lossC.backward()
+        inputD = []
+        for a in self.agent.critic.buildOptim():
+            inputD += list(a.parameters())
+        torch.nn.utils.clip_grad_norm_(inputD, 5)
         self.cOptim.step()
         normC = self.agent.critic.calculateNorm().cpu().detach().numpy()
         self.zeroGrad()
@@ -174,9 +283,13 @@ class PPOOnPolicyTrainer(ONPolicy):
             self.oldAgent,
             state,
             action,
-            gT.detach() - critic
+            gAE.detach()
         )
         minusObj.backward()
+        inputD = []
+        for a in self.agent.actor.buildOptim():
+            inputD += list(a.parameters())
+        torch.nn.utils.clip_grad_norm_(inputD, 5)
         self.aOptim.step() 
         normA = self.agent.actor.calculateNorm().cpu().detach().numpy()
 
@@ -195,7 +308,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             entropy = entropy.detach().cpu().numpy()
             self.writer.add_scalar("Entropy", entropy, step+epoch)
 
-    def getReturn(self, reward, critic, nCritic, done):
+    def getReturn(self, reward, critic, nCritic, done, Step_Agent=False):
         """
         input:
             reward:[np.array]  
@@ -245,14 +358,20 @@ class PPOOnPolicyTrainer(ONPolicy):
             gAE.append(GTDE)
 
         gT = torch.cat(gT, dim=0)
-        gT = gT.view(nAgent, -1)
-        gT = gT.permute(1, 0).contiguous()
-        gT = gT.view((-1, 1))
-
         gAE = torch.cat(gAE, dim=0)
-        gAE = gAE.view(nAgent, -1)
-        gAE = gAE.permute(1, 0).contiguous()
-        gAE = gAE.view((-1, 1))
+
+        if Step_Agent:
+            gT.view(-1, 1)
+            gAE.view(-1, 1)
+        else:
+            gT = gT.view(nAgent, -1)
+            gT = gT.permute(1, 0).contiguous()
+            gT = gT.view((-1, 1))
+
+            gAE = gAE.view(nAgent, -1)
+            gAE = gAE.permute(1, 0).contiguous()
+            gAE = gAE.view((-1, 1))
+
         return gT, gAE      
 
     def getObs(self, init=False):
@@ -274,7 +393,6 @@ class PPOOnPolicyTrainer(ONPolicy):
         obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
         rewards, treward = decisionStep.reward, terminalStep.reward
         tAgentId = terminalStep.agent_id
-        agentId = decisionStep.agent_id
         
         done = [False for i in range(self.nAgent)]
         reward = [0 for i in range(self.nAgent)]
@@ -349,13 +467,15 @@ class PPOOnPolicyTrainer(ONPolicy):
                 if d:
                     episodeReward.append(Rewards[i])
                     Rewards[i] = 0
+                    self.agent.clear(i)
+                    self.oldAgent.clear(i)
 
             action = nAction
             stateT = nStateT
             step += 1
             self.agent.decayingLogStd(step)
             self.oldAgent.decayingLogStd(step)
-            if step % self.updateStep == 0 and self.inferMode == False:
+            if step % (self.updateStep+1) == 0 and self.inferMode == False:
                 k += 1
                 self.train(step, self.epoch)
                 self.clear()

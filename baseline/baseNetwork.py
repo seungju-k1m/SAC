@@ -178,12 +178,35 @@ class LSTMNET(nn.Module):
         self.hiddenSize = netData['hiddenSize']
         self.nLayer = netData['nLayer']
         iSize = netData['iSize']
+        device = netData['device']
+        self.device = torch.device(device)
+        self.nAgent = self.netData['Number_Agent']
+        self.CellState = (torch.zeros(1, self.nAgent, self.hiddenSize).to(self.device), 
+                          torch.zeros(1, self.nAgent, self.hiddenSize).to(self.device))
         self.rnn = nn.LSTM(iSize, self.hiddenSize, self.nLayer)
+        self.FlattenMode = netData['FlattenMode']
+    
+    def clear(self, index, step=0):
+        hn, cn = self.CellState
+        hn[step, index, :] = torch.zeros(self.hiddenSize).to(self.device)
+        cn[step, index, :] = torch.zeros(self.hiddenSize).to(self.device)
+        self.CellState = (hn, cn)
 
-    def forward(self, state, lstmState):
-        output, (hn, cn) = self.rnn(state, lstmState)
+    def forward(self, state):
+        nDim = state.shape[0]
+        if nDim == 1:
+            output, (hn, cn) = self.rnn(state, self.CellState)
+            if self.FlattenMode:
+                output = torch.squeeze(output, dim=0)
+            self.CellState = (hn, cn)
+        else:
+            output, (hn, cn) = self.rnn(state)
+            if self.FlattenMode:
+                output = output.view(-1, self.hiddenSize)
+                output = output.view(-1, self.hiddenSize)
+        
         # output consists of output, hidden, cell state
-        return output, (hn, cn)
+        return output
 
 
 class CNN1D(nn.Module):
