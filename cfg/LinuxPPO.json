@@ -1,95 +1,95 @@
 {
-    "sSize": [1, 120],
-    "aSize":2,
-    "envName":"./Env/Linux/Env16",
+  "sSize": [1, 120],
+  "aSize":2,
+  "envName":"./Env/Linux/Env24",
+
+  "env":{
+    "ImgMode":false,
+    "Resolution_LidarAngle":3,
+    "Number_Agent": 72,
+    "Number_MaxCollision":20,
+    "MaxStep": 1000,
+    "Penallty_Maginitude_AngularVelocity":0,
+    "RecommendedYawRate":0.7,
+    "Velocity":4,
+    "YawRate":1.5,
+    "Penalty_OverAngularVelocity":0,
+    "Reward_ReachingDestination":0.5,
+    "Penalty_OverMaxStep":0,
+    "Penalty_Time":-0.01,
+    "Penalty_Collision_Wall":-0.5,
+    "Penalty_Collision_Agent":-2,
+    "Number_MaxArrivingReward":8,
+    "IntervalStep":4,
+    "LidarMeasurementDistance":10
+  },
   
-    "env":{
-      "imgMode":false,
-      "resolution":3,
-      "nAgent": 48,
-      "maxStack":20,
-      "Count": 1000,
-      "coeffAngV":0,
-      "coeffMAngV":0,
-      "coeffDDist":-0,
-      "coeffVelo":0,
-      "coeffTDist":0.5,
-      "refVelo":2,
-      "endReward":0,
-      "rewardOffset":-0.05,
-      "bumpPenalty":-0.5,
-      "collisionPenalty":-2,
-      "objRewardN":8,
-      "nUpdateDist":4,
-      "detectDistance":10
-    },
-    
-    "agent": {
-      "actor":{
-        "module01":{
-          "netCat":"MLP",
-          "iSize":127,
-          "nLayer":3,
-          "fSize": [256, 256, 2],
-          "act":["relu", "relu", "linear"],
-          "BN":false,
-          "input":[0],
-          "output":true
-        }
-      },
-  
-      "critic":{
-        "module01":{
-          "netCat":"MLP",
-          "iSize":127,
-          "nLayer":3,
-          "fSize": [256, 256, 1],
-          "act":["relu", "relu", "linear"],
-          "BN":false,
-          "input":[0],
-          "output":true
-        }
+  "agent": {
+    "actor":{
+      "module01":{
+        "netCat":"MLP",
+        "iSize":126,
+        "nLayer":3,
+        "fSize": [256, 256, 2],
+        "act":["relu", "relu", "linear"],
+        "BN":false,
+        "input":[0],
+        "output":true
       }
     },
-  
-    "gamma": 0.99,
-    "lambda":0.995,
-    "rScaling": 1,
-    "entropyCoeff":0,
-    "epsilon":0.2,
-    "updateStep":128,
-    "div":1,
-    "epoch":15,
-    "updateOldP":1,
-    "initLogStd":-0.7,
-    "finLogStd":-1.6,
-    "annealingStep":1e6,
-  
-    "optim": {
-      "actor": {
-        "name": "adam",
-        "lr": 3e-4,
-        "decay": 0,
-        "eps": 1e-7,
-        "clipping": false
-      },
-      "critic": {
-        "name": "adam",
-        "lr": 3e-4,
-        "decay": 0,
-        "clipping": false,
-        "eps": 1e-7
+
+    "critic":{
+      "module01":{
+        "netCat":"MLP",
+        "iSize":126,
+        "nLayer":3,
+        "fSize": [256, 256, 1],
+        "act":["relu", "relu", "linear"],
+        "BN":false,
+        "input":[0],
+        "output":true
       }
+    }
+  },
+
+  "gamma": 0.99,
+  "lambda":0.995,
+  "rScaling": 1,
+  "entropyCoeff":0,
+  "epsilon":0.2,
+  "updateStep":128,
+  "div":1,
+  "epoch":15,
+  "updateOldP":1,
+  "initLogStd":-0.7,
+  "finLogStd":-1.6,
+  "annealingStep":1e6,
+
+  "optim": {
+    "actor": {
+      "name": "adam",
+      "lr": 3e-4,
+      "decay": 0,
+      "eps": 1e-7,
+      "clipping": false
     },
-    
+    "critic": {
+      "name": "adam",
+      "lr": 3e-4,
+      "decay": 0,
+      "clipping": false,
+      "eps": 1e-7
+    }
+  },
   
-    "sPath": "./save/PPO/",
-    "writeTMode":true,
-    "tPath": "./tensorboard/PPO/",
-    "lPath":"None",
-  
-    "device": "cuda:0",
-    "gpuOverload":false,
-    "inferMode": false,
-    "renderMode": true
-  }
+
+  "sPath": "./save/PPO/",
+  "writeTMode":true,
+  "tPath": "./tensorboard/PPO/",
+  "lPath":"None",
+
+  "device": "cuda:0",
+  "gpuOverload":false,
+  "inferMode": false,
+  "renderMode": true
+}

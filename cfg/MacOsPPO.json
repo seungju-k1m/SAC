@@ -86,10 +86,10 @@
     "sPath": "./save/PPO/",
     "writeTMode":true,
     "tPath": "./tensorboard/PPO/",
-    "lPath":"./save/PPO/Env24_20201208-12-17-32.pth",
+    "lPath":"None",
   
     "device": "cpu",
     "gpuOverload":false,
-    "inferMode": true,
+    "inferMode": false,
     "renderMode": true
   }

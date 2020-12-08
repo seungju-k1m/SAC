@@ -174,7 +174,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             self.oldAgent,
             state,
             action,
-            gAE.detach()
+            gT.detach() - critic
         )
         minusObj.backward()
         self.aOptim.step() 
