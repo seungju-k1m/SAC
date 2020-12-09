@@ -156,6 +156,12 @@ class AgentV1(nn.Module):
         for i, name in enumerate(self.moduleNames):
             self.model[name] = getattr(self, '_'+str(i))
     
+    def clippingNorm(self, maxNorm):
+        inputD = []
+        for name in self.moduleNames:
+            inputD += list(self.model[name].parameters())
+        torch.nn.utils.clip_grad_norm_(inputD, maxNorm)
+    
     def buildOptim(self):
         listLayer = []
         for name in self.moduleNames:
