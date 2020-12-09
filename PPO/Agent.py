@@ -182,6 +182,32 @@ class AgentV1(nn.Module):
                 totalNorm += norm
         
         return totalNorm
+    
+    def clippingNorm(self, maxNorm):
+        inputD = []
+        for name in self.moduleNames:
+            inputD += list(self.model[name].parameters())
+        torch.nn.utils.clip_grad_norm_(inputD, maxNorm)
+    
+    def getCellState(self):
+        if self.LSTMNum != -1:
+            lstmModuleName = self.moduleNames[self.LSTMNum]
+            return self.model[lstmModuleName].getCellState()
+
+    def setCellState(self, cellstate):
+        if self.LSTMNum != -1:
+            lstmModuleName = self.moduleNames[self.LSTMNum]
+            self.model[lstmModuleName].setCellState(cellstate) 
+
+    def zeroCellState(self):
+        if self.LSTMNum != -1:
+            lstmModuleName = self.moduleNames[self.LSTMNum]
+            self.model[lstmModuleName].zeroCellState()
+    
+    def detachCellState(self):
+        if self.LSTMNum != -1:
+            lstmModuleName = self.moduleNames[self.LSTMNum]
+            self.model[lstmModuleName].detachCellState()
 
     def to(self, device):
         for name in self.moduleNames:

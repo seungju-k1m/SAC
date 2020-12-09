@@ -1,0 +1,115 @@
+{
+    "sSize": [1, 120],
+    "aSize":2,
+    "envName":"./Env/MacOs/Env24",
+  
+    "env":{
+      "LSTMMode":1,
+      "ImgMode":false,
+      "Resolution_LidarAngle":3,
+      "Number_Agent": 72,
+      "Number_MaxCollision":1e6,
+      "MaxStep": 1600,
+      "Penallty_Maginitude_AngularVelocity":0,
+      "RecommendedYawRate":0.7,
+      "Velocity":4,
+      "YawRate":1.5,
+      "Penalty_OverAngularVelocity":0,
+      "Reward_ReachingDestination":0.3,
+      "Penalty_OverMaxStep":0,
+      "Penalty_Time":-0.05,
+      "Penalty_Collision_Wall":-0.5,
+      "Penalty_Collision_Agent":-2,
+      "Number_MaxArrivingReward":1e6,
+      "IntervalStep":4,
+      "LidarMeasurementDistance":10
+    },
+    
+    "LSTMNum":0,
+    "agent": {
+      "actor":{
+        "module01":{
+          "netCat":"LSTMNET",
+          "iSize":126,
+          "nLayer":1,
+          "hiddenSize":256,
+          "Number_Agent":72,
+          "FlattenMode":true,
+          "device":"cpu",
+          "input":[0]
+        },
+        "module02":{
+            "netCat":"MLP",
+            "iSize":256,
+            "nLayer":3,
+            "fSize":[256, 256, 2],
+            "act":["relu", "relu", "linear"],
+            "BN":false,
+            "output":true
+        }
+      },
+  
+      "critic":{
+        "module01":{
+            "netCat":"LSTMNET",
+            "iSize":126,
+            "nLayer":1,
+            "hiddenSize":256,
+            "Number_Agent":72,
+            "FlattenMode":true,
+            "device":"cpu",
+            "input":[0]
+          },
+          "module02":{
+              "netCat":"MLP",
+              "iSize":256,
+              "nLayer":3,
+              "fSize":[256, 256, 1],
+              "act":["relu", "relu", "linear"],
+              "BN":false,
+              "output":true
+          }
+      }
+    },
+  
+    "gamma": 0.998,
+    "lambda":0.95,
+    "rScaling": 1,
+    "entropyCoeff":0,
+    "epsilon":0.2,
+    "updateStep":160,
+    "div":1,
+    "epoch":4,
+    "updateOldP":1,
+    "initLogStd":-0.7,
+    "finLogStd":-1.6,
+    "annealingStep":1e6,
+  
+    "optim": {
+      "actor": {
+        "name": "adam",
+        "lr": 3e-4,
+        "decay": 1e-6,
+        "eps": 1e-7,
+        "clipping": false
+      },
+      "critic": {
+        "name": "adam",
+        "lr": 3e-4,
+        "decay": 1e-6,
+        "clipping": false,
+        "eps": 1e-7
+      }
+    },
+    
+  
+    "sPath": "./save/PPO/",
+    "writeTMode":true,
+    "tPath": "./tensorboard/PPO/",
+    "lPath":"None",
+  
+    "device": "cpu",
+    "gpuOverload":false,
+    "inferMode": false,
+    "renderMode": true
+  }

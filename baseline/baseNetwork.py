@@ -191,6 +191,19 @@ class LSTMNET(nn.Module):
         hn[step, index, :] = torch.zeros(self.hiddenSize).to(self.device)
         cn[step, index, :] = torch.zeros(self.hiddenSize).to(self.device)
         self.CellState = (hn, cn)
+    
+    def getCellState(self):
+        return self.CellState
+
+    def setCellState(self, cellState):
+        self.CellState = cellState
+    
+    def detachCellState(self):
+        self.CellState = (self.CellState[0].detach(), self.CellState[1].detach())
+
+    def zeroCellState(self):
+        self.CellState = (torch.zeros(1, self.nAgent, self.hiddenSize).to(self.device), 
+                          torch.zeros(1, self.nAgent, self.hiddenSize).to(self.device))
 
     def forward(self, state):
         nDim = state.shape[0]
@@ -200,10 +213,11 @@ class LSTMNET(nn.Module):
                 output = torch.squeeze(output, dim=0)
             self.CellState = (hn, cn)
         else:
-            output, (hn, cn) = self.rnn(state)
+            output, (hn, cn) = self.rnn(state, self.CellState)
             if self.FlattenMode:
                 output = output.view(-1, self.hiddenSize)
                 output = output.view(-1, self.hiddenSize)
+            self.CellState = (hn, cn)
         
         # output consists of output, hidden, cell state
         return output
