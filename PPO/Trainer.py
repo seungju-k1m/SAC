@@ -23,6 +23,9 @@ def preprocessBatch(f):
         
         state = torch.cat(rstate, dim=0)
         nstate = torch.cat((state, ns), dim=0)
+        reward = np.array(reward)
+        done = np.array(done)
+        action = torch.tensor(action).to(self.device)
 
         # 1. calculate the target value for actor and critic
         self.agent.actor.detachCellState()
@@ -37,16 +40,21 @@ def preprocessBatch(f):
         value = value[:-1]
 
         self.agent.critic.setCellState(InitCriticCellState)
-
-        reward = np.array(reward)
-        done = np.array(done)
+        
         gT, gAE = self.getReturn(reward, value, nvalue, done)
         gT = gT.view(k1, self.nAgent)
         gAE = gAE.view(k1, self.nAgent)
-        action = torch.tensor(action).to(self.device)
-
+        
         # 2. implemented the training using the truncated BPTT
         for _ in range(epoch):
+            # self.agent.critic.setCellState(InitCriticCellState)
+            # value = self.agent.critic.forward(tuple([nstate]))[0]  # . step, nAgent, 1 -> -1, 1
+            # value = value.view(k1+1, self.nAgent, 1)
+            # nvalue = value[1:]
+            # value = value[:-1]
+            # gT, gAE = self.getReturn(reward, value, nvalue, done)
+            # gT = gT.view(k1, self.nAgent)
+            # gAE = gAE.view(k1, self.nAgent)
             self.agent.actor.setCellState(InitActorCellState)
             self.agent.critic.setCellState(InitCriticCellState)
             self.zeroGrad()
@@ -175,7 +183,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         return action
 
     def step(self, step, epoch):
-        # self.agent.critic.clippingNorm(5)
+        self.agent.critic.clippingNorm(5)
         self.cOptim.step()
         self.agent.actor.clippingNorm(5)
         self.aOptim.step()
@@ -198,7 +206,6 @@ class PPOOnPolicyTrainer(ONPolicy):
         step,
         epoch
     ):
-        self.zeroGrad()
         lossC = self.agent.calQLoss(
             state,
             gT.detach(),
@@ -210,7 +217,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             self.oldAgent,
             state,
             action,
-            gAE.detach()
+            gT.detach() - critic.detach()
         )
         minusObj.backward()
 
