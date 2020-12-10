@@ -6,6 +6,7 @@ from PPO.Agent import ppoAgent
 from baseline.utils import getOptim
 from collections import deque
 
+print("Clipping Mode")
 
 def preprocessBatch(f):
     def wrapper(self, step, epoch):
@@ -188,7 +189,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         return action
 
     def step(self, step, epoch):
-        self.agent.critic.clippingNorm(5)
+        self.agent.critic.clippingNorm(500)
         self.cOptim.step()
         self.agent.actor.clippingNorm(5)
         self.aOptim.step()
@@ -401,7 +402,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 self.agent.critic.zeroCellState()
                 self.oldAgent.actor.zeroCellState()
                 self.oldAgent.critic.zeroCellState()
-                self.copyAgent.actor.zeroCelState()
+                self.copyAgent.actor.zeroCellState()
                 self.copyAgent.critic.zeroCellState()
 
             action = nAction

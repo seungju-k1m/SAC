@@ -9,17 +9,17 @@
     "Resolution_LidarAngle":3,
     "Number_Agent": 72,
     "Number_MaxCollision":1e6,
-    "MaxStep": 640,
+    "MaxStep": 960,
     "Penallty_Maginitude_AngularVelocity":0,
     "RecommendedYawRate":0.7,
     "Velocity":3,
     "YawRate":1,
-    "Penalty_OverAngularVelocity":0,
-    "Reward_ReachingDestination":0.3,
+    "Penalty_OverAngularVelocity":-0.002,
+    "Reward_ReachingDestination":0.002,
     "Penalty_OverMaxStep":0,
-    "Penalty_Time":-0.05,
-    "Penalty_Collision_Wall":-0.2,
-    "Penalty_Collision_Agent":-2,
+    "Penalty_Time":0,
+    "Penalty_Collision_Wall":-0.05,
+    "Penalty_Collision_Agent":-0.05,
     "Number_MaxArrivingReward":1e6,
     "IntervalStep":4,
     "LidarMeasurementDistance":10
@@ -84,6 +84,8 @@
   "initLogStd":-0.7,
   "finLogStd":-1.6,
   "annealingStep":1e6,
+  "K1":160,
+  "K2":10,
 
   "optim": {
     "actor": {
