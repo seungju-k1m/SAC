@@ -47,16 +47,10 @@ def preprocessBatch(f):
         
         # 2. implemented the training using the truncated BPTT
         for _ in range(epoch):
-            # self.agent.critic.setCellState(InitCriticCellState)
-            # value = self.agent.critic.forward(tuple([nstate]))[0]  # . step, nAgent, 1 -> -1, 1
-            # value = value.view(k1+1, self.nAgent, 1)
-            # nvalue = value[1:]
-            # value = value[:-1]
-            # gT, gAE = self.getReturn(reward, value, nvalue, done)
-            # gT = gT.view(k1, self.nAgent)
-            # gAE = gAE.view(k1, self.nAgent)
             self.agent.actor.setCellState(InitActorCellState)
             self.agent.critic.setCellState(InitCriticCellState)
+            self.copyAgent.actor.setCellState(InitActorCellState)
+            self.copyAgent.critic.setCellState(InitCriticCellState)
             self.zeroGrad()
             for i in range(div):
                 _state = tuple([state[i*k2:(i+1)*k2]])
@@ -131,6 +125,17 @@ class PPOOnPolicyTrainer(ONPolicy):
             LSTMNum=self.LSTMNum)
         self.oldAgent.to(self.device)
         self.oldAgent.update(self.agent)
+
+        self.copyAgent = ppoAgent(
+            self.aData,
+            coeff=self.entropyCoeff,
+            epsilon=self.epsilon,
+            initLogStd=initLogStd,
+            finLogStd=finLogStd,
+            annealingStep=annealingStep,
+            LSTMNum=self.LSTMNum)
+        self.copyAgent.to(self.device)
+        self.copyAgent.update(self.agent)
         
         pureEnv = self.data['envName'].split('/')
         name = pureEnv[-1]
@@ -214,7 +219,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         lossC.backward()
 
         minusObj, entropy = self.agent.calAObj(
-            self.oldAgent,
+            self.copyAgent,
             state,
             action,
             gT.detach() - critic.detach()
@@ -396,6 +401,8 @@ class PPOOnPolicyTrainer(ONPolicy):
                 self.agent.critic.zeroCellState()
                 self.oldAgent.actor.zeroCellState()
                 self.oldAgent.critic.zeroCellState()
+                self.copyAgent.actor.zeroCelState()
+                self.copyAgent.critic.zeroCellState()
 
             action = nAction
             stateT = nStateT
@@ -408,6 +415,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 self.clear()
                 if k % self.updateOldP == 0:
                     self.oldAgent.update(self.agent)
+                    self.copyAgent.update(self.agent)
                     k = 0
             
             if step % 2000 == 0:
