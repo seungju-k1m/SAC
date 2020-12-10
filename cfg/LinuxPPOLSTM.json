@@ -1,13 +1,13 @@
 {
   "sSize": [1, 120],
   "aSize":2,
-  "envName":"./Env/Linux/Env24",
+  "envName":"./Env/Linux/Env72",
 
   "env":{
     "LSTMMode":1,
     "ImgMode":false,
     "Resolution_LidarAngle":3,
-    "Number_Agent": 72,
+    "Number_Agent": 216,
     "Number_MaxCollision":1e6,
     "MaxStep": 960,
     "Penallty_Maginitude_AngularVelocity":0,
@@ -16,10 +16,12 @@
     "YawRate":1,
     "Penalty_OverAngularVelocity":-0.002,
     "Reward_ReachingDestination":0.002,
+    "Reward_ArrivingDestination":10,
     "Penalty_OverMaxStep":0,
     "Penalty_Time":0,
     "Penalty_Collision_Wall":-0.05,
     "Penalty_Collision_Agent":-0.05,
+    "Penalty_Collision_DynamicOBS":-0.06,
     "Number_MaxArrivingReward":1e6,
     "IntervalStep":4,
     "LidarMeasurementDistance":10
