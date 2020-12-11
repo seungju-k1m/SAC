@@ -1,13 +1,13 @@
 {
   "sSize": [1, 120],
   "aSize":2,
-  "envName":"./Env/Linux/Env72",
+  "envName":"./Env/Linux/Env16",
 
   "env":{
     "LSTMMode":1,
     "ImgMode":false,
     "Resolution_LidarAngle":3,
-    "Number_Agent": 216,
+    "Number_Agent": 48,
     "Number_MaxCollision":1e6,
     "MaxStep": 960,
     "Penallty_Maginitude_AngularVelocity":0,
@@ -35,7 +35,7 @@
         "iSize":126,
         "nLayer":1,
         "hiddenSize":256,
-        "Number_Agent":216,
+        "Number_Agent":48,
         "FlattenMode":true,
         "device":"cuda:0",
         "input":[0]
@@ -57,7 +57,7 @@
           "iSize":126,
           "nLayer":1,
           "hiddenSize":256,
-          "Number_Agent":216,
+          "Number_Agent":48,
           "FlattenMode":true,
           "device":"cuda:0",
           "input":[0]
