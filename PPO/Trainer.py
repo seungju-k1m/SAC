@@ -24,7 +24,7 @@ def preprocessBatch(f):
         for data in self.ReplayMemory_Trajectory:
             ts, tns = data
             tState.append(ts)
-        if len(tState) == k1:
+        if len(tState) == k1 or len(tState) == 1:
             zeroMode = True
         else:
             tState = torch.cat(tState[:-k1], dim=0)
@@ -401,7 +401,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         obs = self.getObs(init=True)
         stateT = self.ppState(obs)
         action = self.getAction(stateT)
-        step = 1
+        step = 0
         while 1:
             self.checkStep(action)
             obs, reward, done = self.getObs()
@@ -422,6 +422,20 @@ class PPOOnPolicyTrainer(ONPolicy):
                 if d:
                     episodeReward.append(Rewards[i])
                     Rewards[i] = 0
+
+            action = nAction
+            stateT = nStateT
+            step += 1
+            self.agent.decayingLogStd(step)
+            self.oldAgent.decayingLogStd(step)
+            if (step) % (self.updateStep) == 0 and self.inferMode == False:
+                k += 1
+                self.train(step, self.epoch)
+                self.clear()
+                if k % self.updateOldP == 0:
+                    self.oldAgent.update(self.agent)
+                    self.copyAgent.update(self.agent)
+                    k = 0
             if True in done:
                 self.agent.actor.zeroCellState()
                 self.agent.critic.zeroCellState()
@@ -430,20 +444,6 @@ class PPOOnPolicyTrainer(ONPolicy):
                 self.copyAgent.actor.zeroCellState()
                 self.copyAgent.critic.zeroCellState()
                 self.ReplayMemory_Trajectory.clear()
-
-            action = nAction
-            stateT = nStateT
-            step += 1
-            self.agent.decayingLogStd(step)
-            self.oldAgent.decayingLogStd(step)
-            if step % (self.updateStep+1) == 0 and self.inferMode == False:
-                k += 1
-                self.train(step, self.epoch)
-                self.clear()
-                if k % self.updateOldP == 0:
-                    self.oldAgent.update(self.agent)
-                    self.copyAgent.update(self.agent)
-                    k = 0
             
             if step % 2000 == 0:
                 self.LogSucessRate(step)
