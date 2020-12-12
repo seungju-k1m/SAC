@@ -6,7 +6,6 @@ from PPO.Agent import ppoAgent
 from baseline.utils import getOptim
 from collections import deque
 
-print("Clipping Mode")
 
 def preprocessBatch(f):
     def wrapper(self, step, epoch):
@@ -15,43 +14,63 @@ def preprocessBatch(f):
         div = int(k1/k2)
         rstate, action, reward, done = \
             [], [], [], []
+        tState = []
         for data in self.replayMemory[0]:
             s, a, r, ns, d = data
             rstate.append(s)
             action.append(a)
             reward.append(r)
             done.append(d)
-        
+        for data in self.ReplayMemory_Trajectory:
+            ts, tns = data
+            tState.append(ts)
+        if len(tState) == k1:
+            zeroMode = True
+        else:
+            tState = torch.cat(tState[:-k1], dim=0)
+            zeroMode = False
         state = torch.cat(rstate, dim=0)
         nstate = torch.cat((state, ns), dim=0)
         reward = np.array(reward)
         done = np.array(done)
         action = torch.tensor(action).to(self.device)
 
+        self.agent.actor.zeroCellState()
+        self.agent.critic.zeroCellState()
+        self.copyAgent.actor.zeroCellState()
+        self.copyAgent.critic.zeroCellState()
+
+        if zeroMode == False:
+            self.agent.critic.forward(tuple([tState]))
+            self.copyAgent.critic.forward(tuple([tState]))
+            self.agent.actor.forward(tuple([tState]))
+            self.copyAgent.actor.forward(tuple([tState]))
+
         # 1. calculate the target value for actor and critic
         self.agent.actor.detachCellState()
         InitActorCellState = self.agent.actor.getCellState()
+        InitCopyActorCellState = self.copyAgent.actor.getCellState()
 
         self.agent.critic.detachCellState()
         InitCriticCellState = self.agent.critic.getCellState()
-
-        value = self.agent.critic.forward(tuple([nstate]))[0]  # . step, nAgent, 1 -> -1, 1
-        value = value.view(k1+1, self.nAgent, 1)
-        nvalue = value[1:]
-        value = value[:-1]
+        InitCopyCriticCellState = self.copyAgent.critic.getCellState()
 
         self.agent.critic.setCellState(InitCriticCellState)
-        
-        gT, gAE = self.getReturn(reward, value, nvalue, done)
-        gT = gT.view(k1, self.nAgent)
-        gAE = gAE.view(k1, self.nAgent)
         
         # 2. implemented the training using the truncated BPTT
         for _ in range(epoch):
             self.agent.actor.setCellState(InitActorCellState)
+            value = self.agent.critic.forward(tuple([nstate]))[0]  # . step, nAgent, 1 -> -1, 1
+            value = value.view(k1+1, self.nAgent, 1)
+            nvalue = value[1:]
+            value = value[:-1]
+            gT, gAE = self.getReturn(reward, value, nvalue, done)
+            gT = gT.view(k1, self.nAgent)
+            gAE = gAE.view(k1, self.nAgent)
+
             self.agent.critic.setCellState(InitCriticCellState)
-            self.copyAgent.actor.setCellState(InitActorCellState)
-            self.copyAgent.critic.setCellState(InitCriticCellState)
+            self.copyAgent.actor.setCellState(InitCopyActorCellState)
+            self.copyAgent.critic.setCellState(InitCopyCriticCellState)
             self.zeroGrad()
             for i in range(div):
                 _state = tuple([state[i*k2:(i+1)*k2]])
@@ -63,6 +82,13 @@ def preprocessBatch(f):
                 self.agent.actor.detachCellState()
                 self.agent.critic.detachCellState()
             self.step(step+i, epoch)
+            self.agent.actor.zeroCellState()
+            self.agent.critic.zeroCellState()
+            if zeroMode == False:
+                self.agent.critic.forward(tuple([tState]))
+                self.agent.actor.forward(tuple([tState]))
+            InitActorCellState = self.agent.actor.getCellState()
+            InitCriticCellState = self.agent.critic.getCellState()
 
     return wrapper
 
@@ -154,6 +180,8 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.updateOldP = self.data['updateOldP']
         self.Number_Episode = 0
         self.Number_Sucess = 0
+
+        self.ReplayMemory_Trajectory = deque(maxlen=1000000)
 
         if self.writeTMode:
             self.writeTrainInfo()
@@ -387,6 +415,8 @@ class PPOOnPolicyTrainer(ONPolicy):
                         (stateT[0][u:uu], action[u:uu].copy(),
                          reward[u:uu]*self.rScaling, nStateT[0][u:uu],
                          done[u:uu].copy()))
+                self.ReplayMemory_Trajectory.append(
+                        (stateT[0][u:uu],  nStateT[0][u:uu]))
                 u = uu
             for i, d in enumerate(done):
                 if d:
@@ -399,6 +429,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 self.oldAgent.critic.zeroCellState()
                 self.copyAgent.actor.zeroCellState()
                 self.copyAgent.critic.zeroCellState()
+                self.ReplayMemory_Trajectory.clear()
 
             action = nAction
             stateT = nStateT
