@@ -43,9 +43,9 @@
       "module02":{
           "netCat":"MLP",
           "iSize":256,
-          "nLayer":3,
-          "fSize":[256, 256, 2],
-          "act":["relu", "relu", "linear"],
+          "nLayer":2,
+          "fSize":[256, 2],
+          "act":["relu", "linear"],
           "BN":false,
           "output":true
       }
@@ -65,9 +65,9 @@
         "module02":{
             "netCat":"MLP",
             "iSize":256,
-            "nLayer":3,
-            "fSize":[256, 256, 1],
-            "act":["relu", "relu", "linear"],
+            "nLayer":2,
+            "fSize":[256, 1],
+            "act":["relu", "linear"],
             "BN":false,
             "output":true
         }
@@ -84,10 +84,10 @@
   "epoch":4,
   "updateOldP":1,
   "initLogStd":-0.7,
-  "finLogStd":-1.6,
-  "annealingStep":1e6,
+  "finLogStd":-1.2,
+  "annealingStep":1e7,
   "K1":160,
-  "K2":10,
+  "K2":40,
 
   "optim": {
     "actor": {

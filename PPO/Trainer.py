@@ -11,7 +11,7 @@ print("Clipping Mode")
 def preprocessBatch(f):
     def wrapper(self, step, epoch):
         k1 = 160
-        k2 = 10
+        k2 = 40
         div = int(k1/k2)
         rstate, action, reward, done = \
             [], [], [], []
@@ -191,7 +191,7 @@ class PPOOnPolicyTrainer(ONPolicy):
     def step(self, step, epoch):
         # self.agent.critic.clippingNorm(500)
         self.cOptim.step()
-        # self.agent.actor.clippingNorm(5)
+        self.agent.actor.clippingNorm(100)
         self.aOptim.step()
 
         normA = self.agent.actor.calculateNorm().cpu().detach().numpy()
@@ -261,8 +261,10 @@ class PPOOnPolicyTrainer(ONPolicy):
             GT = []
             GTDE = []
             discounted_Td = 0
-
-            discounted_r = cA[-1]
+            if dA[:-1][0]:
+                discounted_r = 0
+            else:
+                discounted_r = cA[-1]
             for r, is_terminal, c, nc in zip(
                     reversed(rA), 
                     reversed(dA), 
