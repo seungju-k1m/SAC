@@ -299,7 +299,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                     reversed(cA),
                     reversed(ncA)):
                 
-                if dA:
+                if is_terminal:
                     td_error = r - c
                 else:
                     td_error = r + self.gamma * nc - c
