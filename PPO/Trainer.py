@@ -22,9 +22,9 @@ def preprocessBatch(f):
             reward.append(r)
             done.append(d)
         for data in self.ReplayMemory_Trajectory:
-            ts, tns = data
+            ts = data
             tState.append(ts)
-        if len(tState) == k1 or len(tState) == 1:
+        if len(tState) == k1:
             zeroMode = True
         else:
             tState = torch.cat(tState[:-k1], dim=0)
@@ -298,6 +298,11 @@ class PPOOnPolicyTrainer(ONPolicy):
                     reversed(dA), 
                     reversed(cA),
                     reversed(ncA)):
+                
+                if dA:
+                    td_error = r - c
+                else:
+                    td_error = r + self.gamma * nc - c
 
                 td_error = r + self.gamma * nc - c
                 discounted_r = r + self.gamma * discounted_r
@@ -416,7 +421,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                          reward[u:uu]*self.rScaling, nStateT[0][u:uu],
                          done[u:uu].copy()))
                 self.ReplayMemory_Trajectory.append(
-                        (stateT[0][u:uu],  nStateT[0][u:uu]))
+                        (stateT[0][u:uu]))
                 u = uu
             for i, d in enumerate(done):
                 if d:
@@ -444,6 +449,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 self.copyAgent.actor.zeroCellState()
                 self.copyAgent.critic.zeroCellState()
                 self.ReplayMemory_Trajectory.clear()
+                self.env.step()
             
             if step % 2000 == 0:
                 self.LogSucessRate(step)
