@@ -10,7 +10,7 @@ from collections import deque
 def preprocessBatch(f):
     def wrapper(self, step, epoch):
         k1 = 160
-        k2 = 40
+        k2 = 10
         div = int(k1/k2)
         rstate, action, reward, done = \
             [], [], [], []

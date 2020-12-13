@@ -1,15 +1,15 @@
 {
   "sSize": [1, 120],
   "aSize":2,
-  "envName":"./Env/Linux/Env16",
+  "envName":"./Env/Linux/Env36",
 
   "env":{
     "LSTMMode":1,
     "ImgMode":false,
     "Resolution_LidarAngle":3,
-    "Number_Agent": 48,
+    "Number_Agent": 108,
     "Number_MaxCollision":1e6,
-    "MaxStep": 1600,
+    "MaxStep": 641,
     "Penallty_Maginitude_AngularVelocity":0,
     "RecommendedYawRate":0.7,
     "Velocity":3,
@@ -35,7 +35,7 @@
         "iSize":126,
         "nLayer":1,
         "hiddenSize":256,
-        "Number_Agent":48,
+        "Number_Agent":108,
         "FlattenMode":true,
         "device":"cuda:0",
         "input":[0]
@@ -43,9 +43,9 @@
       "module02":{
           "netCat":"MLP",
           "iSize":256,
-          "nLayer":2,
-          "fSize":[256, 2],
-          "act":["relu", "linear"],
+          "nLayer":3,
+          "fSize":[256, 256, 2],
+          "act":["relu", "relu", "linear"],
           "BN":false,
           "output":true
       }
@@ -57,7 +57,7 @@
           "iSize":126,
           "nLayer":1,
           "hiddenSize":256,
-          "Number_Agent":48,
+          "Number_Agent":108,
           "FlattenMode":true,
           "device":"cuda:0",
           "input":[0]
@@ -65,16 +65,16 @@
         "module02":{
             "netCat":"MLP",
             "iSize":256,
-            "nLayer":2,
-            "fSize":[256, 1],
-            "act":["relu", "linear"],
+            "nLayer":3,
+            "fSize":[256, 256, 1],
+            "act":["relu", "relu", "linear"],
             "BN":false,
             "output":true
         }
     }
   },
 
-  "gamma": 0.99,
+  "gamma": 0.998,
   "lambda":0.95,
   "rScaling": 1,
   "entropyCoeff":0,
@@ -87,7 +87,7 @@
   "finLogStd":-1.2,
   "annealingStep":1e7,
   "K1":160,
-  "K2":40,
+  "K2":10,
 
   "optim": {
     "actor": {
