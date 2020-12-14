@@ -54,12 +54,12 @@ def preprocessBatch(f):
         self.agent.critic.detachCellState()
         InitCriticCellState = self.agent.critic.getCellState()
         InitCopyCriticCellState = self.copyAgent.critic.getCellState()
-
-        self.agent.critic.setCellState(InitCriticCellState)
         
         # 2. implemented the training using the truncated BPTT
         for _ in range(epoch):
             self.agent.actor.setCellState(InitActorCellState)
+            self.agent.critic.setCellState(InitCriticCellState)
+
             value = self.agent.critic.forward(tuple([nstate]))[0]  # . step, nAgent, 1 -> -1, 1
             value = value.view(k1+1, self.nAgent, 1)
             nvalue = value[1:]
@@ -289,10 +289,11 @@ class PPOOnPolicyTrainer(ONPolicy):
             GT = []
             GTDE = []
             discounted_Td = 0
-            if dA[:-1][0]:
-                discounted_r = 0
-            else:
+            if dA[-1]:
                 discounted_r = cA[-1]
+            else:
+                discounted_r = ncA[-1]
+
             for r, is_terminal, c, nc in zip(
                     reversed(rA), 
                     reversed(dA), 
@@ -300,11 +301,10 @@ class PPOOnPolicyTrainer(ONPolicy):
                     reversed(ncA)):
                 
                 if is_terminal:
-                    td_error = r - c
+                    td_error = r + self.gamma * c - c
                 else:
                     td_error = r + self.gamma * nc - c
 
-                td_error = r + self.gamma * nc - c
                 discounted_r = r + self.gamma * discounted_r
                 discounted_Td = td_error + self.gamma * self.labmda * discounted_Td
 
