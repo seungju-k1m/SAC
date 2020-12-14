@@ -219,7 +219,7 @@ class PPOOnPolicyTrainer(ONPolicy):
     def step(self, step, epoch):
         # self.agent.critic.clippingNorm(500)
         self.cOptim.step()
-        self.agent.actor.clippingNorm(100)
+        self.agent.actor.clippingNorm(5)
         self.aOptim.step()
 
         normA = self.agent.actor.calculateNorm().cpu().detach().numpy()
@@ -414,15 +414,16 @@ class PPOOnPolicyTrainer(ONPolicy):
             nStateT = self.ppState(obs)
             nAction = self.getAction(nStateT)
             u = 0
-            for z in range(self.div):
-                uu = u + int(self.nAgent/self.div)
-                self.replayMemory[z].append(
-                        (stateT[0][u:uu], action[u:uu].copy(),
-                         reward[u:uu]*self.rScaling, nStateT[0][u:uu],
-                         done[u:uu].copy()))
-                self.ReplayMemory_Trajectory.append(
-                        (stateT[0][u:uu]))
-                u = uu
+            if self.inferMode == False:
+                for z in range(self.div):
+                    uu = u + int(self.nAgent/self.div)
+                    self.replayMemory[z].append(
+                            (stateT[0][u:uu], action[u:uu].copy(),
+                             reward[u:uu]*self.rScaling, nStateT[0][u:uu],
+                             done[u:uu].copy()))
+                    self.ReplayMemory_Trajectory.append(
+                            (stateT[0][u:uu]))
+                    u = uu
             for i, d in enumerate(done):
                 if d:
                     episodeReward.append(Rewards[i])
