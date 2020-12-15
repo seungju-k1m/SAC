@@ -12,7 +12,7 @@
       "MaxStep": 1601,
       "Penallty_Maginitude_AngularVelocity":0,
       "RecommendedYawRate":0.7,
-      "Velocity":3,
+      "Velocity":4,
       "YawRate":1,
       "Penalty_OverAngularVelocity":-0.002,
       "Reward_ReachingDestination":0.03,
@@ -110,7 +110,7 @@
     "sPath": "./save/PPO/",
     "writeTMode":false,
     "tPath": "./tensorboard/PPO/",
-    "lPath":"./save/PPO/DemoEnv.pth",
+    "lPath":"./save/PPO/Env36_20201214-21-56-33.pth",
   
     "device": "cuda:0",
     "gpuOverload":false,
