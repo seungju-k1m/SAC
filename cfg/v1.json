@@ -1,27 +1,29 @@
 {
-    "sSize": [1, 120],
+    "sSize": [1, 72],
     "aSize":2,
-    "envName":"./Env/Linux/Env36",
+    "envName":"./Env/Linux/Lotte16",
   
     "env":{
       "LSTMMode":1,
       "ImgMode":false,
-      "Resolution_LidarAngle":3,
-      "Number_Agent": 108,
+      "Resolution_LidarAngle":5,
+      "Number_Agent": 48,
       "Number_MaxCollision":1e6,
       "MaxStep": 1601,
       "Penallty_Maginitude_AngularVelocity":0,
       "RecommendedYawRate":0.7,
       "Velocity":4,
-      "YawRate":1,
-      "Penalty_OverAngularVelocity":-0.002,
-      "Reward_ReachingDestination":0.03,
-      "Reward_ArrivingDestination":10,
+      "YawRate":1.5,
+      "Penalty_OverAngularVelocity":0,
+      "Reward_ReachingDestination ":0,
+      "Reward_ArrivingDestination":0,
+      "Reward_ArrivingStartPoint":0,
+      
       "Penalty_OverMaxStep":0,
       "Penalty_Time":0,
-      "Penalty_Collision_Wall":-0.05,
-      "Penalty_Collision_Agent":-0.10,
-      "Penalty_Collision_DynamicOBS":-0.10,
+      "Penalty_Collision_Wall":0,
+      "Penalty_Collision_Agent":0,
+      "Penalty_Collision_DynamicOBS":0,
       "Number_MaxArrivingReward":1e6,
       "IntervalStep":5,
       "LidarMeasurementDistance":10
@@ -32,10 +34,10 @@
       "actor":{
         "module01":{
           "netCat":"LSTMNET",
-          "iSize":126,
+          "iSize":78,
           "nLayer":1,
           "hiddenSize":256,
-          "Number_Agent":108,
+          "Number_Agent":48,
           "FlattenMode":true,
           "device":"cuda:0",
           "input":[0]
@@ -54,10 +56,10 @@
       "critic":{
         "module01":{
             "netCat":"LSTMNET",
-            "iSize":126,
+            "iSize":78,
             "nLayer":1,
             "hiddenSize":256,
-            "Number_Agent":108,
+            "Number_Agent":48,
             "FlattenMode":true,
             "device":"cuda:0",
             "input":[0]
@@ -83,7 +85,7 @@
     "div":1,
     "epoch":4,
     "updateOldP":1,
-    "initLogStd":-1.2,
+    "initLogStd":-1.0,
     "finLogStd":-1.2,
     "annealingStep":1e7,
     "K1":160,
@@ -110,7 +112,7 @@
     "sPath": "./save/PPO/",
     "writeTMode":false,
     "tPath": "./tensorboard/PPO/",
-    "lPath":"./save/PPO/Env36_20201214-21-56-33.pth",
+    "lPath":"./save/PPO/Lotte16_20201216-00-25-50.pth",
   
     "device": "cuda:0",
     "gpuOverload":false,
