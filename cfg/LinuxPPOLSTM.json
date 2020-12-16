@@ -1,30 +1,30 @@
 {
-  "sSize": [1, 72],
+  "sSize": [1, 120],
   "aSize":2,
   "envName":"./Env/Linux/Lotte16",
 
   "env":{
     "LSTMMode":1,
     "ImgMode":false,
-    "Resolution_LidarAngle":5,
+    "Resolution_LidarAngle":3,
     "Number_Agent": 48,
     "Number_MaxCollision":1e6,
     "MaxStep": 961,
     "Penallty_Maginitude_AngularVelocity":0,
     "RecommendedYawRate":0.7,
     "Velocity":4,
-    "YawRate":1.5,
+    "YawRate":1,
     "Penalty_OverAngularVelocity":0,
-    "Reward_ReachingDestination":0.0001,
-    "Reward_ArrivingDestination":0.2,
-    "Reward_ArrivingStartPoint":0.2,
+    "Reward_ReachingDestination":0.01,
+    "Reward_ArrivingDestination":5,
+    "Reward_ArrivingStartPoint":5,
     "Penalty_OverMaxStep":0,
     "Penalty_Time":0,
     "Penalty_Collision_Wall":-0.01,
-    "Penalty_Collision_Agent":-0.1,
+    "Penalty_Collision_Agent":-0.5,
     "Penalty_Collision_DynamicOBS":-0.3,
     "Number_MaxArrivingReward":1e6,
-    "IntervalStep":5,
+    "IntervalStep":80,
     "LidarMeasurementDistance":10
   },
   
@@ -33,7 +33,7 @@
     "actor":{
       "module01":{
         "netCat":"LSTMNET",
-        "iSize":78,
+        "iSize":126,
         "nLayer":1,
         "hiddenSize":256,
         "Number_Agent":48,
@@ -55,7 +55,7 @@
     "critic":{
       "module01":{
           "netCat":"LSTMNET",
-          "iSize":78,
+          "iSize":126,
           "nLayer":1,
           "hiddenSize":256,
           "Number_Agent":48,
