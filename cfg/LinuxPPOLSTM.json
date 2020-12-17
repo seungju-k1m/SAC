@@ -1,7 +1,7 @@
 {
   "sSize": [1, 120],
   "aSize":2,
-  "envName":"./Env/Linux/Lotte16",
+  "envName":"./Env/Linux/sameEnv16",
 
   "env":{
     "LSTMMode":1,
@@ -9,13 +9,13 @@
     "Resolution_LidarAngle":3,
     "Number_Agent": 48,
     "Number_MaxCollision":1e6,
-    "MaxStep": 1761,
+    "MaxStep": 481,
     "Penallty_Maginitude_AngularVelocity":0,
     "RecommendedYawRate":0.7,
     "Velocity":4,
     "YawRate":1,
     "Penalty_OverAngularVelocity":0,
-    "Reward_ReachingDestination":0.01,
+    "Reward_ReachingDestination":0.03,
     "Reward_ArrivingDestination":5,
     "Reward_ArrivingStartPoint":5,
     "Penalty_OverMaxStep":0,
@@ -24,7 +24,7 @@
     "Penalty_Collision_Agent":-0.5,
     "Penalty_Collision_DynamicOBS":-0.3,
     "Number_MaxArrivingReward":1e6,
-    "IntervalStep":40,
+    "IntervalStep":10,
     "LidarMeasurementDistance":10
   },
   
