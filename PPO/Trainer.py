@@ -9,8 +9,8 @@ from collections import deque
 
 def preprocessBatch(f):
     def wrapper(self, step, epoch):
-        k1 = 160
-        k2 = 10
+        k1 = self.K1
+        k2 = self.K2
         div = int(k1/k2)
         rstate, action, reward, done = \
             [], [], [], []
@@ -182,6 +182,8 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.Number_Sucess = 0
 
         self.ReplayMemory_Trajectory = deque(maxlen=1000000)
+        self.K1 = self.data['K1']
+        self.K2 = self.data['K2']
 
         if self.writeTMode:
             self.writeTrainInfo()
@@ -434,6 +436,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             step += 1
             self.agent.decayingLogStd(step)
             self.oldAgent.decayingLogStd(step)
+            self.copyAgent.decayingLogStd(step)
             if (step) % (self.updateStep) == 0 and self.inferMode == False:
                 k += 1
                 self.train(step, self.epoch)
