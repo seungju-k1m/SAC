@@ -9,7 +9,7 @@
     "Resolution_LidarAngle":3,
     "Number_Agent": 48,
     "Number_MaxCollision":1e6,
-    "MaxStep": 641,
+    "MaxStep": 961,
     "Penallty_Maginitude_AngularVelocity":0,
     "RecommendedYawRate":0.7,
     "Velocity":4,
@@ -21,10 +21,10 @@
     "Penalty_OverMaxStep":0,
     "Penalty_Time":0,
     "Penalty_Collision_Wall":-0.01,
-    "Penalty_Collision_Agent":-2,
+    "Penalty_Collision_Agent":-0.5,
     "Penalty_Collision_DynamicOBS":-0.5,
     "Number_MaxArrivingReward":1e6,
-    "IntervalStep":20,
+    "IntervalStep":40,
     "LidarMeasurementDistance":10
   },
   
