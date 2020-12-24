@@ -1,13 +1,13 @@
 {
     "sSize": [1, 120],
     "aSize":2,
-    "envName":"./Env/Linux/LotteZoomIn",
+    "envName":"./Env/Linux/sameEnv16",
   
     "env":{
       "LSTMMode":1,
       "ImgMode":false,
       "Resolution_LidarAngle":3,
-      "Number_Agent": 3,
+      "Number_Agent": 48,
       "Number_MaxCollision":1e6,
       "MaxStep": 3201,
       "Penallty_Maginitude_AngularVelocity":0,
@@ -37,7 +37,7 @@
           "iSize":126,
           "nLayer":1,
           "hiddenSize":256,
-          "Number_Agent":3,
+          "Number_Agent":48,
           "FlattenMode":true,
           "device":"cuda:0",
           "input":[0]
@@ -59,7 +59,7 @@
             "iSize":126,
             "nLayer":1,
             "hiddenSize":256,
-            "Number_Agent":3,
+            "Number_Agent":48,
             "FlattenMode":true,
             "device":"cuda:0",
             "input":[0]
@@ -85,8 +85,8 @@
     "div":1,
     "epoch":4,
     "updateOldP":1,
-    "initLogStd":-1.0,
-    "finLogStd":-1.2,
+    "initLogStd":-0.7,
+    "finLogStd":-1.6,
     "annealingStep":1e7,
     "K1":160,
     "K2":10,
@@ -112,7 +112,7 @@
     "sPath": "./save/PPO/",
     "writeTMode":false,
     "tPath": "./tensorboard/PPO/",
-    "lPath":"./save/PPO/Lotte16_20201218-15-18-30.pth",
+    "lPath":"./save/PPO/sameEnv16_20201221-20-30-24.pth",
   
     "device": "cuda:0",
     "gpuOverload":false,

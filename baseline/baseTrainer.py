@@ -51,7 +51,7 @@ class OFFPolicy:
         # 5. Unity Setting
         id_ = np.random.randint(10, 100, 1)[0]
         engineChannel = EngineConfigurationChannel()
-        engineChannel.set_configuration_parameters(time_scale=1)
+        engineChannel.set_configuration_parameters(time_scale=self.data['time_scale'])
         setChannel = EnvironmentParametersChannel()
         envData = self.data['env']
         for key in envData.keys():
@@ -178,7 +178,7 @@ class ONPolicy:
         # 5. Unity Setting
         id_ = np.random.randint(10, 100, 1)[0]
         engineChannel = EngineConfigurationChannel()
-        engineChannel.set_configuration_parameters(time_scale=3)
+        engineChannel.set_configuration_parameters(time_scale=self.data['time_scale'])
         setChannel = EnvironmentParametersChannel()
         envData = self.data['env']
         for key in envData.keys():

@@ -277,7 +277,7 @@ class CNN1D(nn.Module):
                 self.add_module(
                     "Flatten",
                     nn.Flatten())
-                iSize = self.getSize()
+                # iSize = self.getSize()
             else:
                 self.add_module(
                     "MLP_"+str(i+1),
@@ -402,4 +402,27 @@ class Cat(nn.Module):
     def forward(self, x):
         return torch.cat(x, dim=-1)
 
-        
+
+class Unsequeeze(nn.Module):
+    
+    def __init__(
+        self,
+        data
+    ):
+        super(Unsequeeze, self).__init__()
+        self.dim = data['dim']
+
+    def forward(self, x):
+        return torch.unsqueeze(x, dim=self.dim)
+
+
+class View(nn.Module):
+    def __init__(
+        self,
+        data
+    ):
+        super(View, self).__init__()
+        self.shape = data['shape']
+
+    def forward(self, x):
+        return x.view(self.shape)

@@ -3,7 +3,7 @@ import numpy as np
 import json
 import torchvision.transforms.functional as TF
 
-from baseline.baseNetwork import MLP, CNET, LSTMNET, CNN1D, Res1D, Cat
+from baseline.baseNetwork import MLP, CNET, LSTMNET, CNN1D, Res1D, Cat, Unsequeeze, View
 
 
 def showLidarImg(img):
@@ -93,12 +93,11 @@ def constructNet(netData, iSize=1, WH=-1):
     netCat = netData['netCat']
     if netCat == 'Input':
         return None
-    Net = [MLP, CNET, LSTMNET, CNN1D, Res1D, Cat]
-    netName = ["MLP", "CNET", "LSTMNET", "CNN1D", "Res1D", "Cat"]
+    Net = [MLP, CNET, LSTMNET, CNN1D, Res1D, Cat, Unsequeeze, View]
+    netName = ["MLP", "CNET", "LSTMNET", "CNN1D", "Res1D", "Cat", "Unsequeeze", "View"]
     ind = netName.index(netCat)
 
     baseNet = Net[ind]
-
     network = baseNet(
         netData
     )
