@@ -305,6 +305,50 @@ class PPOOnPolicyTrainer(ONPolicy):
             self.writer.add_scalar("Sucess Rate", (self.Number_Sucess/self.Number_Episode), step)
             self.Number_Episode = 0
             self.Number_Sucess = 0
+    
+    def evaluate(self):
+        episodeReward = []
+        k = 0
+        Rewards = np.zeros(self.nAgent)
+        
+        obs = self.getObs(init=True)
+        stateT = self.ppState(obs)
+        action = self.getAction(stateT)
+        TotalTrial = np.zeros(self.nAgent)
+        TotalSucess = np.zeros(self.nAgent)
+        step = 0
+        while 1:
+            self.checkStep(action)
+            obs, reward, done = self.getObs()
+            for k, r in enumerate(reward):
+                if r > 2:
+                    TotalTrial[k] += 1
+                    TotalSucess[k] += 1
+
+            Rewards += reward
+            nStateT = self.ppState(obs)
+            nAction = self.getAction(nStateT)
+            for i, d in enumerate(done):
+                if d:
+                    episodeReward.append(Rewards[i])
+                    Rewards[i] = 0
+                    TotalTrial[i] += 1
+                    self.oldAgent.actor.zeroCellStateAgent(i)
+
+            action = nAction
+            stateT = nStateT
+            step += 1
+            
+            if step % 10000 == 0:
+                episodeReward = np.array(episodeReward)
+                reward = episodeReward.mean()
+                SuccessRate = TotalSucess/TotalSucess
+                SuccessRate = SuccessRate.mean()
+                print("""
+                Step : {:5d} // Reward : {:.3f}  // SuccessRate: {:.3f}
+                """.format(step, reward, SuccessRate))
+                episodeReward = []
+                torch.save(self.agent.state_dict(), self.sPath)
 
     def run(self):
         episodeReward = []

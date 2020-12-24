@@ -204,6 +204,12 @@ class LSTMNET(nn.Module):
     def zeroCellState(self):
         self.CellState = (torch.zeros(1, self.nAgent, self.hiddenSize).to(self.device), 
                           torch.zeros(1, self.nAgent, self.hiddenSize).to(self.device))
+    
+    def zeroCellStateAgent(self, idx):
+        h = torch.zeros(1, 1, self.netData['hiddenSize'])
+        c = torch.zeros(1, 1, self.netData['hiddenSize'])
+        self.CellState[0][idx] = h
+        self.CellState[1][idx] = c
 
     def forward(self, state):
         nDim = state.shape[0]

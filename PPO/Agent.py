@@ -204,6 +204,11 @@ class AgentV1(nn.Module):
             lstmModuleName = self.moduleNames[self.LSTMNum]
             self.model[lstmModuleName].zeroCellState()
     
+    def zeroCellStateAgent(self, idx):
+        if self.LSTMNum != -1:
+            lstmModuleName = self.moduleNames[self.LSTMNum]
+            self.model[lstmModuleName].zeroCellStateAgent(idx)
+    
     def detachCellState(self):
         if self.LSTMNum != -1:
             lstmModuleName = self.moduleNames[self.LSTMNum]
