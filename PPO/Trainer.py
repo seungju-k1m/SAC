@@ -90,6 +90,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.ReplayMemory_Trajectory = deque(maxlen=1000000)
         self.K1 = self.data['K1']
         self.K2 = self.data['K2']
+        self.RecordScore = self.data['RecordScore']
 
         if self.writeTMode:
             self.writeTrainInfo()
@@ -321,8 +322,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             self.checkStep(action)
             obs, reward, done = self.getObs()
             for k, r in enumerate(reward):
-                if r > 2:
-                    TotalTrial[k] += 1
+                if r > 8:
                     TotalSucess[k] += 1
 
             Rewards += reward
@@ -339,14 +339,16 @@ class PPOOnPolicyTrainer(ONPolicy):
             stateT = nStateT
             step += 1
             
-            if step % 10000 == 0:
-                episodeReward = np.array(episodeReward)
+            if step % 3000 == 0:
+                episodeReward = np.array(Rewards)
                 reward = episodeReward.mean()
-                SuccessRate = TotalSucess/TotalSucess
+                SuccessRate = TotalSucess/TotalTrial
                 SuccessRate = SuccessRate.mean()
                 print("""
                 Step : {:5d} // Reward : {:.3f}  // SuccessRate: {:.3f}
                 """.format(step, reward, SuccessRate))
+                print(TotalTrial.sum())
+                print(TotalSucess.sum())
                 episodeReward = []
                 torch.save(self.agent.state_dict(), self.sPath)
 
@@ -417,5 +419,9 @@ class PPOOnPolicyTrainer(ONPolicy):
                 print("""
                 Step : {:5d} // Reward : {:.3f}  
                 """.format(step, reward))
+                if (reward > self.RecordScore):
+                    self.RecordScore = reward
+                    sPath = './save/PPO/'+self.data['envName']+str(self.RecordScore)+'.pth'
+                    torch.save(self.agent.state_dict())
                 episodeReward = []
                 torch.save(self.agent.state_dict(), self.sPath)
