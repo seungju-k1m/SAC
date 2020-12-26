@@ -1,25 +1,25 @@
 {
     "sSize": [1, 120],
     "aSize":2,
-    "envName":"./Env/Linux/easyEnv16",
-    "time_scale":10,
-    "RecordScore":2000,
+    "envName":"./Env/Linux/Lotte32",
+    "time_scale":3,
+    "RecordScore":200,
   
     "env":{
-      "LSTMMode":0,
+      "LSTMMode":1,
       "ImgMode":false,
       "Resolution_LidarAngle":3,
-      "Number_Agent": 48,
-      "Number_MaxCollision":1,
-      "MaxStep": 9999,
+      "Number_Agent": 96,
+      "Number_MaxCollision":1e6,
+      "MaxStep": 801,
       "Penallty_Maginitude_AngularVelocity":0,
       "RecommendedYawRate":0.7,
       "Velocity":4,
       "YawRate":1,
       "Penalty_OverAngularVelocity":0,
       "Reward_ReachingDestination":0.1,
-      "Reward_ArrivingDestination":50,
-      "Reward_ArrivingStartPoint":50,
+      "Reward_ArrivingDestination":5,
+      "Reward_ArrivingStartPoint":5,
       "Penalty_OverMaxStep":0,
       "Penalty_Time":0,
       "Penalty_Collision_Wall":-0.2,
@@ -51,14 +51,14 @@
         },
         "module02":{
           "netCat":"View",
-          "shape":[-1, 48, 150]
+          "shape":[-1, 96, 150]
         },
         "module03":{
           "netCat":"LSTMNET",
           "iSize":150,
           "nLayer":1,
           "hiddenSize":256,
-          "Number_Agent":48,
+          "Number_Agent":96,
           "FlattenMode":true,
           "device":"cuda:0"
         },
@@ -92,14 +92,14 @@
         },
         "module02":{
           "netCat":"View",
-          "shape":[-1, 48, 150]
+          "shape":[-1, 96, 150]
         },
         "module03":{
           "netCat":"LSTMNET",
           "iSize":150,
           "nLayer":1,
           "hiddenSize":256,
-          "Number_Agent":48,
+          "Number_Agent":96,
           "FlattenMode":true,
           "device":"cuda:0"
         },
@@ -149,11 +149,11 @@
     
   
     "sPath": "./save/PPO/",
-    "writeTMode":false,
+    "writeTMode":true,
     "tPath": "./tensorboard/PPO/",
-    "lPath":"./save/PPO/easyEnv16_20201225-22-27-28.pth",
+    "lPath":"None",
     "device": "cuda:0",
     "gpuOverload":false,
-    "inferMode": true,
+    "inferMode": false,
     "renderMode": true
   }
