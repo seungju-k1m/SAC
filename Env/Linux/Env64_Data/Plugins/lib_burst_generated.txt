@@ -94,7 +94,6 @@ Library: lib_burst_generated
 --compilation-defines=PACKAGE_PHYSICS
 --compilation-defines=PACKAGE_PHYSICS2D
 --compilation-defines=PACKAGE_ANIMATION
---debug=Full
 --output=/Users/seungju/Documents/Unity_Project/Tutorials/Temp/StagingArea/Data/Plugins/lib_burst_generated
 --root-assembly=/Users/seungju/Documents/Unity_Project/Tutorials/Temp/StagingArea/Data/Managed/Unity.ProBuilder.dll
 --root-assembly=/Users/seungju/Documents/Unity_Project/Tutorials/Temp/StagingArea/Data/Managed/Unity.Barracuda.dll
@@ -266,7 +265,6 @@ Library: lib_burst_generated
 --compilation-defines=PACKAGE_PHYSICS
 --compilation-defines=PACKAGE_PHYSICS2D
 --compilation-defines=PACKAGE_ANIMATION
---debug=Full
 --output=/Users/seungju/Documents/Unity_Project/Tutorials/Temp/StagingArea/Data/Plugins/lib_burst_generated
 --root-assembly=/Users/seungju/Documents/Unity_Project/Tutorials/Temp/StagingArea/Data/Managed/Unity.ProBuilder.dll
 --root-assembly=/Users/seungju/Documents/Unity_Project/Tutorials/Temp/StagingArea/Data/Managed/Unity.Barracuda.dll
