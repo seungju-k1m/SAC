@@ -1,29 +1,29 @@
 {
     "sSize": [1, 120],
     "aSize":2,
-    "envName":"./Env/Linux/easyEnv16",
+    "envName":"./Env/Linux/Env64",
     "time_scale":3,
-    "RecordScore":2000,
+    "RecordScore":200,
   
     "env":{
-      "LSTMMode":0,
+      "LSTMMode":1,
       "ImgMode":false,
       "Resolution_LidarAngle":3,
-      "Number_Agent": 48,
-      "Number_MaxCollision":1,
-      "MaxStep": 1e6,
+      "Number_Agent": 192,
+      "Number_MaxCollision":1e6,
+      "MaxStep": 801,
       "Penallty_Maginitude_AngularVelocity":0,
       "RecommendedYawRate":0.7,
       "Velocity":4,
       "YawRate":1,
       "Penalty_OverAngularVelocity":0,
-      "Reward_ReachingDestination":0.5,
-      "Reward_ArrivingDestination":10,
-      "Reward_ArrivingStartPoint":10,
+      "Reward_ReachingDestination":0.1,
+      "Reward_ArrivingDestination":5,
+      "Reward_ArrivingStartPoint":5,
       "Penalty_OverMaxStep":0,
       "Penalty_Time":0,
-      "Penalty_Collision_Wall":-1,
-      "Penalty_Collision_Agent":-3,
+      "Penalty_Collision_Wall":-0.05,
+      "Penalty_Collision_Agent":-2,
       "Penalty_Collision_DynamicOBS":-2,
       "Number_MaxArrivingReward":1e6,
       "IntervalStep":5,
@@ -37,7 +37,7 @@
           "netCat":"CNN1D",
           "iSize":1,
           "nLayer":3,
-          "nUnit":[8, 16, 4],
+          "nUnit":[4, 8, 16],
           "fSize":[5, 3, 3, -1],
           "padding":[0, 0, 0],
           "stride":[3, 2, 2],
@@ -51,16 +51,16 @@
         },
         "module02":{
           "netCat":"View",
-          "shape":[-1, 48, 42]
+          "shape":[-1, 192, 150]
         },
         "module03":{
           "netCat":"LSTMNET",
-          "iSize":42,
+          "iSize":150,
           "nLayer":1,
           "hiddenSize":256,
-          "Number_Agent":48,
+          "Number_Agent":192,
           "FlattenMode":true,
-          "device":"cuda:0"
+          "device":"cuda:1"
         },
         "module04":{
             "netCat":"MLP",
@@ -78,7 +78,7 @@
           "netCat":"CNN1D",
           "iSize":1,
           "nLayer":3,
-          "nUnit":[8, 16, 4],
+          "nUnit":[4, 8, 16],
           "fSize":[5, 3, 3, -1],
           "padding":[0, 0, 0],
           "stride":[3, 2, 2],
@@ -92,16 +92,16 @@
         },
         "module02":{
           "netCat":"View",
-          "shape":[-1, 48, 42]
+          "shape":[-1, 192, 150]
         },
         "module03":{
           "netCat":"LSTMNET",
-          "iSize":42,
+          "iSize":150,
           "nLayer":1,
           "hiddenSize":256,
-          "Number_Agent":48,
+          "Number_Agent":192,
           "FlattenMode":true,
-          "device":"cuda:0"
+          "device":"cuda:1"
         },
         "module04":{
             "netCat":"MLP",
@@ -124,9 +124,9 @@
     "div":1,
     "epoch":4,
     "updateOldP":1,
-    "initLogStd":-2,
-    "finLogStd":-2,
-    "annealingStep":1e7,
+    "initLogStd":-1.1,
+    "finLogStd":-1.5,
+    "annealingStep":1e6,
     "K1":160,
     "K2":10,
   
@@ -149,11 +149,11 @@
     
   
     "sPath": "./save/PPO/",
-    "writeTMode":false,
+    "writeTMode":true,
     "tPath": "./tensorboard/PPO/",
-    "lPath":"./save/PPO/test9.pth",
-    "device": "cuda:0",
+    "lPath":"None",
+    "device": "cuda:1",
     "gpuOverload":false,
-    "inferMode": true,
+    "inferMode": false,
     "renderMode": true
   }

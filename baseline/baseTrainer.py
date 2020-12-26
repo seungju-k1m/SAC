@@ -186,7 +186,8 @@ class ONPolicy:
         name = self.data['envName']
         self.env = UnityEnvironment(
             name, worker_id=id_, 
-            side_channels=[setChannel, engineChannel])
+            side_channels=[setChannel, engineChannel],
+            no_graphics=True)
         self.env.reset()
         self.behaviorNames = list(self.env.behavior_specs._dict.keys())[0]
 
