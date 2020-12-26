@@ -339,7 +339,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             stateT = nStateT
             step += 1
             
-            if step % 3000 == 0:
+            if step % 6000 == 0:
                 episodeReward = np.array(Rewards)
                 reward = episodeReward.mean()
                 SuccessRate = TotalSucess/TotalTrial
@@ -350,7 +350,6 @@ class PPOOnPolicyTrainer(ONPolicy):
                 print(TotalTrial.sum())
                 print(TotalSucess.sum())
                 episodeReward = []
-                torch.save(self.agent.state_dict(), self.sPath)
 
     def run(self):
         episodeReward = []
