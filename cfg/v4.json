@@ -26,7 +26,7 @@
       "Penalty_Collision_Wall":-0.2,
       "Penalty_Collision_Agent":-1,
       "Penalty_Collision_DynamicOBS":-1,
-      "Number_MaxArrivingReward":1,
+      "Number_MaxArrivingReward":1e6,
       "IntervalStep":20,
       "LidarMeasurementDistance":10
     },
