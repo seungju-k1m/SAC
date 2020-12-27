@@ -92,7 +92,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.K2 = self.data['K2']
         self.RecordScore = self.data['RecordScore']
 
-        self.pid = PidPolicy(self.parm)
+        self.pid = PidPolicy(self.data)
         self._reset_num = 0
         self._saved_num = 0
         self.dx = []
@@ -142,12 +142,12 @@ class PPOOnPolicyTrainer(ONPolicy):
             actions = self.getAction(state)
             i = 0
             for rs, ob in zip(rstate, obs):
-                dx = rs[0, 0].item()
-                dy = rs[0, 1].item()
-                yaw = -rs[0, 2].item()
+                dx = rs[0].item()
+                dy = rs[1].item()
+                yaw = -rs[4].item()
                 distToGoal = np.sqrt(np.power(dx, 2) + np.power(dy, 2))
-                obs_dist = ob * self.parm['lidar_roi_dist']
-                if np.min(obs_dist) > self.parm['r_safe'] or np.min(obs_dist) > distToGoal:
+                obs_dist = ob * self.data['lidar_roi_dist']
+                if np.min(obs_dist) > self.data['r_safe'] or np.min(obs_dist) > distToGoal:
                     # print("--- pid mode ---")
                     uv_pid, uw_pid = self.pid.pid_policy(dx, dy, yaw)
                     action = np.array([uv_pid, -uw_pid])
@@ -363,7 +363,7 @@ class PPOOnPolicyTrainer(ONPolicy):
 
             Rewards += reward
             nStateT = self.ppState(obs)
-            nAction = self.getAction(nStateT)
+            nAction = self.getActionHybridPolicy(nStateT)
             for i, d in enumerate(done):
                 if d:
                     episodeReward.append(Rewards[i])

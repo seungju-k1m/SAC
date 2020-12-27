@@ -2,6 +2,7 @@
     "sSize": [1, 120],
     "aSize":2,
     "envName":"./Env/Linux/sameEnv16",
+    
   
     "env":{
       "LSTMMode":1,
