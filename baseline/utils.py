@@ -124,3 +124,35 @@ class jsonParser:
     
     def loadOptParser(self):
         return self.jsonFile.get('optim')
+
+
+class PidPolicy:
+    def __init__(self, parm):
+        self.parm = parm
+
+    def pid_policy(self, dx, dy, yaw):
+        """
+        PID policy in safe situation
+        """
+        self.dx = dx
+        self.dy = dy
+        self.yaw = yaw
+
+        e_s, e_yaw = self.calculate_e()
+        uv_pid = self.parm['Kp_lin'] * e_s
+        uw_pid = self.parm['Kp_ang'] * e_yaw
+
+        uv_pid = np.clip(uv_pid, self.parm['uv_min'], self.parm['uv_max'])
+        uw_pid = np.clip(uw_pid, self.parm['uw_min'], self.parm['uw_max'])
+
+        return uv_pid, uw_pid
+
+    def calculate_e(self):
+        """
+        Calculate longitudinal and lateral error for PID policy
+        """
+        e_s = np.sqrt(np.power(self.dx, 2) + np.power(self.dy, 2)) * np.cos(np.arctan2(self.dy,self.dx) - self.yaw)
+        yaw_ref = np.arctan2(self.dy, self.dx)
+        e_yaw_ = yaw_ref - self.yaw
+        e_yaw = np.arctan2(np.sin(e_yaw_), np.cos(e_yaw_))
+        return e_s, e_yaw

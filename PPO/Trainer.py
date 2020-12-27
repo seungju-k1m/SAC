@@ -3,7 +3,7 @@ import datetime
 import numpy as np
 from baseline.baseTrainer import ONPolicy
 from PPO.Agent import ppoAgent
-from baseline.utils import getOptim
+from baseline.utils import getOptim, PidPolicy
 from collections import deque
 from PPO.wrapper import preprocessBatch, preprocessState
 
@@ -92,6 +92,15 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.K2 = self.data['K2']
         self.RecordScore = self.data['RecordScore']
 
+        self.pid = PidPolicy(self.parm)
+        self._reset_num = 0
+        self._saved_num = 0
+        self.dx = []
+        self.dy = []
+        self.yaw = []
+        self.uv = []
+        self.uw = []
+
         if self.writeTMode:
             self.writeTrainInfo()
     
@@ -124,6 +133,32 @@ class PPOOnPolicyTrainer(ONPolicy):
                     self.oldAgent.actorForward(state)
             action = action.cpu().numpy()
         return action
+    
+    def getActionHybridPolicy(self, state):
+
+        with torch.no_grad():
+            rstate = state[0]
+            obs = state[1].cpu().numpy()
+            actions = self.getAction(state)
+            i = 0
+            for rs, ob in zip(rstate, obs):
+                dx = rs[0, 0].item()
+                dy = rs[0, 1].item()
+                yaw = -rs[0, 2].item()
+                distToGoal = np.sqrt(np.power(dx, 2) + np.power(dy, 2))
+                obs_dist = ob * self.parm['lidar_roi_dist']
+                if np.min(obs_dist) > self.parm['r_safe'] or np.min(obs_dist) > distToGoal:
+                    # print("--- pid mode ---")
+                    uv_pid, uw_pid = self.pid.pid_policy(dx, dy, yaw)
+                    action = np.array([uv_pid, -uw_pid])
+                    actions[i] = action
+                i += 1
+
+        return actions
+
+    def safety_policy(self, state):
+        state[0, 6:] = state[0, 6:] / self.parm['p_scale']
+        return state
 
     def step(self, step, epoch):
         self.agent.critic.clippingNorm(1000)
@@ -314,7 +349,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         
         obs = self.getObs(init=True)
         stateT = self.ppState(obs)
-        action = self.getAction(stateT)
+        action = self.getActionHybridPolicy(stateT)
         TotalTrial = np.zeros(self.nAgent)
         TotalSucess = np.zeros(self.nAgent)
         step = 0
