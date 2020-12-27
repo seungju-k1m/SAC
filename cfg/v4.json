@@ -1,68 +1,50 @@
 {
     "sSize": [1, 120],
     "aSize":2,
-    "envName":"./Env/Linux/Lotte16",
-    "time_scale":3,
-    "RecordScore":2000,
+    "envName":"./Env/Linux/Lotte32",
+    "time_scale":1,
+    "RecordScore":200,
+    "no_graphics":false,
   
     "env":{
       "LSTMMode":0,
       "ImgMode":false,
       "Resolution_LidarAngle":3,
-      "Number_Agent": 48,
-      "Number_MaxCollision":100,
-      "MaxStep": 1e6,
+      "Number_Agent": 96,
+      "Number_MaxCollision":1e6,
+      "MaxStep": 9999,
       "Penallty_Maginitude_AngularVelocity":0,
       "RecommendedYawRate":0.7,
       "Velocity":4,
       "YawRate":1,
       "Penalty_OverAngularVelocity":0,
-      "Reward_ReachingDestination":0.5,
-      "Reward_ArrivingDestination":10,
-      "Reward_ArrivingStartPoint":10,
+      "Reward_ReachingDestination":0.1,
+      "Reward_ArrivingDestination":5,
+      "Reward_ArrivingStartPoint":5,
       "Penalty_OverMaxStep":0,
       "Penalty_Time":0,
-      "Penalty_Collision_Wall":-1,
-      "Penalty_Collision_Agent":-3,
-      "Penalty_Collision_DynamicOBS":-2,
+      "Penalty_Collision_Wall":-0.2,
+      "Penalty_Collision_Agent":-1,
+      "Penalty_Collision_DynamicOBS":-1,
       "Number_MaxArrivingReward":1e6,
-      "IntervalStep":5,
+      "IntervalStep":20,
       "LidarMeasurementDistance":10
     },
     
-    "LSTMNum":3,
+    "LSTMNum":0,
     "agent": {
       "actor":{
-        "module00":{
-          "netCat":"CNN1D",
-          "iSize":1,
-          "nLayer":3,
-          "nUnit":[4, 8, 16],
-          "fSize":[5, 3, 3, -1],
-          "padding":[0, 0, 0],
-          "stride":[3, 2, 2],
-          "act":["relu", "relu", "relu"],
-          "linear":true,
-          "input":[1]
-        },
         "module01":{
-          "netCat":"Cat",
+          "netCat":"LSTMNET",
+          "iSize":126,
+          "nLayer":1,
+          "hiddenSize":256,
+          "Number_Agent":96,
+          "FlattenMode":true,
+          "device":"cuda:0",
           "input":[0]
         },
         "module02":{
-          "netCat":"View",
-          "shape":[-1, 48, 150]
-        },
-        "module03":{
-          "netCat":"LSTMNET",
-          "iSize":150,
-          "nLayer":1,
-          "hiddenSize":256,
-          "Number_Agent":48,
-          "FlattenMode":true,
-          "device":"cuda:0"
-        },
-        "module04":{
             "netCat":"MLP",
             "iSize":256,
             "nLayer":3,
@@ -74,46 +56,28 @@
       },
   
       "critic":{
-        "module00":{
-          "netCat":"CNN1D",
-          "iSize":1,
-          "nLayer":3,
-          "nUnit":[4, 8, 16],
-          "fSize":[5, 3, 3, -1],
-          "padding":[0, 0, 0],
-          "stride":[3, 2, 2],
-          "act":["relu", "relu", "relu"],
-          "linear":true,
-          "input":[1]
-        },
         "module01":{
-          "netCat":"Cat",
-          "input":[0]
-        },
-        "module02":{
-          "netCat":"View",
-          "shape":[-1, 48, 150]
-        },
-        "module03":{
-          "netCat":"LSTMNET",
-          "iSize":150,
-          "nLayer":1,
-          "hiddenSize":256,
-          "Number_Agent":48,
-          "FlattenMode":true,
-          "device":"cuda:0"
-        },
-        "module04":{
-            "netCat":"MLP",
-            "iSize":256,
-            "nLayer":3,
-            "fSize":[256, 256, 1],
-            "act":["relu", "relu", "linear"],
-            "BN":false,
-            "output":true
-        }
+            "netCat":"LSTMNET",
+            "iSize":126,
+            "nLayer":1,
+            "hiddenSize":256,
+            "Number_Agent":96,
+            "FlattenMode":true,
+            "device":"cuda:0",
+            "input":[0]
+          },
+          "module02":{
+              "netCat":"MLP",
+              "iSize":256,
+              "nLayer":3,
+              "fSize":[256, 256, 1],
+              "act":["relu", "relu", "linear"],
+              "BN":false,
+              "output":true
+          }
       }
     },
+  
   
     "gamma": 0.99,
     "lambda":0.95,
@@ -124,9 +88,9 @@
     "div":1,
     "epoch":4,
     "updateOldP":1,
-    "initLogStd":-2,
-    "finLogStd":-2,
-    "annealingStep":1e7,
+    "initLogStd":-1.1,
+    "finLogStd":-1.5,
+    "annealingStep":1e6,
     "K1":160,
     "K2":10,
   
@@ -151,7 +115,7 @@
     "sPath": "./save/PPO/",
     "writeTMode":false,
     "tPath": "./tensorboard/PPO/",
-    "lPath":"./save/PPO/test11Lotte.pth",
+    "lPath":"./save/PPO/200Lotte.pth",
     "device": "cuda:0",
     "gpuOverload":false,
     "inferMode": true,

@@ -126,7 +126,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         return action
 
     def step(self, step, epoch):
-        # self.agent.critic.clippingNorm(500)
+        self.agent.critic.clippingNorm(1000)
         self.cOptim.step()
         self.agent.actor.clippingNorm(5)
         self.aOptim.step()
