@@ -11,7 +11,7 @@
       "ImgMode":false,
       "Resolution_LidarAngle":3,
       "Number_Agent": 96,
-      "Number_MaxCollision":1e6,
+      "Number_MaxCollision":1,
       "MaxStep": 9999,
       "Penallty_Maginitude_AngularVelocity":0,
       "RecommendedYawRate":0.7,

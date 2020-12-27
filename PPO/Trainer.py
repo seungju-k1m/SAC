@@ -322,8 +322,9 @@ class PPOOnPolicyTrainer(ONPolicy):
             self.checkStep(action)
             obs, reward, done = self.getObs()
             for k, r in enumerate(reward):
-                if r > 8:
+                if r > 3:
                     TotalSucess[k] += 1
+                    TotalTrial[k] += 1
 
             Rewards += reward
             nStateT = self.ppState(obs)
@@ -342,7 +343,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             if step % 3000 == 0:
                 episodeReward = np.array(Rewards)
                 reward = episodeReward.mean()
-                SuccessRate = TotalSucess/TotalTrial
+                SuccessRate = TotalSucess.sum()/TotalTrial.sum()
                 SuccessRate = SuccessRate.mean()
                 print("""
                 Step : {:5d} // Reward : {:.3f}  // SuccessRate: {:.3f}

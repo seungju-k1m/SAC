@@ -2,16 +2,17 @@
     "sSize": [1, 120],
     "aSize":2,
     "envName":"./Env/Linux/Env64",
-    "time_scale":3,
+    "time_scale":1,
     "RecordScore":200,
+    "no_graphics":false,
   
     "env":{
-      "LSTMMode":1,
+      "LSTMMode":0,
       "ImgMode":false,
       "Resolution_LidarAngle":3,
       "Number_Agent": 192,
-      "Number_MaxCollision":1e6,
-      "MaxStep": 801,
+      "Number_MaxCollision":20,
+      "MaxStep": 9999,
       "Penallty_Maginitude_AngularVelocity":0,
       "RecommendedYawRate":0.7,
       "Velocity":4,
@@ -37,7 +38,7 @@
           "netCat":"CNN1D",
           "iSize":1,
           "nLayer":3,
-          "nUnit":[4, 8, 16],
+          "nUnit":[8, 16, 4],
           "fSize":[5, 3, 3, -1],
           "padding":[0, 0, 0],
           "stride":[3, 2, 2],
@@ -51,16 +52,16 @@
         },
         "module02":{
           "netCat":"View",
-          "shape":[-1, 192, 150]
+          "shape":[-1, 192, 42]
         },
         "module03":{
           "netCat":"LSTMNET",
-          "iSize":150,
+          "iSize":42,
           "nLayer":1,
           "hiddenSize":256,
           "Number_Agent":192,
           "FlattenMode":true,
-          "device":"cuda:1"
+          "device":"cuda:0"
         },
         "module04":{
             "netCat":"MLP",
@@ -78,7 +79,7 @@
           "netCat":"CNN1D",
           "iSize":1,
           "nLayer":3,
-          "nUnit":[4, 8, 16],
+          "nUnit":[8, 16, 4],
           "fSize":[5, 3, 3, -1],
           "padding":[0, 0, 0],
           "stride":[3, 2, 2],
@@ -92,16 +93,16 @@
         },
         "module02":{
           "netCat":"View",
-          "shape":[-1, 192, 150]
+          "shape":[-1, 192, 42]
         },
         "module03":{
           "netCat":"LSTMNET",
-          "iSize":150,
+          "iSize":42,
           "nLayer":1,
           "hiddenSize":256,
           "Number_Agent":192,
           "FlattenMode":true,
-          "device":"cuda:1"
+          "device":"cuda:0"
         },
         "module04":{
             "netCat":"MLP",
@@ -149,11 +150,11 @@
     
   
     "sPath": "./save/PPO/",
-    "writeTMode":true,
+    "writeTMode":false,
     "tPath": "./tensorboard/PPO/",
-    "lPath":"None",
-    "device": "cuda:1",
+    "lPath":"./save/PPO/test8.pth",
+    "device": "cuda:0",
     "gpuOverload":false,
-    "inferMode": false,
+    "inferMode": true,
     "renderMode": true
   }
