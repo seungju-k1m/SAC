@@ -349,7 +349,8 @@ class PPOOnPolicyTrainer(ONPolicy):
         
         obs = self.getObs(init=True)
         stateT = self.ppState(obs)
-        action = self.getActionHybridPolicy(stateT)
+        # action = self.getActionHybridPolicy(stateT)
+        action = self.getAction(stateT)
         TotalTrial = np.zeros(self.nAgent)
         TotalSucess = np.zeros(self.nAgent)
         step = 0
@@ -363,7 +364,8 @@ class PPOOnPolicyTrainer(ONPolicy):
 
             Rewards += reward
             nStateT = self.ppState(obs)
-            nAction = self.getActionHybridPolicy(nStateT)
+            # nAction = self.getActionHybridPolicy(nStateT)
+            nAction = self.getAction(nStateT)
             for i, d in enumerate(done):
                 if d:
                     episodeReward.append(Rewards[i])
