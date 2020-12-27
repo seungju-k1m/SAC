@@ -1,7 +1,7 @@
 {
     "sSize": [1, 120],
     "aSize":2,
-    "envName":"./Env/Linux/Env64",
+    "envName":"./Env/Linux/Env16",
     "time_scale":1,
     "RecordScore":200,
     "no_graphics":false,
@@ -10,7 +10,7 @@
       "LSTMMode":0,
       "ImgMode":false,
       "Resolution_LidarAngle":3,
-      "Number_Agent": 192,
+      "Number_Agent": 48,
       "Number_MaxCollision":20,
       "MaxStep": 9999,
       "Penallty_Maginitude_AngularVelocity":0,
@@ -52,14 +52,14 @@
         },
         "module02":{
           "netCat":"View",
-          "shape":[-1, 192, 42]
+          "shape":[-1, 48, 42]
         },
         "module03":{
           "netCat":"LSTMNET",
           "iSize":42,
           "nLayer":1,
           "hiddenSize":256,
-          "Number_Agent":192,
+          "Number_Agent":48,
           "FlattenMode":true,
           "device":"cuda:0"
         },
@@ -93,14 +93,14 @@
         },
         "module02":{
           "netCat":"View",
-          "shape":[-1, 192, 42]
+          "shape":[-1, 48, 42]
         },
         "module03":{
           "netCat":"LSTMNET",
           "iSize":42,
           "nLayer":1,
           "hiddenSize":256,
-          "Number_Agent":192,
+          "Number_Agent":48,
           "FlattenMode":true,
           "device":"cuda:0"
         },
