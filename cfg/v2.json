@@ -4,7 +4,7 @@
   "envName":"./Env/Linux/Lotte08",
   "time_scale":3,
   "RecordScore":200,
-  "no_graphics":true,
+  "no_graphics":false,
 
   "env":{
     "LSTMMode":1,
@@ -152,7 +152,7 @@
   "sPath": "./save/PPO/",
   "writeTMode":true,
   "tPath": "./tensorboard/PPO/",
-  "lPath":"None",
+  "lPath":"./save/PPO/Lotte08_20201227-16-08-30.pth",
   "device": "cuda:0",
   "gpuOverload":false,
   "inferMode": false,
