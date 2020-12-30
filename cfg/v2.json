@@ -1,5 +1,5 @@
 {
-  "sSize": [1, 120],
+  "sSize": [1, 360],
   "aSize":2,
   "envName":"./Env/Linux/Lotte08",
   "time_scale":3,
@@ -9,7 +9,7 @@
   "env":{
     "LSTMMode":1,
     "ImgMode":false,
-    "Resolution_LidarAngle":3,
+    "Resolution_LidarAngle":1,
     "Number_Agent": 64,
     "Number_MaxCollision":1,
     "MaxStep": 801,
@@ -18,13 +18,13 @@
     "Velocity":4,
     "YawRate":1,
     "Penalty_OverAngularVelocity":0,
-    "Reward_ReachingDestination":0.01,
-    "Reward_ArrivingDestination":5,
-    "Reward_ArrivingStartPoint":5,
+    "Reward_ReachingDestination":0.03,
+    "Reward_ArrivingDestination":15,
+    "Reward_ArrivingStartPoint":15,
     "Penalty_OverMaxStep":0,
     "Penalty_Time":0,
-    "Penalty_Collision_Wall":-0.05,
-    "Penalty_Collision_Agent":-0.3,
+    "Penalty_Collision_Wall":-0.4,
+    "Penalty_Collision_Agent":-1,
     "Penalty_Collision_DynamicOBS":-0.3,
     "Number_MaxArrivingReward":1e6,
     "IntervalStep":20,
@@ -52,11 +52,11 @@
       },
       "module02":{
         "netCat":"View",
-        "shape":[-1, 64, 42]
+        "shape":[-1, 64, 122]
       },
       "module03":{
         "netCat":"LSTMNET",
-        "iSize":42,
+        "iSize":122,
         "nLayer":1,
         "hiddenSize":256,
         "Number_Agent":64,
@@ -93,11 +93,11 @@
       },
       "module02":{
         "netCat":"View",
-        "shape":[-1, 64, 42]
+        "shape":[-1, 64, 122]
       },
       "module03":{
         "netCat":"LSTMNET",
-        "iSize":42,
+        "iSize":122,
         "nLayer":1,
         "hiddenSize":256,
         "Number_Agent":64,
@@ -123,10 +123,10 @@
   "epsilon":0.2,
   "updateStep":160,
   "div":1,
-  "epoch":4,
-  "updateOldP":1,
+  "epoch":1,
+  "updateOldP":4,
   "initLogStd":-1.1,
-  "finLogStd":-1.1,
+  "finLogStd":-1.5,
   "annealingStep":1e6,
   "K1":160,
   "K2":10,
@@ -134,15 +134,15 @@
   "optim": {
     "actor": {
       "name": "adam",
-      "lr": 3e-4,
-      "decay": 1e-6,
+      "lr": 3e-5,
+      "decay": 1e-5,
       "eps": 1e-7,
       "clipping": false
     },
     "critic": {
       "name": "adam",
-      "lr": 3e-4,
-      "decay": 1e-6,
+      "lr": 3e-5,
+      "decay": 1e-5,
       "clipping": false,
       "eps": 1e-7
     }
@@ -152,7 +152,7 @@
   "sPath": "./save/PPO/",
   "writeTMode":true,
   "tPath": "./tensorboard/PPO/",
-  "lPath":"./save/PPO/Lotte08_20201227-16-08-30.pth",
+  "lPath":"None",
   "device": "cuda:0",
   "gpuOverload":false,
   "inferMode": false,

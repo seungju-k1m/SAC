@@ -1,7 +1,7 @@
 {
     "sSize": [1, 120],
     "aSize":2,
-    "envName":"./Env/Linux/LotteZoomIn",
+    "envName":"./Env/Linux/Lotte08",
     "time_scale":1,
     "RecordScore":200,
     "no_graphics":false,
@@ -10,22 +10,22 @@
       "LSTMMode":0,
       "ImgMode":false,
       "Resolution_LidarAngle":3,
-      "Number_Agent": 8,
-      "Number_MaxCollision":1e6,
-      "MaxStep": 801,
+      "Number_Agent": 64,
+      "Number_MaxCollision":20,
+      "MaxStep": 9999,
       "Penallty_Maginitude_AngularVelocity":0,
       "RecommendedYawRate":0.7,
       "Velocity":4,
       "YawRate":1,
       "Penalty_OverAngularVelocity":0,
-      "Reward_ReachingDestination":0.01,
+      "Reward_ReachingDestination":0.05,
       "Reward_ArrivingDestination":5,
       "Reward_ArrivingStartPoint":5,
       "Penalty_OverMaxStep":0,
       "Penalty_Time":0,
-      "Penalty_Collision_Wall":-0.05,
-      "Penalty_Collision_Agent":-0.3,
-      "Penalty_Collision_DynamicOBS":-0.3,
+      "Penalty_Collision_Wall":-0.15,
+      "Penalty_Collision_Agent":-0.6,
+      "Penalty_Collision_DynamicOBS":-0.6,
       "Number_MaxArrivingReward":1e6,
       "IntervalStep":20,
       "LidarMeasurementDistance":10
@@ -52,14 +52,14 @@
         },
         "module02":{
           "netCat":"View",
-          "shape":[-1, 8, 42]
+          "shape":[-1, 64, 42]
         },
         "module03":{
           "netCat":"LSTMNET",
           "iSize":42,
           "nLayer":1,
           "hiddenSize":256,
-          "Number_Agent":8,
+          "Number_Agent":64,
           "FlattenMode":true,
           "device":"cuda:0"
         },
@@ -93,14 +93,14 @@
         },
         "module02":{
           "netCat":"View",
-          "shape":[-1, 8, 42]
+          "shape":[-1, 64, 42]
         },
         "module03":{
           "netCat":"LSTMNET",
           "iSize":42,
           "nLayer":1,
           "hiddenSize":256,
-          "Number_Agent":8,
+          "Number_Agent":64,
           "FlattenMode":true,
           "device":"cuda:0"
         },
@@ -123,10 +123,10 @@
     "epsilon":0.2,
     "updateStep":160,
     "div":1,
-    "epoch":4,
+    "epoch":20,
     "updateOldP":1,
-    "initLogStd":-1.1,
-    "finLogStd":-1.1,
+    "initLogStd":-2,
+    "finLogStd":-2,
     "annealingStep":1e6,
     "K1":160,
     "K2":10,
@@ -134,14 +134,14 @@
     "optim": {
       "actor": {
         "name": "adam",
-        "lr": 3e-4,
+        "lr": 3e-5,
         "decay": 1e-6,
         "eps": 1e-7,
         "clipping": false
       },
       "critic": {
         "name": "adam",
-        "lr": 3e-4,
+        "lr": 3e-5,
         "decay": 1e-6,
         "clipping": false,
         "eps": 1e-7
@@ -152,7 +152,7 @@
     "sPath": "./save/PPO/",
     "writeTMode":false,
     "tPath": "./tensorboard/PPO/",
-    "lPath":"./save/PPO/Lotte08_20201227-17-10-39.pth",
+    "lPath":"./save/PPO/Lotte08_20201228-14-48-53.pth",
     "device": "cuda:0",
     "gpuOverload":false,
     "inferMode": true,

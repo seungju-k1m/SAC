@@ -1,3 +1,7 @@
 *.pth
 *.ipynb
 tensorboard/
+Env/Linux/LotteZoomInReal.x86_64
+Env/Linux/LotteZoomInReal02.x86_64
+Env/Linux/LotteZoomInReal_Data
+Env/Linux/LotteZoomInReal02_Data

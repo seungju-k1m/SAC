@@ -97,7 +97,7 @@
     "optim": {
       "actor": {
         "name": "adam",
-        "lr": 3e-4,
+        "lr": 3e-4,                                                                                                                                                                                                   
         "decay": 1e-6,
         "eps": 1e-7,
         "clipping": false
@@ -115,7 +115,7 @@
     "sPath": "./save/PPO/",
     "writeTMode":false,
     "tPath": "./tensorboard/PPO/",
-    "lPath":"./save/PPO/220Lotte.pth",
+    "lPath":"./save/PPO/Lotte08_20201228-14-48-53.pth",
     "device": "cuda:0",
     "gpuOverload":false,
     "inferMode": true,
