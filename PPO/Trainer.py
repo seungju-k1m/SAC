@@ -58,17 +58,6 @@ class PPOOnPolicyTrainer(ONPolicy):
             LSTMNum=self.LSTMNum)
         self.oldAgent.to(self.device)
         self.oldAgent.update(self.agent)
-
-        self.copyAgent = ppoAgent(
-            self.aData,
-            coeff=self.entropyCoeff,
-            epsilon=self.epsilon,
-            initLogStd=initLogStd,
-            finLogStd=finLogStd,
-            annealingStep=annealingStep,
-            LSTMNum=self.LSTMNum)
-        self.copyAgent.to(self.device)
-        self.copyAgent.update(self.agent)
         
         pureEnv = self.data['envName'].split('/')
         name = pureEnv[-1]
@@ -87,9 +76,6 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.Number_Episode = 0
         self.Number_Sucess = 0
 
-        self.ReplayMemory_Trajectory = deque(maxlen=1000000)
-        self.K1 = self.data['K1']
-        self.K2 = self.data['K2']
         self.RecordScore = self.data['RecordScore']
 
         self.pid = PidPolicy(self.data)
@@ -192,7 +178,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         lossC.backward()
 
         minusObj, entropy = self.agent.calAObj(
-            self.copyAgent,
+            self.oldAgent,
             state,
             action,
             gT.detach() - critic.detach()
@@ -234,7 +220,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             GTDE = []
             discounted_Td = 0
             if dA[-1]:
-                discounted_r = cA[-1]
+                discounted_r = 0
             else:
                 discounted_r = ncA[-1]
 
@@ -412,11 +398,10 @@ class PPOOnPolicyTrainer(ONPolicy):
                             (stateT, action.copy(),
                              reward*self.rScaling, nStateT,
                              done.copy()))
-                    self.ReplayMemory_Trajectory.append(
-                            stateT)
                     u = uu
             for i, d in enumerate(done):
                 if d:
+
                     episodeReward.append(Rewards[i])
                     Rewards[i] = 0
 
@@ -425,27 +410,13 @@ class PPOOnPolicyTrainer(ONPolicy):
             step += 1
             self.agent.decayingLogStd(step)
             self.oldAgent.decayingLogStd(step)
-            self.copyAgent.decayingLogStd(step)
-            if (step) % (self.updateStep) == 0 and self.inferMode == False:
+            if (step) % (self.updateStep) == 0 and self.inferMode is False:
                 k += 1
                 self.train(step, self.epoch)
-                self.clear()
+                self.replayMemory[0].clear()
                 if k % self.updateOldP == 0:
                     self.oldAgent.update(self.agent)
-                    self.copyAgent.update(self.agent)
                     k = 0
-            if True in done:
-                self.agent.actor.zeroCellState()
-                self.agent.critic.zeroCellState()
-                self.oldAgent.actor.zeroCellState()
-                self.oldAgent.critic.zeroCellState()
-                self.copyAgent.actor.zeroCellState()
-                self.copyAgent.critic.zeroCellState()
-                self.ReplayMemory_Trajectory.clear()
-                self.env.step()
-            
-            if step % 2000 == 0:
-                self.LogSucessRate(step)
             
             if step % 2000 == 0:
                 episodeReward = np.array(episodeReward)
@@ -459,6 +430,6 @@ class PPOOnPolicyTrainer(ONPolicy):
                 if (reward > self.RecordScore):
                     self.RecordScore = reward
                     sPath = './save/PPO/'+self.data['envName']+str(self.RecordScore)+'.pth'
-                    torch.save(self.agent.state_dict())
+                    torch.save(self.agent.state_dict(), sPath)
                 episodeReward = []
                 torch.save(self.agent.state_dict(), self.sPath)

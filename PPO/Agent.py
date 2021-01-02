@@ -158,12 +158,11 @@ class AgentV1(nn.Module):
     
     def buildOptim(self):
         listLayer = []
-        j = 4
+
         for i, name in enumerate(self.moduleNames):
             layer = self.model[name]
             if type(layer) is not None:
-                if i == j:
-                    listLayer.append(layer)
+                listLayer.append(layer)
         print(listLayer)
         return tuple(listLayer)
     
