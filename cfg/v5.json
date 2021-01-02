@@ -10,7 +10,7 @@
     "LSTMMode":0,
     "ImgMode":false,
     "Resolution_LidarAngle":1,
-    "Number_Agent": 64,
+    "Number_Agent": 72,
     "Number_MaxCollision":1,
     "MaxStep": 1600,
     "Penallty_Maginitude_AngularVelocity":0,
