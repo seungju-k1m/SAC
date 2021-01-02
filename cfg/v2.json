@@ -1,8 +1,8 @@
 {
   "sSize": [1, 360],
   "aSize":2,
-  "envName":"./Env/Linux/Lotte08",
-  "time_scale":3,
+  "envName":"./Env/Linux/LotteZoomIn",
+  "time_scale":1,
   "RecordScore":200,
   "no_graphics":false,
 
@@ -10,9 +10,9 @@
     "LSTMMode":1,
     "ImgMode":false,
     "Resolution_LidarAngle":1,
-    "Number_Agent": 64,
+    "Number_Agent": 6,
     "Number_MaxCollision":1,
-    "MaxStep": 801,
+    "MaxStep": 1601,
     "Penallty_Maginitude_AngularVelocity":0,
     "RecommendedYawRate":0.7,
     "Velocity":4,
@@ -52,14 +52,14 @@
       },
       "module02":{
         "netCat":"View",
-        "shape":[-1, 64, 122]
+        "shape":[-1, 6, 122]
       },
       "module03":{
         "netCat":"LSTMNET",
         "iSize":122,
         "nLayer":1,
         "hiddenSize":256,
-        "Number_Agent":64,
+        "Number_Agent":6,
         "FlattenMode":true,
         "device":"cuda:0"
       },
@@ -93,14 +93,14 @@
       },
       "module02":{
         "netCat":"View",
-        "shape":[-1, 64, 122]
+        "shape":[-1, 6, 122]
       },
       "module03":{
         "netCat":"LSTMNET",
         "iSize":122,
         "nLayer":1,
         "hiddenSize":256,
-        "Number_Agent":64,
+        "Number_Agent":6,
         "FlattenMode":true,
         "device":"cuda:0"
       },
@@ -125,8 +125,8 @@
   "div":1,
   "epoch":1,
   "updateOldP":4,
-  "initLogStd":-1.1,
-  "finLogStd":-1.5,
+  "initLogStd":-2,
+  "finLogStd":-2,
   "annealingStep":1e6,
   "K1":160,
   "K2":10,
@@ -150,9 +150,9 @@
   
 
   "sPath": "./save/PPO/",
-  "writeTMode":true,
+  "writeTMode":false,
   "tPath": "./tensorboard/PPO/",
-  "lPath":"None",
+  "lPath":"./save/PPO/Lotte08_20210102-00-48-53.pth",
   "device": "cuda:0",
   "gpuOverload":false,
   "inferMode": false,

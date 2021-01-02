@@ -158,10 +158,13 @@ class AgentV1(nn.Module):
     
     def buildOptim(self):
         listLayer = []
-        for name in self.moduleNames:
+        j = 4
+        for i, name in enumerate(self.moduleNames):
             layer = self.model[name]
             if type(layer) is not None:
-                listLayer.append(layer)
+                if i == j:
+                    listLayer.append(layer)
+        print(listLayer)
         return tuple(listLayer)
     
     def updateParameter(self, Agent, tau):
