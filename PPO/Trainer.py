@@ -9,8 +9,24 @@ from PPO.wrapper import preprocessBatch, preprocessState
 
 
 class PPOOnPolicyTrainer(ONPolicy):
+    """
+    PPOOnPolicyTrainer는 알고리즘 전체 과정을 제어하는 역할을 수행한다.
+
+    그 역할을 다음과 같이 정렬하면
+
+        1. set the hyper parameter from configuration file.
+        2. sample from the environment
+        3. training
+        4. logging
+        5. saving
+        6. uploading
+        7. evaluating
+    """
 
     def __init__(self, cfg):
+        """
+        configuration에 따라 actor, critic, optimizer등을 반환한다.
+        """
         super(PPOOnPolicyTrainer, self).__init__(cfg)
         
         if 'fixedTemp' in self.keyList:
@@ -110,9 +126,15 @@ class PPOOnPolicyTrainer(ONPolicy):
 
     @preprocessState
     def ppState(self, obs):
+        """
+        wrapper를 통해 전처리 된 observation을 tuple형태로 반환한다.
+        """
         return tuple([obs])
 
     def genOptim(self):
+        """
+        optimizer를 configuration에 맞춰 반환한다.
+        """
         optimKeyList = list(self.optimData.keys())
         for optimKey in optimKeyList:
             if optimKey == 'actor':
@@ -121,10 +143,16 @@ class PPOOnPolicyTrainer(ONPolicy):
                 self.cOptim = getOptim(self.optimData[optimKey], self.agent.critic.buildOptim())
                 
     def zeroGrad(self):
+        """
+        gradient를 zero로 반환
+        """
         self.aOptim.zero_grad()
         self.cOptim.zero_grad() 
 
     def getAction(self, state, dMode=False):
+        """
+        action을 구한다. 이때 action을 생성하는 것은, oldAgent이다.
+        """
         with torch.no_grad():
             if dMode:
                 pass
@@ -161,6 +189,9 @@ class PPOOnPolicyTrainer(ONPolicy):
         return state
 
     def step(self, step, epoch):
+        """
+        gradient를 바탕으로 weight를 update.
+        """
         self.agent.critic.clippingNorm(1000)
         self.cOptim.step()
         self.agent.actor.clippingNorm(5)
@@ -184,6 +215,12 @@ class PPOOnPolicyTrainer(ONPolicy):
         step,
         epoch
     ):
+        """
+        전처리 된 입력값들을 바탕으로 objective function을 구하고
+        
+        이 후, backpropagation이 이루어진다
+        """
+
         lossC = self.agent.calQLoss(
             state,
             gT.detach(),
@@ -212,6 +249,7 @@ class PPOOnPolicyTrainer(ONPolicy):
 
     def getReturn(self, reward, critic, nCritic, done, Step_Agent=False):
         """
+        GAE, rewards-to-go를 구하기 위한 method이다.
         input:
             reward:[np.array]  
                 shape:[step, nAgent]
@@ -301,12 +339,6 @@ class PPOOnPolicyTrainer(ONPolicy):
         obsState = np.array(obs)
         reward = rewards
         
-        # for i, state in zip(agentId, obs):
-        #     state = np.array(state)
-        #     obsState[i] = state
-        #     done[i] = False
-        #     reward[i] = rewards[k]
-        #     k += 1
         k = 0
         for i, state in zip(tAgentId, tobs):
             state = np.array(state)
@@ -314,7 +346,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             done[i] = True
             self.Number_Episode += 1
             reward[i] = treward[k]
-            if (reward[i]>1):
+            if (reward[i] > 1):
                 self.Number_Sucess += 1
             k += 1
         if init:
@@ -336,13 +368,10 @@ class PPOOnPolicyTrainer(ONPolicy):
             self.env.set_actions(self.behaviorNames, action)
         self.env.step()
     
-    def LogSucessRate(self, step):
-        if self.writeTMode:
-            self.writer.add_scalar("Sucess Rate", (self.Number_Sucess/self.Number_Episode), step)
-            self.Number_Episode = 0
-            self.Number_Sucess = 0
-    
     def evaluate(self):
+        """
+        evaluate를 통해 해당 알고리즘의 성능을 구한다.
+        """
         episodeReward = []
         k = 0
         Rewards = np.zeros(self.nAgent)
@@ -399,12 +428,21 @@ class PPOOnPolicyTrainer(ONPolicy):
         action = self.getAction(stateT)
         step = 0
         while 1:
+            # action을 환경으로 보내준다.
             self.checkStep(action)
+
+            # 이를 바탕으로 환경으로부터 observation을 구한다.
             obs, reward, done = self.getObs()
+
+            # reward logging
             Rewards += reward
+
+            # observation을 전처리한후, 다음 행동을 구한다.
             nStateT = self.ppState(obs)
             nAction = self.getAction(nStateT)
             u = 0
+
+            # inferencemode가 아니라면, replaymemory에  s, a, r ,s_, d를 추가한다.
             if self.inferMode is False:
                 for z in range(self.div):
                     uu = u + int(self.nAgent/self.div)
@@ -420,12 +458,17 @@ class PPOOnPolicyTrainer(ONPolicy):
                     episodeReward.append(Rewards[i])
                     Rewards[i] = 0
 
+            # 초기화를 통해 sampling을 계속 진행시킨다.
             action = nAction
             stateT = nStateT
             step += 1
+
+            # decayiong Log STd
             self.agent.decayingLogStd(step)
             self.oldAgent.decayingLogStd(step)
             self.copyAgent.decayingLogStd(step)
+
+            # training
             if (step) % (self.updateStep) == 0 and self.inferMode == False:
                 k += 1
                 self.train(step, self.epoch)
@@ -434,6 +477,8 @@ class PPOOnPolicyTrainer(ONPolicy):
                     self.oldAgent.update(self.agent)
                     self.copyAgent.update(self.agent)
                     k = 0
+            
+            # episode가 끝나면 lstm의 cell state를 초기화 한다.
             if True in done:
                 self.agent.actor.zeroCellState()
                 self.agent.critic.zeroCellState()
@@ -442,11 +487,10 @@ class PPOOnPolicyTrainer(ONPolicy):
                 self.copyAgent.actor.zeroCellState()
                 self.copyAgent.critic.zeroCellState()
                 self.ReplayMemory_Trajectory.clear()
+                # 환경 역시 초기화를 위해 한 스텝 이동한다.
                 self.env.step()
             
-            if step % 2000 == 0:
-                self.LogSucessRate(step)
-            
+            # 2000 step마다 결과를 print, save한다.
             if step % 2000 == 0:
                 episodeReward = np.array(episodeReward)
                 reward = episodeReward.mean()
@@ -459,6 +503,6 @@ class PPOOnPolicyTrainer(ONPolicy):
                 if (reward > self.RecordScore):
                     self.RecordScore = reward
                     sPath = './save/PPO/'+self.data['envName']+str(self.RecordScore)+'.pth'
-                    torch.save(self.agent.state_dict())
+                    torch.save(self.agent.state_dict(), sPath)
                 episodeReward = []
                 torch.save(self.agent.state_dict(), self.sPath)

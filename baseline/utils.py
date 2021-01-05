@@ -6,13 +6,25 @@ import torchvision.transforms.functional as TF
 from baseline.baseNetwork import MLP, CNET, LSTMNET, CNN1D, Res1D, Cat, Unsequeeze, View
 
 
+"""
+utils의 경우, 다양한 상황에서 사용되는 기타 method이다.
+"""
+
+
 def showLidarImg(img):
+    """
+    args:
+        img:np.array, [C, H, W]
+    """
     img = torch.tensor(img).float()
     img = TF.to_pil_image(img)
     img.show()
     
 
 def calGlobalNorm(agent):
+    """
+    agent의 graident의 norm/sum을 구한다.
+    """
     totalNorm = 0
     for p in agent.parameters():
         norm = p.grad.data.norm(2)
@@ -28,6 +40,21 @@ def clipByGN(agent, maxNorm):
 
 
 def getOptim(optimData, agent, floatV=False):
+    
+    """
+    configuration에서 정의된 optimizer setting을 지원한다.
+
+    args:
+        optimData:
+            name:[str] optimizer의 이름
+            lr:[float] learning rate
+            decay:[float] decaying(L2 Regularzation)
+            eps:[float], 
+            clipping:deprecated
+        agent:[tuple, torch.nn], 해당 optimizer가 담당하는 weight들 Agentv1.buildOptim을 통해서 호출
+        floatV:[bool], weight이 torch.nn이 아니라 tensor인 경우
+            
+    """
     
     keyList = list(optimData.keys())
 
@@ -89,7 +116,13 @@ def getActivation(actName, **kwargs):
     return act
 
 
-def constructNet(netData, iSize=1, WH=-1):
+def constructNet(netData):
+    """
+    configuration에 따라 해당 network를 반환
+    
+    args:
+        netData:dict
+    """
     netCat = netData['netCat']
     if netCat == 'Input':
         return None
@@ -106,6 +139,10 @@ def constructNet(netData, iSize=1, WH=-1):
 
 
 class jsonParser:
+    """
+    configuration은 *.json 형태이기 때문에
+    이를 dictionary형태로 변환시켜주는 class
+    """
 
     def __init__(self, fileName):
         with open(fileName) as jsonFile:
@@ -127,6 +164,9 @@ class jsonParser:
 
 
 class PidPolicy:
+    """
+    PID Policy를 위한 class
+    """
     def __init__(self, parm):
         self.parm = parm
 

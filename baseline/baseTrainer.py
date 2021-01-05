@@ -8,6 +8,13 @@ from mlagents_envs.side_channel.environment_parameters_channel import Environmen
 from torch.utils.tensorboard import SummaryWriter
 
 
+"""
+Reinforcement Learning내의 알고리즘은 크게 OFFPolicy, OnPolicy로 나눌 수 있다.
+알고리즘들은 공통점을 가지고 있기 때문에, 
+코드의 생산성을 위해서 공통된 생성자 선언과 method선언을 baseTrainer module에서 해준다.
+"""
+
+
 class OFFPolicy:
 
     def __init__(self, fName):
@@ -64,22 +71,37 @@ class OFFPolicy:
         self.behaviorNames = list(self.env.behavior_specs._dict.keys())[0]
 
     def reset(self):
+        """
+        deprecated.
+        """
         pass
 
     def genOptim(self):
+        """
+        optimizer를 생성하는 method이다.
+        """
         pass
 
     def initializePolicy(self):
+        """
+        deprecated
+        """
         self.reset()
         self.genOptim()
 
     def ppState(self, obs):
+        """
+        observation을 전처리하여 state로 변환한다.
+        """
         pass
 
     def appendMemory(self, data):
         pass
 
     def getAction(self, state):
+        """
+        state를 입력으로 받고 action을 출력한다.
+        """
         pass
 
     def targetNetUpdate(self):
