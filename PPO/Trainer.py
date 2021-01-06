@@ -372,6 +372,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         """
         evaluate를 통해 해당 알고리즘의 성능을 구한다.
         """
+        self.loadUnityEnv()
         episodeReward = []
         k = 0
         Rewards = np.zeros(self.nAgent)
@@ -419,6 +420,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 episodeReward = []
 
     def run(self):
+        self.loadUnityEnv()
         episodeReward = []
         k = 0
         Rewards = np.zeros(self.nAgent)

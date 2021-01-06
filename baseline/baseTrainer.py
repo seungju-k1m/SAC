@@ -55,6 +55,7 @@ class OFFPolicy:
         self.sSize = self.data['sSize']
         self.nAgent = self.data['env']['Number_Agent']
 
+    def LoadUnityEnv(self):
         # 5. Unity Setting
         id_ = np.random.randint(10, 100, 1)[0]
         engineChannel = EngineConfigurationChannel()
@@ -197,7 +198,8 @@ class ONPolicy:
         self.sSize = self.data['sSize']
         self.nAgent = self.data['env']['Number_Agent']
 
-        # 5. Unity Setting
+    def loadUnityEnv(self):
+        # Unity Setting
         id_ = np.random.randint(10, 100, 1)[0]
         engineChannel = EngineConfigurationChannel()
         engineChannel.set_configuration_parameters(time_scale=self.data['time_scale'])
@@ -288,4 +290,5 @@ class ONPolicy:
                 self.writeDict(data, k)
 
         print(self.info)
-        self.writer.add_text('info', self.info, 0)  
+        if self.writeTMode:
+            self.writer.add_text('info', self.info, 0)  

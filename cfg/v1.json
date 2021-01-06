@@ -1,8 +1,7 @@
 {
     "sSize": [1, 120],
     "aSize":2,
-    "envName":"./Env/Linux/sameEnv16",
-    
+    "envName":"./Env/MacOs/Env01",
   
     "env":{
       "LSTMMode":1,
@@ -40,7 +39,7 @@
           "hiddenSize":256,
           "Number_Agent":48,
           "FlattenMode":true,
-          "device":"cuda:0",
+          "device":"cpu",
           "input":[0]
         },
         "module02":{
@@ -62,7 +61,7 @@
             "hiddenSize":256,
             "Number_Agent":48,
             "FlattenMode":true,
-            "device":"cuda:0",
+            "device":"cpu",
             "input":[0]
           },
           "module02":{
@@ -76,21 +75,6 @@
           }
       }
     },
-  
-    "gamma": 0.998,
-    "lambda":0.95,
-    "rScaling": 1,
-    "entropyCoeff":0,
-    "epsilon":0.2,
-    "updateStep":160,
-    "div":1,
-    "epoch":4,
-    "updateOldP":1,
-    "initLogStd":-0.7,
-    "finLogStd":-1.6,
-    "annealingStep":1e7,
-    "K1":160,
-    "K2":10,
   
     "optim": {
       "actor": {
@@ -113,9 +97,9 @@
     "sPath": "./save/PPO/",
     "writeTMode":false,
     "tPath": "./tensorboard/PPO/",
-    "lPath":"./save/PPO/sameEnv16_20201221-20-30-24.pth",
+    "lPath":"None",
   
-    "device": "cuda:0",
+    "device": "cpu",
     "gpuOverload":false,
     "inferMode": true,
     "renderMode": true
