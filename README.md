@@ -32,8 +32,8 @@ json format으로 구성된 configuration을 통해 프로그램을 설정할 �
 
 _훈련시_
 
-    python main.py -p [파일의 위치] -t
+    python main.py -p [./cfg/*.json] -t
 
 _테스트시_
 
-    python main.py -p [파일의 위치] -te
+    python main.py -p [./cfg/*json] -te
