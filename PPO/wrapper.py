@@ -147,13 +147,13 @@ def CNN1DLTMPBatch(self, step, epoch, f):
 
 def preprocessBatch(f):
     def wrapper(self, step, epoch):
-        MLPBatch(self, step, epoch, f)
-        # CNN1DLTMPBatch(self, step, epoch, f)
+        # MLPBatch(self, step, epoch, f)
+        CNN1DLTMPBatch(self, step, epoch, f)
     return wrapper
 
 
 def preprocessState(f):
     def wrapper(self, obs):
-        return f(self, MLPState(self, obs))
-        # return CNN1DLTMPState(self, obs)
+        # return f(self, MLPState(self, obs))
+        return CNN1DLTMPState(self, obs)
     return wrapper

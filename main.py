@@ -43,7 +43,6 @@ if __name__ == '__main__':
     test = args.test
     train = args.train
     trainer = PPOOnPolicyTrainer(path)
-    trainer.run()
     if train:
         print("""
         ------------------------------------------------

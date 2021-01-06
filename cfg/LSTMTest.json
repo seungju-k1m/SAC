@@ -1,7 +1,7 @@
 {
   "sSize": [1, 360],
   "aSize":2,
-  "envName":"./Env/Linux/LotteZoomIn",
+  "envName":"./Env/Linux/LotteZoomInReal",
   "time_scale":1,
   "RecordScore":200,
   "no_graphics":false,
@@ -152,7 +152,7 @@
   "sPath": "./save/PPO/",
   "writeTMode":false,
   "tPath": "./tensorboard/PPO/",
-  "lPath":"./save/PPO/Lotte08_20210104-15-06-11____.pth",
+  "lPath":"./save/PPO/Lotte08_20210104-15-06-11_1.pth",
   "device": "cuda:0",
   "gpuOverload":false,
   "inferMode": false,

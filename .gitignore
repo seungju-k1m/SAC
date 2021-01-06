@@ -7,3 +7,4 @@ Env/Linux/LotteZoomInReal_Data
 Env/Linux/LotteZoomInReal02_Data
 .vscode
 mujoco-py
+__pycache__
