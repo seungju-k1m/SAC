@@ -13,6 +13,13 @@
 _conda 환경에서 설치하는 것을 추천합니다.!!_
 
 ## Installing
+    git init
+
+    git remote add origin <this repo>
+
+    git fetch --all
+
+    git checkout main
 
     pip install -r requirements.txt
 
@@ -22,13 +29,24 @@ json format으로 구성된 configuration을 통해 프로그램을 설정할 �
 
     ./cfg/*.json
 
-자세한 설명은 여기를 참조하세요.
+프로그램을 효과적으로 사용할 수 있도록 manual을 확인해보세요.
 
-[How to Configure the Program][configureLink]
+0. [How to Download Unity Environment][downloadLink]
 
-[configureLink]:[./docs/configuration.md]
+1. [How to Configure the Program][configureLink]
 
-프로그램 설정 파일이 준비되었으면 훈련과 테스트는 다음 코드를 통해서 실행할 수 있습니다.
+2. [How to manipulate the Environment][manipulateLink]
+
+3. [How to run Following Algorithm][followingLink]
+
+[downloadLink]:[./docs/00_download.md]
+[followingLink]:[./docs/03_following.md]
+[manipulateLink]:[./docs/02_manipulatorEnv.md]
+[configureLink]:[./docs/01_configuration.md]
+
+_실물 및 데모 환경_ 에 대한 설정 파일이 준비되었으면
+
+훈련과 테스트는 다음 코드를 통해서 실행할 수 있습니다.
 
 _훈련시_
 
