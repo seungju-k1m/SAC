@@ -1,1 +1,1 @@
-# SAC
+# Lotte Mobile Robot Navigation Project
