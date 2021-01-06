@@ -9,7 +9,7 @@ parser.add_argument(
     '--path',
     '-p',
     type=str,
-    default='./cfg/LSTMTrain.json',
+    default='./cfg/MLPTrain.json',
     help="The relative file path of cfg.json")
 parser.add_argument(
     '--train',
@@ -43,6 +43,7 @@ if __name__ == '__main__':
     test = args.test
     train = args.train
     trainer = PPOOnPolicyTrainer(path)
+    trainer.run()
     if train:
         print("""
         ------------------------------------------------
