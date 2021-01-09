@@ -1,0 +1,106 @@
+{
+  "env_name":"MobileRobot_SingleBrain_following",
+  "unity_env": "True",
+  "state_size": [1,78],
+  "multi_agent": 3,
+  "action_size": 3,
+  "action_size_rl" : 2,
+  "seed": 0,
+
+  "agent": {
+            "network": "MLP",
+            "actor": {
+              "num_of_layers": 2,
+              "filter_size": [256,256],
+              "activation": "relu",
+              "actor_activation": "linear",
+              "batch_norm": "None"
+            },
+            "critic": {
+              "num_of_layers": 3,
+              "activation": "relu",
+              "batch_norm": "None",
+              "filter_size": [256,256,1]
+            },
+            "temperature": {
+              "num_of_layers": 1,
+              "activation": "sigmoid",
+              "batch_norm": "None",
+              "filter_size": [1],
+              "temperature_scaling": 1,
+              "temperature_offset":0
+            }
+
+  },
+
+  "tau": 0.005,
+  "conservative_mode": "True",
+  "run_step": 300000,
+  "start_step": 10000,
+  "show_episode": 5,
+
+  "r_safe" : 4,
+  "r_risk" : 0.5,
+  "p_scale" : 1.25,
+  "v_max" : 1,
+  "lidar_roi_dist" : 5,
+
+  "Kp_ang" : 0.5,
+  "Kp_lin" : 0.8,
+
+  "uv_max" : 2,
+  "uv_min" : -2,
+  "uw_max" : 1,
+  "uw_min" : -1,
+
+  "following_safety_dist" : 2,
+
+  "input_normalization": "None",
+
+  "fixed_temperature": "True",
+  "temperature_parameter": 0.2,
+
+  "size_replay_memory": 1e6,
+  "batch_size": 256,
+  "learning_freq": 1,
+  "reward_scaling": 1,
+  "gradient_steps": 1,
+
+  "optimizer": {
+    "actor": {
+      "name": "adam",
+      "learning_rate": 3e-4,
+      "weight_decay": 0,
+      "eps": 1e-7,
+      "clipping": "None"
+    },
+    "critic": {
+      "name": "adam",
+      "learning_rate": 3e-4,
+      "weight_decay": 0,
+      "clipping": "None",
+      "eps": 1e-7
+    },
+    "temperature": {
+      "name": "adam",
+      "learning_rate": 1e-2,
+      "weight_decay": 0,
+      "clipping": "None",
+      "eps": 1e-7
+    }
+  },
+  "discount_factor": 0.99,
+
+  "save_path": "./utils/save/",
+  "tensorboard_path": "./tensorboard/04_SAC/",
+  "load_model": "True",
+  "load_path":"./utils/save/mobileTest01_20201219-23-41-15.pth",
+
+  "is_gpu": "True",
+  "gpu_name": "cuda:0",
+  "Exploration_method": "e_greedy",
+  "epsilon_min": 0.1,
+  "epsilon": 1.0,
+  "inference_mode": "True",
+  "render_mode": "True"
+}

@@ -150,7 +150,7 @@
   
 
   "sPath": "./save/PPO/",
-  "writeTMode":true,
+  "writeTMode":false,
   "tPath": "./tensorboard/PPO/",
   "lPath":"None",
   "device": "cuda:0",

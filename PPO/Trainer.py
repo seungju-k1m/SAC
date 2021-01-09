@@ -418,7 +418,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 print(TotalTrial.sum())
                 print(TotalSucess.sum())
                 episodeReward = []
-
+                
     def run(self):
         self.loadUnityEnv()
         episodeReward = []
@@ -452,6 +452,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                             (stateT, action.copy(),
                              reward*self.rScaling, nStateT,
                              done.copy()))
+                    
                     self.ReplayMemory_Trajectory.append(
                             stateT)
                     u = uu

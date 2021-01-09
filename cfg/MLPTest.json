@@ -1,7 +1,7 @@
 {
   "sSize": [1, 120],
   "aSize":2,
-  "envName":"./Env/MacOs/DemoEnv01",
+  "envName":"./Env/Linux/DemoEnv01",
 
   "env":{
     "LSTMMode":1,

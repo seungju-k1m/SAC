@@ -38,7 +38,7 @@ def MLPBatch(self, step, epoch, f) -> None:
 def MLPState(self, obs) -> list:
     rState = torch.tensor(obs[:, :6]).float().to(self.device)
     lidarPt = torch.tensor(obs[:, 8:8+self.sSize[-1]]).float().to(self.device)
-    state = torch.cat((rState, lidarPt), dim=1)
+    state = tuple([torch.cat((rState, lidarPt), dim=1)])
     return state
 
 
@@ -154,6 +154,6 @@ def preprocessBatch(f):
 
 def preprocessState(f):
     def wrapper(self, obs):
-        # return f(self, MLPState(self, obs))
+        # return self, MLPState(self, obs)
         return CNN1DLTMPState(self, obs)
     return wrapper
