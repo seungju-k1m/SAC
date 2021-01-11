@@ -29,6 +29,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         """
         super(PPOOnPolicyTrainer, self).__init__(cfg)
         
+        torch.set_default_dtype(torch.float64)
         if 'fixedTemp' in self.keyList:
             self.fixedTemp = self.data['fixedTemp'] == "True"
             if self.fixedTemp:
@@ -46,8 +47,8 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.entropyCoeff = self.data['entropyCoeff']
         self.epsilon = self.data['epsilon']
         self.labmda = self.data['lambda']
-        initLogStd = torch.tensor(self.data['initLogStd']).to(self.device).float()
-        finLogStd = torch.tensor(self.data['finLogStd']).to(self.device).float()
+        initLogStd = torch.tensor(self.data['initLogStd']).to(self.device)
+        finLogStd = torch.tensor(self.data['finLogStd']).to(self.device)
         annealingStep = self.data['annealingStep']
         self.LSTMNum = self.data['LSTMNum']
         self.agent = ppoAgent(
@@ -328,7 +329,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             done:[np.array]
                 shape[:nAgent, 1]
         """
-        obsState = np.zeros((self.nAgent, 1447), dtype=np.float32)
+        obsState = np.zeros((self.nAgent, 1447), dtype=np.float64)
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
         rewards, treward = decisionStep.reward, terminalStep.reward
@@ -336,8 +337,8 @@ class PPOOnPolicyTrainer(ONPolicy):
         
         done = [False for i in range(self.nAgent)]
         reward = [0 for i in range(self.nAgent)]
-        obsState = np.array(obs)
-        reward = rewards
+        obsState = np.array(obs, dtype=np.float64)
+        reward = np.array(rewards, dtype=np.float64)
         
         k = 0
         for i, state in zip(tAgentId, tobs):
