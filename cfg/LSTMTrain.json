@@ -19,6 +19,7 @@
     "YawRate":1,
     "Penalty_OverAngularVelocity":0,
     "Reward_ReachingDestination":0.15,
+    "Penalty_Distance":0,
     "Reward_ArrivingDestination":8,
     "Reward_ArrivingStartPoint":8,
     "Penalty_OverMaxStep":0,
