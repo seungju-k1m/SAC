@@ -344,7 +344,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         k = 0
         enumerate
         for m, r in enumerate(reward):
-            if (r > 1):
+            if (r > 3):
                 doneReward[m] = True
 
         for i, state in zip(tAgentId, tobs):

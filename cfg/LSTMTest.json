@@ -1,18 +1,18 @@
 {
   "sSize": [1, 360],
   "aSize":2,
-  "envName":"./Env/Linux/LotteZoomIn",
+  "envName":"./Env/Linux/LotteZoomInReal",
   "time_scale":1,
   "RecordScore":200,
   "no_graphics":false,
 
   "env":{
-    "LSTMMode":1,
+    "LSTMMode":0,
     "ImgMode":false,
     "Resolution_LidarAngle":1,
     "Number_Agent": 6,
-    "Number_MaxCollision":1,
-    "MaxStep": 1601,
+    "Number_MaxCollision":4,
+    "MaxStep": 4001,
     "Penallty_Maginitude_AngularVelocity":0,
     "RecommendedYawRate":0.7,
     "Velocity":4,
