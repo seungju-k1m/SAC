@@ -1,8 +1,8 @@
 {
   "sSize": [1, 360],
   "aSize":2,
-  "envName":"./Env/Linux/LotteZoomInReal",
-  "time_scale":1,
+  "envName":"./Env/Linux/LotteZoomIn",
+  "time_scale":5,
   "RecordScore":200,
   "no_graphics":false,
 
@@ -11,7 +11,7 @@
     "ImgMode":false,
     "Resolution_LidarAngle":1,
     "Number_Agent": 6,
-    "Number_MaxCollision":4,
+    "Number_MaxCollision":20,
     "MaxStep": 4001,
     "Penallty_Maginitude_AngularVelocity":0,
     "RecommendedYawRate":0.7,
@@ -152,7 +152,7 @@
   "sPath": "./save/PPO/",
   "writeTMode":false,
   "tPath": "./tensorboard/PPO/",
-  "lPath":"./save/PPO/Lotte08_20210111-12-28-04_1.pth",
+  "lPath":"./save/PPO/Lotte08_20210104-15-06-11_4.pth",
   "device": "cuda:0",
   "gpuOverload":false,
   "inferMode": false,
