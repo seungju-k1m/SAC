@@ -499,7 +499,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 self.env.step()
 
             # 2000 step마다 결과를 print, save한다.
-            if step % 2000 == 0:
+            if step % 4000 == 0:
                 episodeReward = np.array(episodeReward)
                 reward = episodeReward.mean()
                 if self.writeTMode:
