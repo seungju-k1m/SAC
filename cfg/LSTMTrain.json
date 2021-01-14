@@ -7,11 +7,11 @@
   "no_graphics":false,
 
   "env":{
-    "LSTMMode":1,
+    "LSTMMode":0,
     "ImgMode":false,
     "Resolution_LidarAngle":1,
     "Number_Agent": 64,
-    "Number_MaxCollision":1,
+    "Number_MaxCollision":1e6,
     "MaxStep": 961,
     "Penallty_Maginitude_AngularVelocity":0,
     "RecommendedYawRate":0.7,
@@ -31,7 +31,7 @@
     "Number_MaxArrivingReward":1e6,
     "IntervalStep":5,
     "LidarMeasurementDistance":10,
-    "SwitchDistance":4
+    "SwitchDistance":10
   },
   
   "LSTMNum":3,
