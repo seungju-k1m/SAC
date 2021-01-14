@@ -23,15 +23,15 @@
     "Reward_ArrivingDestination":8,
     "Reward_ArrivingStartPoint":8,
     "Penalty_OverMaxStep":0,
-    "Penalty_Time":0,
-    "Penalty_Stay":-0.03,
+    "Penalty_Time":-0.05,
+    "Penalty_Stay":0,
     "Penalty_Collision_Wall":-0.2,
     "Penalty_Collision_Agent":-0.6,
     "Penalty_Collision_DynamicOBS":-0.3,
     "Number_MaxArrivingReward":1e6,
     "IntervalStep":5,
     "LidarMeasurementDistance":10,
-    "SwitchDistance":4
+    "SwitchDistance":1.2
   },
   
   "LSTMNum":3,
@@ -153,7 +153,7 @@
   
 
   "sPath": "./save/PPO/",
-  "writeTMode":true,
+  "writeTMode":false,
   "tPath": "./tensorboard/PPO/",
   "lPath":"None",
   "device": "cuda:0",

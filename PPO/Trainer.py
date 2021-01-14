@@ -28,7 +28,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         configuration에 따라 actor, critic, optimizer등을 반환한다.
         """
         super(PPOOnPolicyTrainer, self).__init__(cfg)
-        
+
         torch.set_default_dtype(torch.float64)
         if 'fixedTemp' in self.keyList:
             self.fixedTemp = self.data['fixedTemp'] == "True"
@@ -41,7 +41,7 @@ class PPOOnPolicyTrainer(ONPolicy):
 
         if self.device != "cpu":
             self.device = torch.device(self.device)
-            
+
         else:
             self.device = torch.device("cpu")
         self.entropyCoeff = self.data['entropyCoeff']
@@ -86,7 +86,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             LSTMNum=self.LSTMNum)
         self.copyAgent.to(self.device)
         self.copyAgent.update(self.agent)
-        
+
         pureEnv = self.data['envName'].split('/')
         name = pureEnv[-1]
         time = datetime.datetime.now().strftime("%Y%m%d-%H-%M-%S")
@@ -120,7 +120,7 @@ class PPOOnPolicyTrainer(ONPolicy):
 
         if self.writeTMode:
             self.writeTrainInfo()
-    
+
     def clear(self):
         for i in self.replayMemory:
             i.clear()
@@ -142,7 +142,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 self.aOptim = getOptim(self.optimData[optimKey], self.agent.actor.buildOptim())
             if optimKey == 'critic':
                 self.cOptim = getOptim(self.optimData[optimKey], self.agent.critic.buildOptim())
-                
+
     def zeroGrad(self):
         """
         gradient를 zero로 반환
@@ -162,7 +162,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                     self.oldAgent.actorForward(state)
             action = action.cpu().numpy()
         return action
-    
+
     def getActionHybridPolicy(self, state):
 
         with torch.no_grad():
@@ -204,7 +204,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         if self.writeTMode:
             self.writer.add_scalar('Action Gradient Mag', normA, step+epoch)
             self.writer.add_scalar('Critic Gradient Mag', normC, step+epoch)
-        
+
     @preprocessBatch
     def train(
         self, 
@@ -225,7 +225,6 @@ class PPOOnPolicyTrainer(ONPolicy):
         lossC = self.agent.calQLoss(
             state,
             gT.detach(),
-        
         )
         lossC.backward()
 
@@ -248,11 +247,11 @@ class PPOOnPolicyTrainer(ONPolicy):
             entropy = entropy.detach().cpu().numpy()
             self.writer.add_scalar("Entropy", entropy, step+epoch)
 
-    def getReturn(self, reward, critic, nCritic, done, Step_Agent=False):
+    def getReturn(self, reward, critic, nCritic, done, Step_Agent=False, lastMode=False):
         """
         GAE, rewards-to-go를 구하기 위한 method이다.
         input:
-            reward:[np.array]  
+            reward:[np.array]
                 shape:[step, nAgent]
             done:[np.array]
                 shape:[step, nAgent]
@@ -268,29 +267,30 @@ class PPOOnPolicyTrainer(ONPolicy):
             rA = reward[:, i]  # [step] , 100
             dA = done[:, i]  # [step] , 100
             cA = critic[:, i]
-            ncA = nCritic[:, i] 
+            ncA = nCritic[:, i]
             GT = []
             GTDE = []
-            discounted_Td = 0
-            if dA[-1]:
+            if lastMode:
                 discounted_r = cA[-1]
+                discounted_Td = rA[-1] + cA[-1] * (1 - self.gamma)
             else:
+                discounted_Td = 0
                 discounted_r = ncA[-1]
 
             for r, is_terminal, c, nc in zip(
-                    reversed(rA), 
-                    reversed(dA), 
+                    reversed(rA),
+                    reversed(dA),
                     reversed(cA),
                     reversed(ncA)):
-                
+
                 if is_terminal:
-                    td_error = r + self.gamma * c - c
+                    td_error = r - c
+                    discounted_r = r
+                    discounted_Td = 0
                 else:
                     td_error = r + self.gamma * nc - c
-
-                discounted_r = r + self.gamma * discounted_r
+                    discounted_r = r + self.gamma * discounted_r
                 discounted_Td = td_error + self.gamma * self.labmda * discounted_Td
-
                 GT.append(discounted_r)
                 GTDE.append(discounted_Td)
             GT = torch.tensor(GT[::-1]).view((-1, 1)).to(self.device)
@@ -313,7 +313,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             gAE = gAE.permute(1, 0).contiguous()
             gAE = gAE.view((-1, 1))
 
-        return gT, gAE      
+        return gT, gAE
 
     def getObs(self, init=False):
         """
@@ -334,27 +334,33 @@ class PPOOnPolicyTrainer(ONPolicy):
         obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
         rewards, treward = decisionStep.reward, terminalStep.reward
         tAgentId = terminalStep.agent_id
-        
+
         done = [False for i in range(self.nAgent)]
+        doneReward = [False for i in range(self.nAgent)]
         reward = [0 for i in range(self.nAgent)]
         obsState = np.array(obs, dtype=np.float64)
         reward = np.array(rewards, dtype=np.float64)
-        
+
         k = 0
+        enumerate
+        for m, r in enumerate(reward):
+            if (r > 1):
+                doneReward[m] = True
+
         for i, state in zip(tAgentId, tobs):
             state = np.array(state)
             obsState[i] = state
             done[i] = True
             self.Number_Episode += 1
             reward[i] = treward[k]
-            if (reward[i] > 1):
+            if (reward[i] > 2):
                 self.Number_Sucess += 1
             k += 1
         if init:
             return obsState
         else:
-            return(obsState, reward, done)
-    
+            return(obsState, reward, done, doneReward)
+
     def checkStep(self, action):
         """
         this method is for sending messages for unity environment.
@@ -368,7 +374,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         if len(agentId) != 0:
             self.env.set_actions(self.behaviorNames, action)
         self.env.step()
-    
+
     def evaluate(self):
         """
         evaluate를 통해 해당 알고리즘의 성능을 구한다.
@@ -377,7 +383,6 @@ class PPOOnPolicyTrainer(ONPolicy):
         episodeReward = []
         k = 0
         Rewards = np.zeros(self.nAgent)
-        
         obs = self.getObs(init=True)
         stateT = self.ppState(obs)
         # action = self.getActionHybridPolicy(stateT)
@@ -387,7 +392,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         step = 0
         while 1:
             self.checkStep(action)
-            obs, reward, done = self.getObs()
+            obs, reward, done, _ = self.getObs()
             for k, r in enumerate(reward):
                 if r > 3:
                     TotalSucess[k] += 1
@@ -407,7 +412,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             action = nAction
             stateT = nStateT
             step += 1
-            
+
             if step % 3000 == 0:
                 episodeReward = np.array(Rewards)
                 reward = episodeReward.mean()
@@ -419,13 +424,13 @@ class PPOOnPolicyTrainer(ONPolicy):
                 print(TotalTrial.sum())
                 print(TotalSucess.sum())
                 episodeReward = []
-                
+
     def run(self):
         self.loadUnityEnv()
         episodeReward = []
         k = 0
         Rewards = np.zeros(self.nAgent)
-        
+
         obs = self.getObs(init=True)
         stateT = self.ppState(obs)
         action = self.getAction(stateT)
@@ -435,7 +440,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             self.checkStep(action)
 
             # 이를 바탕으로 환경으로부터 observation을 구한다.
-            obs, reward, done = self.getObs()
+            obs, reward, done, doneReward = self.getObs()
 
             # reward logging
             Rewards += reward
@@ -452,8 +457,8 @@ class PPOOnPolicyTrainer(ONPolicy):
                     self.replayMemory[z].append(
                             (stateT, action.copy(),
                              reward*self.rScaling, nStateT,
-                             done.copy()))
-                    
+                             doneReward.copy()))
+
                     self.ReplayMemory_Trajectory.append(
                             stateT)
                     u = uu
@@ -473,7 +478,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             self.copyAgent.decayingLogStd(step)
 
             # training
-            if (step) % (self.updateStep) == 0 and self.inferMode == False:
+            if (step) % (self.updateStep) == 0 and self.inferMode is False:
                 k += 1
                 self.train(step, self.epoch)
                 self.clear()
@@ -481,7 +486,6 @@ class PPOOnPolicyTrainer(ONPolicy):
                     self.oldAgent.update(self.agent)
                     self.copyAgent.update(self.agent)
                     k = 0
-            
             # episode가 끝나면 lstm의 cell state를 초기화 한다.
             if True in done:
                 self.agent.actor.zeroCellState()
@@ -493,7 +497,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 self.ReplayMemory_Trajectory.clear()
                 # 환경 역시 초기화를 위해 한 스텝 이동한다.
                 self.env.step()
-            
+
             # 2000 step마다 결과를 print, save한다.
             if step % 2000 == 0:
                 episodeReward = np.array(episodeReward)
@@ -502,7 +506,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                     self.writer.add_scalar('Reward', reward, step)
 
                 print("""
-                Step : {:5d} // Reward : {:.3f}  
+                Step : {:5d} // Reward : {:.3f}
                 """.format(step, reward))
                 if (reward > self.RecordScore):
                     self.RecordScore = reward

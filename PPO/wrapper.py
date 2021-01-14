@@ -74,6 +74,10 @@ def CNN1DLTMPBatch(self, step, epoch, f):
     else:
         tState = (torch.cat(trstate[:-k1], dim=0), torch.cat(tlidarPt[:-k1], dim=0))
         zeroMode = False
+    if (len(trstate) == (self.data['env']['MaxStep']-1)):
+        lastMode = True
+    else:
+        lastMode = False
     rstate = torch.cat(rstate, dim=0)
     lidarPt = torch.cat(lidarPt, dim=0)
     nrstate, nlidarPt = ns
@@ -116,7 +120,7 @@ def CNN1DLTMPBatch(self, step, epoch, f):
         value = value.view(k1+1, self.nAgent, 1)
         nvalue = value[1:]
         value = value[:-1]
-        gT, gAE = self.getReturn(reward, value, nvalue, done)
+        gT, gAE = self.getReturn(reward, value, nvalue, done, lastMode=lastMode)
         gT = gT.view(k1, self.nAgent)
         gAE = gAE.view(k1, self.nAgent)
 
