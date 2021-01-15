@@ -103,7 +103,7 @@ def CNN1DLTMPBatch(self, step, epoch, f):
     if zeroMode is False:
         with torch.no_grad():
             for tr in tState:
-                tr_cuda = tuple([x.cuda() for x in tr])
+                tr_cuda = tuple([x.to(self.device) for x in tr])
                 self.agent.critic.forward(tr_cuda)
                 self.copyAgent.critic.forward(tr_cuda)
                 self.agent.actor.forward(tr_cuda)
@@ -158,7 +158,7 @@ def CNN1DLTMPBatch(self, step, epoch, f):
         if zeroMode is False:
             with torch.no_grad():
                 for tr in tState:
-                    tr_cuda = tuple([x.cuda() for x in tr])
+                    tr_cuda = tuple([x.to(self.device) for x in tr])
                     self.agent.critic.forward(tr_cuda)
                     self.agent.actor.forward(tr_cuda)
                     del tr_cuda
