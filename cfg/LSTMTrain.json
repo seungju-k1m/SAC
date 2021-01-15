@@ -10,7 +10,7 @@
     "LSTMMode":0,
     "ImgMode":false,
     "Resolution_LidarAngle":1,
-    "Number_Agent":512,
+    "Number_Agent":256,
     "Number_MaxCollision":1e6,
     "MaxStep": 3201,
     "Penallty_Maginitude_AngularVelocity":0,
@@ -55,14 +55,14 @@
       },
       "module02":{
         "netCat":"View",
-        "shape":[-1, 512, 122]
+        "shape":[-1, 256, 122]
       },
       "module03":{
         "netCat":"LSTMNET",
         "iSize":122,
         "nLayer":1,
         "hiddenSize":256,
-        "Number_Agent":512,
+        "Number_Agent":256,
         "FlattenMode":true,
         "device":"cuda:0"
       },
@@ -96,14 +96,14 @@
       },
       "module02":{
         "netCat":"View",
-        "shape":[-1, 512, 122]
+        "shape":[-1, 256, 122]
       },
       "module03":{
         "netCat":"LSTMNET",
         "iSize":122,
         "nLayer":1,
         "hiddenSize":256,
-        "Number_Agent":512,
+        "Number_Agent":256,
         "FlattenMode":true,
         "device":"cuda:0"
       },
