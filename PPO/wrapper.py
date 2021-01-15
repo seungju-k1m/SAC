@@ -93,10 +93,11 @@ def CNN1DLTMPBatch(self, step, epoch, f):
     self.copyAgent.critic.zeroCellState()
 
     if zeroMode is False:
-        self.agent.critic.forward(tState)
-        self.copyAgent.critic.forward(tState)
-        self.agent.actor.forward(tState)
-        self.copyAgent.actor.forward(tState)
+        with torch.no_grad():
+            self.agent.critic.forward(tState)
+            self.copyAgent.critic.forward(tState)
+            self.agent.actor.forward(tState)
+            self.copyAgent.actor.forward(tState)
 
     # 1. calculate the target value for actor and critic
     self.agent.actor.detachCellState()
@@ -139,8 +140,9 @@ def CNN1DLTMPBatch(self, step, epoch, f):
         self.agent.actor.zeroCellState()
         self.agent.critic.zeroCellState()
         if zeroMode is False:
-            self.agent.critic.forward(tState)
-            self.agent.actor.forward(tState)
+            with torch.no_grad():
+                self.agent.critic.forward(tState)
+                self.agent.actor.forward(tState)
         InitActorCellState = self.agent.actor.getCellState()
         InitCriticCellState = self.agent.critic.getCellState()
 

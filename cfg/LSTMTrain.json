@@ -12,7 +12,7 @@
     "Resolution_LidarAngle":1,
     "Number_Agent": 64,
     "Number_MaxCollision":1e6,
-    "MaxStep": 961,
+    "MaxStep": 3201,
     "Penallty_Maginitude_AngularVelocity":0,
     "RecommendedYawRate":0.7,
     "Velocity":4,
