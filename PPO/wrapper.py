@@ -107,6 +107,10 @@ def CNN1DLTMPBatch(self, step, epoch, f):
                 self.copyAgent.critic.forward(tr)
                 self.agent.actor.forward(tr)
                 self.copyAgent.actor.forward(tr)
+            self.agent.actor.detachCellState()
+            self.agent.critic.detachCellState()
+            self.copyAgent.actor.detachCellState()
+            self.copyAgent.critic.detachCellState()
 
     # 1. calculate the target value for actor and critic
     self.agent.actor.detachCellState()
@@ -153,6 +157,8 @@ def CNN1DLTMPBatch(self, step, epoch, f):
                 for tr in tState:
                     self.agent.critic.forward(tr)
                     self.agent.actor.forward(tr)
+                self.agent.critic.detachCellState()
+                self.agent.actor.detachCellState()
         InitActorCellState = self.agent.actor.getCellState()
         InitCriticCellState = self.agent.critic.getCellState()
 
