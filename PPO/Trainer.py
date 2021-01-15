@@ -247,6 +247,8 @@ class PPOOnPolicyTrainer(ONPolicy):
             self.writer.add_scalar('Critic Loss', lossC, step+epoch)
             entropy = entropy.detach().cpu().numpy()
             self.writer.add_scalar("Entropy", entropy, step+epoch)
+        del loss
+        del minusObj
 
     def getReturn(self, reward, critic, nCritic, done, Step_Agent=False):
         """
@@ -454,9 +456,9 @@ class PPOOnPolicyTrainer(ONPolicy):
                                 (stateT, action.copy(),
                                  reward*self.rScaling, nStateT,
                                  done.copy()))
-                        
+                        stateT_cpu = tuple([x.cpu() for x in stateT])
                         self.ReplayMemory_Trajectory.append(
-                                stateT)
+                                stateT_cpu)
                         u = uu
             for i, d in enumerate(done):
                 if d:

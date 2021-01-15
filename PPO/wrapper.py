@@ -103,10 +103,12 @@ def CNN1DLTMPBatch(self, step, epoch, f):
     if zeroMode is False:
         with torch.no_grad():
             for tr in tState:
-                self.agent.critic.forward(tr)
-                self.copyAgent.critic.forward(tr)
-                self.agent.actor.forward(tr)
-                self.copyAgent.actor.forward(tr)
+                tr_cuda = tuple([x.cuda() for x in tr])
+                self.agent.critic.forward(tr_cuda)
+                self.copyAgent.critic.forward(tr_cuda)
+                self.agent.actor.forward(tr_cuda)
+                self.copyAgent.actor.forward(tr_cuda)
+                del tr_cuda
             self.agent.actor.detachCellState()
             self.agent.critic.detachCellState()
             self.copyAgent.actor.detachCellState()
@@ -120,7 +122,7 @@ def CNN1DLTMPBatch(self, step, epoch, f):
     self.agent.critic.detachCellState()
     InitCriticCellState = self.agent.critic.getCellState()
     InitCopyCriticCellState = self.copyAgent.critic.getCellState()
-
+    self.zeroGrad()
     # 2. implemented the training using the truncated BPTT
     for _ in range(epoch):
         self.agent.actor.setCellState(InitActorCellState)
@@ -137,7 +139,7 @@ def CNN1DLTMPBatch(self, step, epoch, f):
         self.agent.critic.setCellState(InitCriticCellState)
         self.copyAgent.actor.setCellState(InitCopyActorCellState)
         self.copyAgent.critic.setCellState(InitCopyCriticCellState)
-        self.zeroGrad()
+        
         for i in range(div):
             _rstate = rstate[i*k2:(i+1)*k2].view(-1, 6)
             _lidarpt = lidarPt[i*k2:(1+i)*k2].view(-1, 1, self.sSize[-1])
@@ -152,15 +154,21 @@ def CNN1DLTMPBatch(self, step, epoch, f):
         self.step(step+i, epoch)
         self.agent.actor.zeroCellState()
         self.agent.critic.zeroCellState()
+        self.zeroGrad()
         if zeroMode is False:
             with torch.no_grad():
                 for tr in tState:
-                    self.agent.critic.forward(tr)
-                    self.agent.actor.forward(tr)
+                    tr_cuda = tuple([x.cuda() for x in tr])
+                    self.agent.critic.forward(tr_cuda)
+                    self.agent.actor.forward(tr_cuda)
+                    del tr_cuda
                 self.agent.critic.detachCellState()
                 self.agent.actor.detachCellState()
         InitActorCellState = self.agent.actor.getCellState()
         InitCriticCellState = self.agent.critic.getCellState()
+    
+    del tState,  InitActorCellState, InitCriticCellState, \
+        InitCopyActorCellState, InitCopyCriticCellState
 
 
 def preprocessBatch(f):
