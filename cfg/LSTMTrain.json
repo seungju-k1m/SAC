@@ -64,7 +64,7 @@
         "hiddenSize":256,
         "Number_Agent":256,
         "FlattenMode":true,
-        "device":"cuda:0"
+        "device":"cuda:1"
       },
       "module04":{
           "netCat":"MLP",
@@ -105,7 +105,7 @@
         "hiddenSize":256,
         "Number_Agent":256,
         "FlattenMode":true,
-        "device":"cuda:0"
+        "device":"cuda:1"
       },
       "module04":{
           "netCat":"MLP",
@@ -156,7 +156,7 @@
   "writeTMode":true,
   "tPath": "./tensorboard/PPO/",
   "lPath":"None",
-  "device": "cuda:0",
+  "device": "cuda:1",
   "gpuOverload":false,
   "inferMode": false,
   "renderMode": true

@@ -446,17 +446,18 @@ class PPOOnPolicyTrainer(ONPolicy):
             u = 0
 
             # inferencemode가 아니라면, replaymemory에  s, a, r ,s_, d를 추가한다.
-            if self.inferMode is False:
-                for z in range(self.div):
-                    uu = u + int(self.nAgent/self.div)
-                    self.replayMemory[z].append(
-                            (stateT, action.copy(),
-                             reward*self.rScaling, nStateT,
-                             done.copy()))
-                    
-                    self.ReplayMemory_Trajectory.append(
-                            stateT)
-                    u = uu
+            with torch.no_grad():
+                if self.inferMode is False:
+                    for z in range(self.div):
+                        uu = u + int(self.nAgent/self.div)
+                        self.replayMemory[z].append(
+                                (stateT, action.copy(),
+                                 reward*self.rScaling, nStateT,
+                                 done.copy()))
+                        
+                        self.ReplayMemory_Trajectory.append(
+                                stateT)
+                        u = uu
             for i, d in enumerate(done):
                 if d:
                     episodeReward.append(Rewards[i])
