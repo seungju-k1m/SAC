@@ -57,7 +57,10 @@ def CNN1DLTMPBatch(self, step, epoch, f):
     div = int(k1/k2)
     rstate, lidarPt, action, reward, done = \
         [], [], [], [], []
-    trstate, tlidarPt = [], []
+    num_list = int(len(self.ReplayMemory_Trajectory)/k1)
+    trstate, tlidarPt = [[] for __ in range(num_list)], [[] for __ in range(num_list)]
+    tState = [[] for _ in range(num_list - 1)]
+
     for data in self.replayMemory[0]:
         s, a, r, ns, d = data
         rstate.append(s[0])
@@ -65,15 +68,24 @@ def CNN1DLTMPBatch(self, step, epoch, f):
         action.append(a)
         reward.append(r)
         done.append(d)
+    z = 0
     for data in self.ReplayMemory_Trajectory:
+        
         ts = data
-        trstate.append(ts[0])
-        tlidarPt.append(ts[1])
+        trstate[int(z/k1)].append(ts[0])
+        tlidarPt[int(z/k1)].append(ts[1])
+        z += 1
+    
     if len(trstate) == k1:
         zeroMode = True
     else:
-        tState = (torch.cat(trstate[:-k1], dim=0), torch.cat(tlidarPt[:-k1], dim=0))
+        for _ in range(num_list - 1):
+            tState[_] = (torch.cat(trstate[_], dim=0), torch.cat(tlidarPt[_], dim=0))
         zeroMode = False
+    if (len(trstate) == (self.data['env']['MaxStep']-1)):
+        lastMode = True
+    else:
+        lastMode = False
     rstate = torch.cat(rstate, dim=0)
     lidarPt = torch.cat(lidarPt, dim=0)
     nrstate, nlidarPt = ns
@@ -94,10 +106,11 @@ def CNN1DLTMPBatch(self, step, epoch, f):
 
     if zeroMode is False:
         with torch.no_grad():
-            self.agent.critic.forward(tState)
-            self.copyAgent.critic.forward(tState)
-            self.agent.actor.forward(tState)
-            self.copyAgent.actor.forward(tState)
+            for tr in tState:
+                self.agent.critic.forward(tr)
+                self.copyAgent.critic.forward(tr)
+                self.agent.actor.forward(tr)
+                self.copyAgent.actor.forward(tr)
 
     # 1. calculate the target value for actor and critic
     self.agent.actor.detachCellState()
@@ -117,7 +130,7 @@ def CNN1DLTMPBatch(self, step, epoch, f):
         value = value.view(k1+1, self.nAgent, 1)
         nvalue = value[1:]
         value = value[:-1]
-        gT, gAE = self.getReturn(reward, value, nvalue, done)
+        gT, gAE = self.getReturn(reward, value, nvalue, done, lastMode=lastMode)
         gT = gT.view(k1, self.nAgent)
         gAE = gAE.view(k1, self.nAgent)
 
@@ -141,8 +154,9 @@ def CNN1DLTMPBatch(self, step, epoch, f):
         self.agent.critic.zeroCellState()
         if zeroMode is False:
             with torch.no_grad():
-                self.agent.critic.forward(tState)
-                self.agent.actor.forward(tState)
+                for tr in tState:
+                    self.agent.critic.forward(tr)
+                    self.agent.actor.forward(tr)
         InitActorCellState = self.agent.actor.getCellState()
         InitCriticCellState = self.agent.critic.getCellState()
 
