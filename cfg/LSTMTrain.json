@@ -1,7 +1,7 @@
 {
   "sSize": [1, 360],
   "aSize":2,
-  "envName":"./Env/Linux/Lotte08",
+  "envName":"./Env/Linux/Lotte32",
   "time_scale":3,
   "RecordScore":2000,
   "no_graphics":false,
@@ -10,7 +10,7 @@
     "LSTMMode":0,
     "ImgMode":false,
     "Resolution_LidarAngle":1,
-    "Number_Agent": 64,
+    "Number_Agent":512,
     "Number_MaxCollision":1e6,
     "MaxStep": 3201,
     "Penallty_Maginitude_AngularVelocity":0,
@@ -18,15 +18,15 @@
     "Velocity":4,
     "YawRate":1,
     "Penalty_OverAngularVelocity":0,
-    "Reward_ReachingDestination":0.15,
+    "Reward_ReachingDestination":0.02,
     "Penalty_Distance":0,
-    "Reward_ArrivingDestination":8,
-    "Reward_ArrivingStartPoint":8,
+    "Reward_ArrivingDestination":12,
+    "Reward_ArrivingStartPoint":12,
     "Penalty_OverMaxStep":0,
     "Penalty_Time":0,
     "Penalty_Stay":-0.03,
-    "Penalty_Collision_Wall":-0.2,
-    "Penalty_Collision_Agent":-0.6,
+    "Penalty_Collision_Wall":-0.1,
+    "Penalty_Collision_Agent":-0.3,
     "Penalty_Collision_DynamicOBS":-0.3,
     "Number_MaxArrivingReward":1e6,
     "IntervalStep":5,
@@ -55,14 +55,14 @@
       },
       "module02":{
         "netCat":"View",
-        "shape":[-1, 64, 122]
+        "shape":[-1, 512, 122]
       },
       "module03":{
         "netCat":"LSTMNET",
         "iSize":122,
         "nLayer":1,
         "hiddenSize":256,
-        "Number_Agent":64,
+        "Number_Agent":512,
         "FlattenMode":true,
         "device":"cuda:0"
       },
@@ -96,14 +96,14 @@
       },
       "module02":{
         "netCat":"View",
-        "shape":[-1, 64, 122]
+        "shape":[-1, 512, 122]
       },
       "module03":{
         "netCat":"LSTMNET",
         "iSize":122,
         "nLayer":1,
         "hiddenSize":256,
-        "Number_Agent":64,
+        "Number_Agent":512,
         "FlattenMode":true,
         "device":"cuda:0"
       },
