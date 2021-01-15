@@ -494,8 +494,8 @@ class PPOOnPolicyTrainer(ONPolicy):
                 # 환경 역시 초기화를 위해 한 스텝 이동한다.
                 self.env.step()
             
-            # 2000 step마다 결과를 print, save한다.
-            if step % 2000 == 0:
+            # 10000 step마다 결과를 print, save한다.
+            if step % 10000 == 0:
                 episodeReward = np.array(episodeReward)
                 reward = episodeReward.mean()
                 if self.writeTMode:
