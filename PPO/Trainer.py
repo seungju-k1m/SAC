@@ -1,3 +1,4 @@
+import sys
 import time
 import torch
 import datetime
@@ -373,11 +374,9 @@ class PPOOnPolicyTrainer(ONPolicy):
                         self.behaviorNames,
                         nAgent,
                         self.Q)))
-        
-        x = time.time()
-        for p in proc:
-            p.start()
-        print("inference:{:.3f}".format(time.time() - x))
+            x = time.time()
+            proc[i].start()
+            print("inference:{:.3f}".format(time.time() - x))        
 
         for p in proc:
             p.join()
@@ -510,6 +509,10 @@ class PPOOnPolicyTrainer(ONPolicy):
                 if self.inferMode is False:
                     for z in range(self.div):
                         uu = u + int(self.nAgent/self.div)
+                        k = (stateT, action.copy(),
+                             reward*self.rScaling, nStateT,
+                             done.copy())
+                        bb = sys.getsizeof(k)
                         self.replayMemory[z].append(
                                 (stateT, action.copy(),
                                  reward*self.rScaling, nStateT,
