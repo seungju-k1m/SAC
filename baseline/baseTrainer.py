@@ -65,9 +65,11 @@ class OFFPolicy:
         for key in envData.keys():
             setChannel.set_float_parameter(key, float(envData[key]))
         name = self.data['envName']
-        self.env = UnityEnvironment(
-            name, worker_id=id_, 
-            side_channels=[setChannel, engineChannel])
+        self.envs = []
+        for i in range(2):
+            self.envs.append(UnityEnvironment(
+                name, worker_id=id_ + i,
+                side_channels=[setChannel, engineChannel]))
         self.env.reset()
         self.behaviorNames = list(self.env.behavior_specs._dict.keys())[0]
 
@@ -208,12 +210,16 @@ class ONPolicy:
         for key in envData.keys():
             setChannel.set_float_parameter(key, float(envData[key]))
         name = self.data['envName']
-        self.env = UnityEnvironment(
-            name, worker_id=id_, 
-            side_channels=[setChannel, engineChannel],
-            no_graphics=self.data['no_graphics'])
-        self.env.reset()
-        self.behaviorNames = list(self.env.behavior_specs._dict.keys())[0]
+        self.envs = []
+        self.nEnv = self.data['nEnv']
+        nEnv = self.nEnv
+        for i in range(nEnv):
+            self.envs.append(UnityEnvironment(
+                name, worker_id=id_ + i,
+                side_channels=[setChannel, engineChannel],
+                no_graphics=self.data['no_graphics']))
+            self.envs[i].reset()
+        self.behaviorNames = list(self.envs[0].behavior_specs._dict.keys())[0]
 
     def reset(self):
         pass

@@ -1,3 +1,4 @@
+import time
 import torch
 import datetime
 import numpy as np
@@ -6,6 +7,23 @@ from PPO.Agent import ppoAgent
 from baseline.utils import getOptim, PidPolicy
 from collections import deque
 from PPO.wrapper import preprocessBatch, preprocessState
+from multiprocessing import Process, Manager
+
+
+def _getObs(env, behaviorNames, nAgent, Q):
+    done = [False for i in range(nAgent)]
+    decisionStep, terminalStep = env.get_steps(behaviorNames)
+    obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
+    reward, treward = decisionStep.reward, terminalStep.reward
+    tAgentId = terminalStep.agent_id
+    obsState = np.array(obs)
+    k = 0
+    for j, state in zip(tAgentId, tobs):
+        obsState[j] = np.array(state)
+        done[j] = True
+        reward[j] = treward[k]
+        k += 1
+    Q.put((obsState, reward, done))
 
 
 class PPOOnPolicyTrainer(ONPolicy):
@@ -30,6 +48,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         super(PPOOnPolicyTrainer, self).__init__(cfg)
         
         torch.set_default_dtype(torch.float64)
+        torch.backends.cudnn.benchmark = True
         if 'fixedTemp' in self.keyList:
             self.fixedTemp = self.data['fixedTemp'] == "True"
             if self.fixedTemp:
@@ -120,7 +139,9 @@ class PPOOnPolicyTrainer(ONPolicy):
 
         if self.writeTMode:
             self.writeTrainInfo()
-    
+        man = Manager()
+        self.Q = man.Queue()
+
     def clear(self):
         for i in self.replayMemory:
             i.clear()
@@ -315,7 +336,11 @@ class PPOOnPolicyTrainer(ONPolicy):
             gAE = gAE.permute(1, 0).contiguous()
             gAE = gAE.view((-1, 1))
 
-        return gT, gAE      
+        return gT, gAE
+    
+    def _step(env, behaviorNames, action):
+        env.set_actions(behaviorNames, action)
+        env.step()
 
     def getObs(self, init=False):
         """
@@ -331,27 +356,39 @@ class PPOOnPolicyTrainer(ONPolicy):
             done:[np.array]
                 shape[:nAgent, 1]
         """
+
+        nEnv = self.nEnv
+        nAgent = int(self.nAgent/nEnv)
         obsState = np.zeros((self.nAgent, 1447), dtype=np.float64)
-        decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
-        obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
-        rewards, treward = decisionStep.reward, terminalStep.reward
-        tAgentId = terminalStep.agent_id
-        
         done = [False for i in range(self.nAgent)]
         reward = [0 for i in range(self.nAgent)]
-        obsState = np.array(obs, dtype=np.float64)
-        reward = np.array(rewards, dtype=np.float64)
+
+        proc = []
         
-        k = 0
-        for i, state in zip(tAgentId, tobs):
-            state = np.array(state)
-            obsState[i] = state
-            done[i] = True
-            self.Number_Episode += 1
-            reward[i] = treward[k]
-            if (reward[i] > 1):
-                self.Number_Sucess += 1
-            k += 1
+        for i in range(nEnv):
+            proc.append(Process(
+                    target=_getObs,
+                    args=(
+                        self.envs[i],
+                        self.behaviorNames,
+                        nAgent,
+                        self.Q)))
+        
+        x = time.time()
+        for p in proc:
+            p.start()
+        print("inference:{:.3f}".format(time.time() - x))
+
+        for p in proc:
+            p.join()
+        
+        for i in range(nEnv):
+            t = self.Q.get()
+            s, r, d = t
+            obsState[i*nAgent:(i+1)*nAgent, :] = s
+            done[i*nAgent:(i+1)*nAgent] = d
+            reward[i*nAgent:(i+1)*nAgent] = r
+
         if init:
             return obsState
         else:
@@ -365,11 +402,14 @@ class PPOOnPolicyTrainer(ONPolicy):
                 dtype:np.array
                 shape:[nAgent, 2]
         """
-        decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
-        agentId = decisionStep.agent_id
-        if len(agentId) != 0:
-            self.env.set_actions(self.behaviorNames, action)
-        self.env.step()
+        nEnv = self.nEnv
+        nAgent = int(self.nAgent/nEnv)
+        for i in range(nEnv):
+            decisionStep, terminalStep = self.envs[i].get_steps(self.behaviorNames)
+            agentId = decisionStep.agent_id
+            if len(agentId) != 0:
+                self.envs[i].set_actions(self.behaviorNames, action[i*nAgent:(i+1)*nAgent, :])
+            self.envs[i].step()
     
     def evaluate(self):
         """
@@ -383,32 +423,50 @@ class PPOOnPolicyTrainer(ONPolicy):
         obs = self.getObs(init=True)
         stateT = self.ppState(obs)
         # action = self.getActionHybridPolicy(stateT)
+        x = time.time()
         action = self.getAction(stateT)
+        print("inference:{:.3f}".format(time.time() - x))
         TotalTrial = np.zeros(self.nAgent)
         TotalSucess = np.zeros(self.nAgent)
         step = 0
         while 1:
+            x = time.time()
             self.checkStep(action)
+            print("inference:{:.3f}".format(time.time() - x))
+
+            x = time.time()
             obs, reward, done = self.getObs()
+            print("inference:{:.3f}".format(time.time() - x))
+
+            x = time.time()
             for k, r in enumerate(reward):
                 if r > 3:
                     TotalSucess[k] += 1
                     TotalTrial[k] += 1
+            print("inference:{:.3f}".format(time.time() - x))
 
+            x = time.time()
             Rewards += reward
             nStateT = self.ppState(obs)
+            print("inference:{:.3f}".format(time.time() - x))
+            
             # nAction = self.getActionHybridPolicy(nStateT)
+            x = time.time()
             nAction = self.getAction(nStateT)
+            # print("inference:{:.3f}".format(time.time() - x))
+            print("inference:{:.3f}".format(time.time() - x))
+            
             for i, d in enumerate(done):
                 if d:
                     episodeReward.append(Rewards[i])
                     Rewards[i] = 0
                     TotalTrial[i] += 1
                     self.oldAgent.actor.zeroCellStateAgent(i)
-
+            
             action = nAction
             stateT = nStateT
             step += 1
+            print("-------------------------------------------")
             
             if step % 3000 == 0:
                 episodeReward = np.array(Rewards)
@@ -460,10 +518,6 @@ class PPOOnPolicyTrainer(ONPolicy):
                         self.ReplayMemory_Trajectory.append(
                                 stateT_cpu)
                         u = uu
-            for i, d in enumerate(done):
-                if d:
-                    episodeReward.append(Rewards[i])
-                    Rewards[i] = 0
 
             # 초기화를 통해 sampling을 계속 진행시킨다.
             action = nAction
@@ -499,7 +553,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             
             # 10000 step마다 결과를 print, save한다.
             if step % 10000 == 0:
-                episodeReward = np.array(episodeReward)
+                episodeReward = np.array(Rewards)
                 reward = episodeReward.mean()
                 if self.writeTMode:
                     self.writer.add_scalar('Reward', reward, step)
@@ -507,9 +561,9 @@ class PPOOnPolicyTrainer(ONPolicy):
                 print("""
                 Step : {:5d} // Reward : {:.3f}  
                 """.format(step, reward))
+                Rewards = np.zeros(self.nAgent)
                 if (reward > self.RecordScore):
                     self.RecordScore = reward
                     sPath = './save/PPO/'+self.data['envName']+str(self.RecordScore)+'.pth'
                     torch.save(self.agent.state_dict(), sPath)
-                episodeReward = []
                 torch.save(self.agent.state_dict(), self.sPath)
