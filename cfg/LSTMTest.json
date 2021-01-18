@@ -152,7 +152,7 @@
   "sPath": "./save/PPO/",
   "writeTMode":false,
   "tPath": "./tensorboard/PPO/",
-  "lPath":"./save/PPO/Lotte08_20210115-00-17-45_.pth",
+  "lPath":"./save/PPO/Lotte08_20210115-00-17-45_1.pth",
   "device": "cuda:0",
   "gpuOverload":false,
   "inferMode": false,
