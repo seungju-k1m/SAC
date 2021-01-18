@@ -33,7 +33,7 @@ args = parser.parse_args()
 
 if __name__ == '__main__':
     # mp.set_start_method('spawn')
-    ray.init(num_cpus=8)
+    ray.init(num_cpus=8, local_mode=True)
     path = args.path
     if os.path.isfile(path):
         print("Finish Loading Configuration File.")
