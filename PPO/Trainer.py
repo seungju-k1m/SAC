@@ -1,4 +1,4 @@
-import sys
+import ray
 import time
 import torch
 import datetime
@@ -8,24 +8,29 @@ from PPO.Agent import ppoAgent
 from baseline.utils import getOptim, PidPolicy
 from collections import deque
 from PPO.wrapper import preprocessBatch, preprocessState
-from multiprocessing import Process, Manager
+from mlagents_envs.base_env import ActionTuple
 
 
-def _getObs(env, behaviorNames, nAgent, Q):
+@ray.remote
+def _getObs(env, behaviorNames, nAgent):
     done = [False for i in range(nAgent)]
-    decisionStep, terminalStep = env.get_steps(behaviorNames)
+    reward = [0 for i in range(nAgent)]
+    decisionStep, terminalStep = ray.get(env.get_steps.remote(behaviorNames))
     obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
-    reward, treward = decisionStep.reward, terminalStep.reward
+    
+    reward_, treward = decisionStep.reward, terminalStep.reward
+    treward = np.array(treward)
+    reward = reward_
     tAgentId = terminalStep.agent_id
     obsState = np.array(obs)
     k = 0
     for j, state in zip(tAgentId, tobs):
         obsState[j] = np.array(state)
         done[j] = True
-        reward[j] = treward[k]
+        # reward[j] = treward[k]
         k += 1
-    Q.put((obsState, reward, done))
-
+    return (obsState, reward, treward, done)
+    
 
 class PPOOnPolicyTrainer(ONPolicy):
     """
@@ -140,8 +145,6 @@ class PPOOnPolicyTrainer(ONPolicy):
 
         if self.writeTMode:
             self.writeTrainInfo()
-        man = Manager()
-        self.Q = man.Queue()
 
     def clear(self):
         for i in self.replayMemory:
@@ -367,26 +370,20 @@ class PPOOnPolicyTrainer(ONPolicy):
         proc = []
         
         for i in range(nEnv):
-            proc.append(Process(
-                    target=_getObs,
-                    args=(
-                        self.envs[i],
-                        self.behaviorNames,
-                        nAgent,
-                        self.Q)))
-            x = time.time()
-            proc[i].start()
-            print("inference:{:.3f}".format(time.time() - x))        
-
-        for p in proc:
-            p.join()
+            proc.append(_getObs.remote(
+                self.envs[i],
+                self.behaviorNames,
+                nAgent))
         
         for i in range(nEnv):
-            t = self.Q.get()
-            s, r, d = t
+            t = ray.get(proc[i])
+            s, r, r_, d = t
             obsState[i*nAgent:(i+1)*nAgent, :] = s
             done[i*nAgent:(i+1)*nAgent] = d
-            reward[i*nAgent:(i+1)*nAgent] = r
+            if True in d:
+                reward[i*nAgent:(i+1)*nAgent] = r_
+            else:
+                reward[i*nAgent:(i+1)*nAgent] = r
 
         if init:
             return obsState
@@ -401,15 +398,30 @@ class PPOOnPolicyTrainer(ONPolicy):
                 dtype:np.array
                 shape:[nAgent, 2]
         """
+        action: np.ndarray
         nEnv = self.nEnv
         nAgent = int(self.nAgent/nEnv)
+        
+        action = np.array(action, dtype=np.float32)
+
         for i in range(nEnv):
-            decisionStep, terminalStep = self.envs[i].get_steps(self.behaviorNames)
-            agentId = decisionStep.agent_id
-            if len(agentId) != 0:
-                self.envs[i].set_actions(self.behaviorNames, action[i*nAgent:(i+1)*nAgent, :])
-            self.envs[i].step()
-    
+            # decisionStep, terminalStep = ray.get(
+            #     self.envs[i].get_steps.remote(self.behaviorNames))
+            # agentId = decisionStep.agent_id
+
+            # if len(agentId) != 0:
+            act = ActionTuple(
+                continuous=action[i*nAgent:(i+1)*nAgent, :])
+            # setattr(act, 'continuous', act.copy())
+            
+            ray.get(self.envs[i].set_actions.remote(
+                self.behaviorNames,
+                act
+                ))
+        
+        for e in self.envs:
+            y = e.step.remote()
+
     def evaluate(self):
         """
         evaluate를 통해 해당 알고리즘의 성능을 구한다.
@@ -509,10 +521,6 @@ class PPOOnPolicyTrainer(ONPolicy):
                 if self.inferMode is False:
                     for z in range(self.div):
                         uu = u + int(self.nAgent/self.div)
-                        k = (stateT, action.copy(),
-                             reward*self.rScaling, nStateT,
-                             done.copy())
-                        bb = sys.getsizeof(k)
                         self.replayMemory[z].append(
                                 (stateT, action.copy(),
                                  reward*self.rScaling, nStateT,

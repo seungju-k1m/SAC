@@ -1,3 +1,4 @@
+import ray
 import datetime
 import numpy as np
 
@@ -166,6 +167,10 @@ class OFFPolicy:
         self.writer.add_text('info', self.info, 0)
 
 
+def getSpec(self):
+    return self._env_specs
+
+
 class ONPolicy:
     
     def __init__(self, fName):
@@ -213,13 +218,23 @@ class ONPolicy:
         self.envs = []
         self.nEnv = self.data['nEnv']
         nEnv = self.nEnv
+        # setattr(UnityEnvironment, "")
         for i in range(nEnv):
-            self.envs.append(UnityEnvironment(
-                name, worker_id=id_ + i,
+            env = ray.remote(UnityEnvironment)
+            env.options(num_cpus=8)
+            actor = env.remote(
+                name,
+                worker_id=id_+i,
                 side_channels=[setChannel, engineChannel],
-                no_graphics=self.data['no_graphics']))
-            self.envs[i].reset()
-        self.behaviorNames = list(self.envs[0].behavior_specs._dict.keys())[0]
+                no_graphics=self.data['no_graphics'])
+            actor.reset.remote()
+            self.envs.append(actor)
+        # for e in self.envs:
+        #     e.reset.remote()
+        self.behaviorNames = 'Robot?team=0'
+        for e in self.envs:
+            ray.get(e._assert_behavior_exists.remote(self.behaviorNames))
+        print("Hello")
 
     def reset(self):
         pass
