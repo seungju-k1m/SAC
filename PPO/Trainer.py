@@ -30,8 +30,27 @@ def _getObs(env, behaviorNames, nAgent):
         # reward[j] = treward[k]
         k += 1
     return (obsState, reward, treward, done)
-    
 
+
+@ray.remote
+def rollout(self, env):
+    data = []
+    obs = self.getObs_one(env, init=True)
+    stateT = self.ppState(obs)
+    action = self.getAction(stateT)
+    for _ in range(160):
+        self.check_one(env, action)
+        obs, reward, done = self.getObs_one(env)
+        nstateT = self.ppState(obs)
+        data.append((
+                        stateT,
+                        action.copy(),
+                        reward.copy,
+                        nstateT,
+                        done.copy()))
+    return data
+
+    
 class PPOOnPolicyTrainer(ONPolicy):
     """
     PPOOnPolicyTrainer는 알고리즘 전체 과정을 제어하는 역할을 수행한다.
@@ -414,13 +433,13 @@ class PPOOnPolicyTrainer(ONPolicy):
                 continuous=action[i*nAgent:(i+1)*nAgent, :])
             # setattr(act, 'continuous', act.copy())
             
-            ray.get(self.envs[i].set_actions.remote(
+            self.envs[i].set_actions.remote(
                 self.behaviorNames,
                 act
-                ))
+                )
         
-        for e in self.envs:
-            y = e.step.remote()
+        # for e in self.envs:
+        #     y = e.step.remote()
 
     def evaluate(self):
         """
@@ -490,7 +509,38 @@ class PPOOnPolicyTrainer(ONPolicy):
                 print(TotalTrial.sum())
                 print(TotalSucess.sum())
                 episodeReward = []
-                
+
+    def getObs_one(self, env, init=False):
+        nEnv = self.nEnv
+        nAgent = int(self.nAgent/nEnv)
+        obsState = np.zeros((nAgent, 1447), dtype=np.float64)
+        done = [False for i in range(self.nAgent)]
+        reward = [0 for i in range(self.nAgent)]
+
+        t = ray.get(_getObs.remote(env, self.behaviorNames, nAgent))
+        s, r, r_, d = t
+        obsState = s
+        done = d
+        if True in d:
+            reward = r_
+        else:
+            reward = r
+
+        if init:
+            return obsState
+        else:
+            return (obsState, reward, done)
+
+    def check_one(self, env, action):
+        act = ActionTuple(
+            continuous=action
+        )
+        env.set_actions.remote(self.behaviorNames, act)
+
+    def test(self):
+        self.loadUnityEnv()
+        obj_refs = [rollout.remote(self, env) for env in self.envs]
+
     def run(self):
         self.loadUnityEnv()
         episodeReward = []

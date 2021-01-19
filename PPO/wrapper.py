@@ -1,10 +1,10 @@
 import torch
 import numpy as np
-import PPO.Trainer
+# from PPO import Trainer
 
 
 def MLPBatch(self, step, epoch, f) -> None:
-    self: PPO.Trainer.PPOOnPolicyTrainer
+    # self: PPO.Trainer.PPOOnPolicyTrainer
     rstate, action, reward, done = \
         [], [], [], []
     tState = []
@@ -51,7 +51,7 @@ def CNN1DLTMPState(self, obs) -> tuple:
 
 
 def CNN1DLTMPBatch(self, step, epoch, f):
-    self: PPO.Trainer.PPOOnPolicyTrainer
+    # self: PPO.Trainer.PPOOnPolicyTrainer
     k1 = 160
     k2 = 10
     div = int(k1/k2)
