@@ -5,13 +5,13 @@
   "time_scale":1,
   "RecordScore":2000,
   "no_graphics":false,
-  "nEnv":2,
+  "nEnv":3,
 
   "env":{
     "LSTMMode":1,
     "ImgMode":false,
     "Resolution_LidarAngle":1,
-    "Number_Agent":128,
+    "Number_Agent":192,
     "Number_MaxCollision":1e6,
     "MaxStep": 962,
     "Penallty_Maginitude_AngularVelocity":0,
@@ -19,12 +19,12 @@
     "Velocity":4,
     "YawRate":1,
     "Penalty_OverAngularVelocity":0,
-    "Reward_ReachingDestination":0.5,
+    "Reward_ReachingDestination":0.2,
     "Penalty_Distance":0,
     "Reward_ArrivingDestination":20,
     "Reward_ArrivingStartPoint":20,
     "Penalty_OverMaxStep":0,
-    "Penalty_Time":-0.05,
+    "Penalty_Time":-0.01,
     "Penalty_Stay":-0.03,
     "Penalty_Collision_Wall":-0.1,
     "Penalty_Collision_Agent":-0.3,
@@ -56,14 +56,14 @@
       },
       "module02":{
         "netCat":"View",
-        "shape":[-1, 128, 124]
+        "shape":[-1, 192, 124]
       },
       "module03":{
         "netCat":"LSTMNET",
         "iSize":124,
         "nLayer":1,
         "hiddenSize":256,
-        "Number_Agent":128,
+        "Number_Agent":192,
         "FlattenMode":true,
         "device":"cuda:0"
       },
@@ -97,14 +97,14 @@
       },
       "module02":{
         "netCat":"View",
-        "shape":[-1, 128, 124]
+        "shape":[-1, 192, 124]
       },
       "module03":{
         "netCat":"LSTMNET",
         "iSize":124,
         "nLayer":1,
         "hiddenSize":256,
-        "Number_Agent":128,
+        "Number_Agent":192,
         "FlattenMode":true,
         "device":"cuda:0"
       },

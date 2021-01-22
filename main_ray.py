@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[2]:
-
-
 import ray
 import time as tt
 import datetime
@@ -22,7 +16,7 @@ from mlagents_envs.base_env import ActionTuple
 from torch.utils.tensorboard import SummaryWriter
 
 
-# In[3]:
+# In[2]:
 
 
 path = './cfg/LSTMTrain.json'
@@ -39,7 +33,7 @@ sPath = data['sPath']
 
 # define Constant
 
-# In[4]:
+# In[3]:
 
 
 nEnv = data['nEnv']
@@ -48,13 +42,14 @@ TotalAgent = nEnv * nAgent
 ReplayMemory = deque(maxlen=int(1e5))
 ReplayMemory_Trajectory = deque(maxlen=int(1e5))
 step = 0
-ClipingNormCritic = 10
-ClipingNormActor = 10
+ClipingNormCritic = 100000
+ClipingNormActor = 100000
+Length_Episode = data['env']['MaxStep'] - 2
 
 
 # Initialize Ray and Specify default data type of torch.tensor
 
-# In[5]:
+# In[4]:
 
 
 ray.init(num_cpus=8)
@@ -63,7 +58,7 @@ torch.set_default_dtype(torch.float64)
 
 # Load hyper-Parameter for Agent
 
-# In[6]:
+# In[5]:
 
 
 entropyCoeff = data['entropyCoeff']
@@ -76,7 +71,7 @@ LSTMNum = data['LSTMNum']
 sSize = data['sSize']
 
 
-# In[7]:
+# In[6]:
 
 
 gamma = data['gamma']
@@ -86,7 +81,7 @@ updateOldP = data['updateOldP']
 
 # Configure Writer
 
-# In[8]:
+# In[7]:
 
 
 pureEnv = data['envName'].split('/')
@@ -98,7 +93,7 @@ if writeMode:
 sPath += name + '_' + str(time) +'.pth'
 
 
-# In[9]:
+# In[8]:
 
 
 info =     """
@@ -143,7 +138,7 @@ def writeTrainInfo():
         writer.add_text('Information', info, 0)
 
 
-# In[10]:
+# In[9]:
 
 
 writeTrainInfo()
@@ -151,7 +146,7 @@ writeTrainInfo()
 
 # Instances for Agent
 
-# In[11]:
+# In[10]:
 
 
 Agent = ppoAgent(
@@ -198,7 +193,7 @@ CopyAgent.update(Agent)
 
 # Configuration for Unity Environment
 
-# In[12]:
+# In[11]:
 
 
 _id = 32
@@ -237,7 +232,7 @@ Load the Unity Environment
 
 # Sampling and Training, AND Sampling,....
 
-# In[13]:
+# In[12]:
 
 
 @ray.remote
@@ -263,6 +258,7 @@ def _getObs(env, behaviorNames, nAgent):
 def getObs(init=False) -> tuple:
     obsState = np.zeros((TotalAgent, 1447), dtype=np.float64)
     done = [False for i in range(TotalAgent)]
+    done_reward = [False for i in range(TotalAgent)]
     reward = [0 for i in range(TotalAgent)]
     proc = []
     for i in range(nEnv):
@@ -280,24 +276,27 @@ def getObs(init=False) -> tuple:
             reward[i*nAgent:(i+1)*nAgent] = r_
         else:
             reward[i*nAgent:(i+1)*nAgent] = r
+    for i, r in enumerate(reward):
+        if r > 1.5:
+            done_reward[i] = True
     if init:
         return obsState
     else:
-        return (obsState, reward, done)
+        return (obsState, reward, done, done_reward)
 
 
-# In[14]:
+# In[13]:
 
 
 def ppState(obs) -> tuple:
-    rState = torch.tensor(obs[:, :6]).to(device).double()
+    rState = torch.tensor(obs[:, :8]).to(device).double()
     lidarPt = torch.tensor(obs[:, 8:sSize[-1]+8]).to(device)
     lidarPt = torch.unsqueeze(lidarPt, dim=1).double()
     state = (rState, lidarPt)
     return state
 
 
-# In[15]:
+# In[14]:
 
 
 def getAction(state) -> np.ndarray:
@@ -307,7 +306,7 @@ def getAction(state) -> np.ndarray:
     return action
 
 
-# In[16]:
+# In[15]:
 
 
 def checkStep(action) -> None:
@@ -322,14 +321,14 @@ def checkStep(action) -> None:
         envs[i].step.remote()
 
 
-# In[17]:
+# In[16]:
 
 
 Rewards = np.zeros(TotalAgent)
 episodeReward = []
 
 
-# In[18]:
+# In[17]:
 
 
 def initSampling() -> tuple:
@@ -347,7 +346,7 @@ def Sampling(stateT, action) -> list:
         for i in range(160):
             z = tt.time()
             checkStep(action)
-            obs, reward, done = getObs()
+            obs, reward, done, done_reward = getObs()
             nstateT = ppState(obs)
             nAction = getAction(nstateT)
             ReplayMemory.append(
@@ -356,7 +355,7 @@ def Sampling(stateT, action) -> list:
                     action.copy(),
                     reward,
                     nstateT,
-                    done.copy()
+                    done_reward.copy()
                 )
             )
             Rewards += reward
@@ -380,7 +379,7 @@ def Sampling(stateT, action) -> list:
 
 # 1. Generate Optimizer
 
-# In[19]:
+# In[18]:
 
 
 def GenerateOptim() -> tuple:
@@ -398,7 +397,7 @@ def GenerateOptim() -> tuple:
     return (aOptim, cOptim)
 
 
-# In[20]:
+# In[19]:
 
 
 aOptim, cOptim = GenerateOptim()
@@ -406,7 +405,7 @@ aOptim, cOptim = GenerateOptim()
 
 # 2. Set Zero Gradient
 
-# In[21]:
+# In[20]:
 
 
 def zeroGrad() -> None:
@@ -414,7 +413,7 @@ def zeroGrad() -> None:
     cOptim.zero_grad()
 
 
-# In[22]:
+# In[21]:
 
 
 zeroGrad()
@@ -422,7 +421,7 @@ zeroGrad()
 
 # 3. Train the Agent
 
-# In[23]:
+# In[22]:
 
 
 def train(
@@ -468,7 +467,7 @@ def train(
         writer.add_scalar("critic", critic, _step + _epoch)
 
 
-# In[24]:
+# In[23]:
 
 
 def getReturn(
@@ -490,7 +489,7 @@ def getReturn(
         GTDE = []
         discounted_Td = 0
         if dA[-1]:
-            discounted_r = cA[-1]
+            discounted_r = 0
         else:
             discounted_r = ncA[-1]
 
@@ -502,6 +501,7 @@ def getReturn(
             
             if is_terminal:
                 td_error = r + gamma * c - c
+                discounted_r = 0
             else:
                 td_error = r + gamma * nc - c
 
@@ -530,7 +530,7 @@ def getReturn(
     return gT, gAE
 
 
-# In[25]:
+# In[24]:
 
 
 def stepGradient(_step, _epoch):
@@ -547,7 +547,7 @@ def stepGradient(_step, _epoch):
         writer.add_scalar('Critic Gradient Mag', normC, _step+_epoch)
 
 
-# In[26]:
+# In[25]:
 
 
 def preprocessBatch(_step, _epoch):
@@ -582,7 +582,7 @@ def preprocessBatch(_step, _epoch):
     nrstate, nlidarPt = ns
     nrstate, nlidarPt = torch.cat((rstate, nrstate), dim=0), torch.cat((lidarPt, nlidarPt), dim=0)
     lidarPt = lidarPt.view((-1, TotalAgent, 1, sSize[-1]))
-    rstate = rstate.view((-1, TotalAgent, 6))
+    rstate = rstate.view((-1, TotalAgent, 8))
 
     nstate = (nrstate, nlidarPt)
 
@@ -632,7 +632,7 @@ def preprocessBatch(_step, _epoch):
         CopyAgent.actor.setCellState(InitCopyActorCellState)
         CopyAgent.critic.setCellState(InitCopyCriticCellState)
         for i in range(div):
-            _rstate = rstate[i*k2:(i+1)*k2].view(-1, 6)
+            _rstate = rstate[i*k2:(i+1)*k2].view(-1, 8)
             _lidarpt = lidarPt[i*k2:(1+i)*k2].view(-1, 1, sSize[-1])
             _state = (_rstate, _lidarpt)
             _action = action[i*k2:(i+1)*k2].view((-1, 2))
@@ -662,13 +662,13 @@ def preprocessBatch(_step, _epoch):
 
 # initialize Sampling
 
-# In[27]:
+# In[26]:
 
 
 kz = 0
 t = 0
+
 while 1:
-    
     stateT, action = initSampling()
     deltaTime = tt.time()
     done = Sampling(stateT, action)
@@ -676,15 +676,18 @@ while 1:
     preprocessBatch(step, epoch)
     kz += 1
     ReplayMemory.clear()
-    if True in done:
+    if (step % Length_Episode) == 0:
+        
         for e in envs:
-            Agent.actor.zeroCellState()
-            Agent.critic.zeroCellState()
-            OldAgent.actor.zeroCellState()
-            OldAgent.critic.zeroCellState()
-            CopyAgent.actor.zeroCellState()
-            CopyAgent.critic.zeroCellState()
-            ReplayMemory_Trajectory.clear()
+            e.step.remote()
+        Agent.actor.zeroCellState()
+        Agent.critic.zeroCellState()
+        OldAgent.actor.zeroCellState()
+        OldAgent.critic.zeroCellState()
+        CopyAgent.actor.zeroCellState()
+        CopyAgent.critic.zeroCellState()
+        ReplayMemory_Trajectory.clear()
+        for e in envs:
             e.step.remote()
     if kz == updateOldP:
         OldAgent.update(Agent)
