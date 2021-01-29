@@ -8,11 +8,9 @@ class sacAgent(baseAgent):
 
     def __init__(
         self, 
-        aData,
-        ICMMode=False
+        aData
     ):
         super(sacAgent, self).__init__()
-        self.ICMMode = ICMMode
         self.aData = aData
         self.keyList = list(self.aData.keys())
         device = self.aData['device']
@@ -159,25 +157,6 @@ class sacAgent(baseAgent):
                 self.temperature.exp()*(-detachedLogProb+self.aData['aSize']))
         
         return lossCritic1, lossCritic2, lossPolicy, lossTemp
-    
-    def calculateLogProb(self, state, predState, predAction, action):
-        output = self.actor.forward(state)[0]
-        mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
-        log_std = torch.clamp(log_std, -20, 2)
-        std = log_std.exp()
-
-        gaussianDist = torch.distributions.Normal(mean, std)
-        predTanhaction = torch.tanh(predAction)
-        logProb = gaussianDist.log_prob(predAction).sum(1, keepdim=True)
-        logProb -= torch.log(1-action.pow(2)+1e-6).sum(1, keepdim=True)
-
-    def getInternalReward(self, state, nstate, action):
-        phiState, phiNState = self.FeatureM.forward(state)[0], self.FeatureM.forward(nstate)[0]
-        predAction = self.inverseM.forward((phiState, phiNState))
-        predPhiNState = self.ForwardM((phiState, action))
-        reward = torch.sum((phiNState - predPhiNState).pow(2), keepdim=1)
-
-        return reward
 
     def loadParameters(self):
         self.actor.loadParameters()

@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[2]:
-
-
 import ray
 import time as tt
 import datetime
@@ -22,9 +16,6 @@ from mlagents_envs.base_env import ActionTuple
 from torch.utils.tensorboard import SummaryWriter
 
 
-# In[3]:
-
-
 path = './cfg/LSTMTrain.json'
 parser = jsonParser(path)
 data = parser.loadParser()
@@ -39,9 +30,6 @@ sPath = data['sPath']
 
 # define Constant
 
-# In[4]:
-
-
 nEnv = data['nEnv']
 nAgent = 64
 TotalAgent = nEnv * nAgent
@@ -54,17 +42,11 @@ ClipingNormActor = 10
 
 # Initialize Ray and Specify default data type of torch.tensor
 
-# In[5]:
-
-
 ray.init(num_cpus=8)
 torch.set_default_dtype(torch.float64)
 
 
 # Load hyper-Parameter for Agent
-
-# In[6]:
-
 
 entropyCoeff = data['entropyCoeff']
 epsilon = data['epsilon']
@@ -76,9 +58,6 @@ LSTMNum = data['LSTMNum']
 sSize = data['sSize']
 
 
-# In[7]:
-
-
 gamma = data['gamma']
 epoch = data['epoch']
 updateOldP = data['updateOldP']
@@ -86,24 +65,20 @@ updateOldP = data['updateOldP']
 
 # Configure Writer
 
-# In[8]:
-
-
 pureEnv = data['envName'].split('/')
 name = pureEnv[-1]
 time = datetime.datetime.now().strftime("%Y%m%d-%H-%M-%S")
 if writeMode:
     tPath = tPath + name + time
     writer = SummaryWriter(tPath)
-sPath += name + '_' + str(time) +'.pth'
+sPath += name + '_' + str(time) + '.pth'
 
 
-# In[9]:
-
-
-info =     """
+info = """
     Configuration for this experiment
     """
+
+
 def writeDict(_data, key, n=0):
     global info
     tab = ""
@@ -113,18 +88,19 @@ def writeDict(_data, key, n=0):
         for k in _data.keys():
             dK = _data[k]
             if type(dK) == dict:
-                info +=            """
+                info += """
         {}{}:
             """.format(tab, k)
                 writeDict(dK, k, n=n+1)
             else:
-                info +=         """
+                info += """
         {}{}:{}
         """.format(tab, k, dK)
     else:
-        info +=        """
+        info += """
         {}:{}
         """.format(key, _data)
+
 
 def writeTrainInfo():
     global info
@@ -132,10 +108,10 @@ def writeTrainInfo():
     for k in key:
         _data = data[k]
         if type(_data) == dict:
-            info +=        """
+            info += """
         {}:
         """.format(k)
-            writeDict(_data, k ,n=1)
+            writeDict(_data, k, n=1)
         else:
             writeDict(_data, k)
     print(info)
@@ -221,7 +197,7 @@ for i in range(nEnv):
         worker_id=_id+i,
         side_channels=[setChannel, engineChannel],
         no_graphics=no_graphics,
-        seed = 1 + i * _id
+        seed=1 + i * _id
     )
     ENV.reset.remote()
     envs.append(ENV)
@@ -237,8 +213,6 @@ Load the Unity Environment
 
 # Sampling and Training, AND Sampling,....
 
-# In[13]:
-
 
 @ray.remote
 def _getObs(env, behaviorNames, nAgent):
@@ -246,7 +220,7 @@ def _getObs(env, behaviorNames, nAgent):
     reward = [0 for i in range(nAgent)]
     decisionStep, terminalStep = ray.get(env.get_steps.remote(behaviorNames))
     obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
-    
+
     reward_, treward = decisionStep.reward, terminalStep.reward
     treward = np.array(treward)
     reward = reward_
@@ -259,6 +233,7 @@ def _getObs(env, behaviorNames, nAgent):
         # reward[j] = treward[k]
         k += 1
     return (obsState, reward, treward, done)
+
 
 def getObs(init=False) -> tuple:
     obsState = np.zeros((TotalAgent, 1447), dtype=np.float64)
@@ -286,18 +261,12 @@ def getObs(init=False) -> tuple:
         return (obsState, reward, done)
 
 
-# In[14]:
-
-
 def ppState(obs) -> tuple:
     rState = torch.tensor(obs[:, :6]).to(device).double()
     lidarPt = torch.tensor(obs[:, 8:sSize[-1]+8]).to(device)
     lidarPt = torch.unsqueeze(lidarPt, dim=1).double()
     state = (rState, lidarPt)
     return state
-
-
-# In[15]:
 
 
 def getAction(state) -> np.ndarray:
@@ -339,13 +308,13 @@ def initSampling() -> tuple:
 
     return (stateT, action)
 
+
 def Sampling(stateT, action) -> list:
     global Rewards
     global episodeReward
     global step
     with torch.no_grad():
         for i in range(160):
-            z = tt.time()
             checkStep(action)
             obs, reward, done = getObs()
             nstateT = ppState(obs)
@@ -377,10 +346,7 @@ def Sampling(stateT, action) -> list:
 
 
 # Training
-
 # 1. Generate Optimizer
-
-# In[19]:
 
 
 def GenerateOptim() -> tuple:
@@ -398,15 +364,10 @@ def GenerateOptim() -> tuple:
     return (aOptim, cOptim)
 
 
-# In[20]:
-
-
 aOptim, cOptim = GenerateOptim()
 
 
 # 2. Set Zero Gradient
-
-# In[21]:
 
 
 def zeroGrad() -> None:
@@ -414,15 +375,10 @@ def zeroGrad() -> None:
     cOptim.zero_grad()
 
 
-# In[22]:
-
-
 zeroGrad()
 
 
 # 3. Train the Agent
-
-# In[23]:
 
 
 def train(
@@ -435,7 +391,7 @@ def train(
     _step,
     _epoch
 ):
-    PPOAGENT:ppoAgent
+    PPOAGENT: ppoAgent
     lossC = PPOAGENT.calQLoss(
         state,
         gT.detach()
@@ -476,7 +432,7 @@ def getReturn(
     critic,
     nCritic,
     done
-)->tuple:
+):
     gT, gAE = [], []
     length = len(reward)
     critic = critic.view(length, -1)
@@ -547,10 +503,9 @@ def stepGradient(_step, _epoch):
         writer.add_scalar('Critic Gradient Mag', normC, _step+_epoch)
 
 
-# In[26]:
-
 
 def preprocessBatch(_step, _epoch):
+
     k1 = 160
     k2 = 10
     div = int(k1/k2)
@@ -569,7 +524,7 @@ def preprocessBatch(_step, _epoch):
     for ts in ReplayMemory_Trajectory:
         trstate[int(z/k1)].append(ts[0])
         tlidarPt[int(z/k1)].append(ts[1])
-        z+=1
+        z += 1
     if len(trstate) == k1:
         zeroMode = True
     else:
@@ -659,7 +614,6 @@ def preprocessBatch(_step, _epoch):
         InitCriticCellState = Agent.critic.getCellState()
    
 
-
 # initialize Sampling
 
 # In[27]:
@@ -701,10 +655,3 @@ while 1:
         t = 0
         Rewards = np.zeros(TotalAgent)
         torch.save(Agent.state_dict(), sPath)
-
-
-# In[ ]:
-
-
-
-

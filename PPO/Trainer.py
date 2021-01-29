@@ -438,8 +438,8 @@ class PPOOnPolicyTrainer(ONPolicy):
                 act
                 )
         
-        # for e in self.envs:
-        #     y = e.step.remote()
+        for e in self.envs:
+            y = e.step.remote()
 
     def evaluate(self):
         """
@@ -455,36 +455,28 @@ class PPOOnPolicyTrainer(ONPolicy):
         # action = self.getActionHybridPolicy(stateT)
         x = time.time()
         action = self.getAction(stateT)
-        print("inference:{:.3f}".format(time.time() - x))
+        # print("inference:{:.3f}".format(time.time() - x))
         TotalTrial = np.zeros(self.nAgent)
         TotalSucess = np.zeros(self.nAgent)
         step = 0
         while 1:
             x = time.time()
             self.checkStep(action)
-            print("inference:{:.3f}".format(time.time() - x))
 
             x = time.time()
             obs, reward, done = self.getObs()
-            print("inference:{:.3f}".format(time.time() - x))
 
             x = time.time()
             for k, r in enumerate(reward):
                 if r > 3:
                     TotalSucess[k] += 1
                     TotalTrial[k] += 1
-            print("inference:{:.3f}".format(time.time() - x))
 
             x = time.time()
-            Rewards += reward
+            # Rewards += reward
             nStateT = self.ppState(obs)
-            print("inference:{:.3f}".format(time.time() - x))
-            
-            # nAction = self.getActionHybridPolicy(nStateT)
-            x = time.time()
             nAction = self.getAction(nStateT)
             # print("inference:{:.3f}".format(time.time() - x))
-            print("inference:{:.3f}".format(time.time() - x))
             
             for i, d in enumerate(done):
                 if d:
@@ -496,7 +488,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             action = nAction
             stateT = nStateT
             step += 1
-            print("-------------------------------------------")
+            # print("-------------------------------------------")
             
             if step % 3000 == 0:
                 episodeReward = np.array(Rewards)

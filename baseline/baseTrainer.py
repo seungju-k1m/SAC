@@ -74,6 +74,9 @@ class OFFPolicy:
         self.env.reset()
         self.behaviorNames = list(self.env.behavior_specs._dict.keys())[0]
 
+    def LoadGymEnv(self):
+        pass
+
     def reset(self):
         """
         deprecated.
