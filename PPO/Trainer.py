@@ -1,5 +1,4 @@
 import ray
-import time
 import torch
 import datetime
 import numpy as np
@@ -9,46 +8,6 @@ from baseline.utils import getOptim, PidPolicy
 from collections import deque
 from PPO.wrapper import preprocessBatch, preprocessState
 from mlagents_envs.base_env import ActionTuple
-
-
-@ray.remote
-def _getObs(env, behaviorNames, nAgent):
-    done = [False for i in range(nAgent)]
-    reward = [0 for i in range(nAgent)]
-    decisionStep, terminalStep = ray.get(env.get_steps.remote(behaviorNames))
-    obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
-    
-    reward_, treward = decisionStep.reward, terminalStep.reward
-    treward = np.array(treward)
-    reward = reward_
-    tAgentId = terminalStep.agent_id
-    obsState = np.array(obs)
-    k = 0
-    for j, state in zip(tAgentId, tobs):
-        obsState[j] = np.array(state)
-        done[j] = True
-        # reward[j] = treward[k]
-        k += 1
-    return (obsState, reward, treward, done)
-
-
-@ray.remote
-def rollout(self, env):
-    data = []
-    obs = self.getObs_one(env, init=True)
-    stateT = self.ppState(obs)
-    action = self.getAction(stateT)
-    for _ in range(160):
-        self.check_one(env, action)
-        obs, reward, done = self.getObs_one(env)
-        nstateT = self.ppState(obs)
-        data.append((
-                        stateT,
-                        action.copy(),
-                        reward.copy,
-                        nstateT,
-                        done.copy()))
-    return data
 
     
 class PPOOnPolicyTrainer(ONPolicy):
@@ -379,31 +338,27 @@ class PPOOnPolicyTrainer(ONPolicy):
             done:[np.array]
                 shape[:nAgent, 1]
         """
-
-        nEnv = self.nEnv
-        nAgent = int(self.nAgent/nEnv)
         obsState = np.zeros((self.nAgent, 1447), dtype=np.float64)
+        decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
+        obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
+        rewards, treward = decisionStep.reward, terminalStep.reward
+        tAgentId = terminalStep.agent_id
+        
         done = [False for i in range(self.nAgent)]
         reward = [0 for i in range(self.nAgent)]
-
-        proc = []
+        obsState = np.array(obs)
+        reward = rewards
         
-        for i in range(nEnv):
-            proc.append(_getObs.remote(
-                self.envs[i],
-                self.behaviorNames,
-                nAgent))
-        
-        for i in range(nEnv):
-            t = ray.get(proc[i])
-            s, r, r_, d = t
-            obsState[i*nAgent:(i+1)*nAgent, :] = s
-            done[i*nAgent:(i+1)*nAgent] = d
-            if True in d:
-                reward[i*nAgent:(i+1)*nAgent] = r_
-            else:
-                reward[i*nAgent:(i+1)*nAgent] = r
-
+        k = 0
+        for i, state in zip(tAgentId, tobs):
+            state = np.array(state)
+            obsState[i] = state
+            done[i] = True
+            self.Number_Episode += 1
+            reward[i] = treward[k]
+            if (reward[i] > 1):
+                self.Number_Sucess += 1
+            k += 1
         if init:
             return obsState
         else:
@@ -417,29 +372,15 @@ class PPOOnPolicyTrainer(ONPolicy):
                 dtype:np.array
                 shape:[nAgent, 2]
         """
-        action: np.ndarray
-        nEnv = self.nEnv
-        nAgent = int(self.nAgent/nEnv)
-        
-        action = np.array(action, dtype=np.float32)
 
-        for i in range(nEnv):
-            # decisionStep, terminalStep = ray.get(
-            #     self.envs[i].get_steps.remote(self.behaviorNames))
-            # agentId = decisionStep.agent_id
-
-            # if len(agentId) != 0:
-            act = ActionTuple(
-                continuous=action[i*nAgent:(i+1)*nAgent, :])
-            # setattr(act, 'continuous', act.copy())
-            
-            self.envs[i].set_actions.remote(
-                self.behaviorNames,
-                act
-                )
-        
-        for e in self.envs:
-            y = e.step.remote()
+        decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
+        agentId = decisionStep.agent_id
+        act = ActionTuple(
+            continuous=action
+        )
+        if len(agentId) != 0:
+            self.env.set_actions(self.behaviorNames, act)
+        self.env.step()
 
     def evaluate(self):
         """
@@ -453,42 +394,32 @@ class PPOOnPolicyTrainer(ONPolicy):
         obs = self.getObs(init=True)
         stateT = self.ppState(obs)
         # action = self.getActionHybridPolicy(stateT)
-        x = time.time()
         action = self.getAction(stateT)
-        # print("inference:{:.3f}".format(time.time() - x))
         TotalTrial = np.zeros(self.nAgent)
         TotalSucess = np.zeros(self.nAgent)
         step = 0
         while 1:
-            x = time.time()
             self.checkStep(action)
-
-            x = time.time()
             obs, reward, done = self.getObs()
-
-            x = time.time()
             for k, r in enumerate(reward):
                 if r > 3:
                     TotalSucess[k] += 1
                     TotalTrial[k] += 1
 
-            x = time.time()
-            # Rewards += reward
+            Rewards += reward
             nStateT = self.ppState(obs)
+            # nAction = self.getActionHybridPolicy(nStateT)
             nAction = self.getAction(nStateT)
-            # print("inference:{:.3f}".format(time.time() - x))
-            
             for i, d in enumerate(done):
                 if d:
                     episodeReward.append(Rewards[i])
                     Rewards[i] = 0
                     TotalTrial[i] += 1
                     self.oldAgent.actor.zeroCellStateAgent(i)
-            
+
             action = nAction
             stateT = nStateT
             step += 1
-            # print("-------------------------------------------")
             
             if step % 3000 == 0:
                 episodeReward = np.array(Rewards)
@@ -501,37 +432,6 @@ class PPOOnPolicyTrainer(ONPolicy):
                 print(TotalTrial.sum())
                 print(TotalSucess.sum())
                 episodeReward = []
-
-    def getObs_one(self, env, init=False):
-        nEnv = self.nEnv
-        nAgent = int(self.nAgent/nEnv)
-        obsState = np.zeros((nAgent, 1447), dtype=np.float64)
-        done = [False for i in range(self.nAgent)]
-        reward = [0 for i in range(self.nAgent)]
-
-        t = ray.get(_getObs.remote(env, self.behaviorNames, nAgent))
-        s, r, r_, d = t
-        obsState = s
-        done = d
-        if True in d:
-            reward = r_
-        else:
-            reward = r
-
-        if init:
-            return obsState
-        else:
-            return (obsState, reward, done)
-
-    def check_one(self, env, action):
-        act = ActionTuple(
-            continuous=action
-        )
-        env.set_actions.remote(self.behaviorNames, act)
-
-    def test(self):
-        self.loadUnityEnv()
-        obj_refs = [rollout.remote(self, env) for env in self.envs]
 
     def run(self):
         self.loadUnityEnv()

@@ -1,4 +1,5 @@
 import ray
+import gym
 import datetime
 import numpy as np
 
@@ -75,7 +76,7 @@ class OFFPolicy:
         self.behaviorNames = list(self.env.behavior_specs._dict.keys())[0]
 
     def LoadGymEnv(self):
-        pass
+        self.env = gym.make(self.data['env'])
 
     def reset(self):
         """
@@ -218,26 +219,12 @@ class ONPolicy:
         for key in envData.keys():
             setChannel.set_float_parameter(key, float(envData[key]))
         name = self.data['envName']
-        self.envs = []
-        self.nEnv = self.data['nEnv']
-        nEnv = self.nEnv
-        # setattr(UnityEnvironment, "")
-        for i in range(nEnv):
-            env = ray.remote(UnityEnvironment)
-            env.options(num_cpus=8)
-            actor = env.remote(
-                name,
-                worker_id=id_+i,
-                side_channels=[setChannel, engineChannel],
-                no_graphics=self.data['no_graphics'])
-            actor.reset.remote()
-            self.envs.append(actor)
-        # for e in self.envs:
-        #     e.reset.remote()
-        self.behaviorNames = 'Robot?team=0'
-        for e in self.envs:
-            ray.get(e._assert_behavior_exists.remote(self.behaviorNames))
-        print("Hello")
+        self.env = UnityEnvironment(
+            name, worker_id=id_, 
+            side_channels=[setChannel, engineChannel],
+            no_graphics=self.data['no_graphics'])
+        self.env.reset()
+        self.behaviorNames = list(self.env.behavior_specs._dict.keys())[0]
 
     def reset(self):
         pass

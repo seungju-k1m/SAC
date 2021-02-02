@@ -43,8 +43,8 @@ def MLPState(self, obs) -> list:
 
 
 def CNN1DLTMPState(self, obs) -> tuple:
-    rState = torch.tensor(obs[:, :8]).to(self.device)
-    lidarPt = torch.tensor(obs[:, 8:self.sSize[-1]+8]).to(self.device)
+    rState = torch.tensor(obs[:, :6]).to(self.device).double()
+    lidarPt = torch.tensor(obs[:, 8:self.sSize[-1]+8]).to(self.device).double()
     lidarPt = torch.unsqueeze(lidarPt, dim=1)
     state = (rState, lidarPt)
     return state
