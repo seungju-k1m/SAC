@@ -502,8 +502,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 self.copyAgent.critic.zeroCellState()
                 self.ReplayMemory_Trajectory.clear()
                 # 환경 역시 초기화를 위해 한 스텝 이동한다.
-                for e in self.envs:
-                    ray.get(e.step.remote())
+                self.env.step()
             
             # 10000 step마다 결과를 print, save한다.
             if step % 10000 == 0:
