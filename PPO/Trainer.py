@@ -338,11 +338,16 @@ class PPOOnPolicyTrainer(ONPolicy):
             done:[np.array]
                 shape[:nAgent, 1]
         """
-        obsState = np.zeros((self.nAgent, 1447), dtype=np.float64)
+        # obsState = np.zeros((self.nAgent, 1447), dtype=np.float64)
+        # obsState = np.zeros((self.nAgent, 369), dtype=np.float64)
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
-        obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
+        obs, tobs = decisionStep.obs[1], terminalStep.obs[1]
         rewards, treward = decisionStep.reward, terminalStep.reward
         tAgentId = terminalStep.agent_id
+        obs = obs.tolist()
+
+        obs = list(map(lambda x : np.array(x), obs))
+        obs = np.array(obs)
         
         done = [False for i in range(self.nAgent)]
         reward = [0 for i in range(self.nAgent)]
@@ -438,10 +443,11 @@ class PPOOnPolicyTrainer(ONPolicy):
         episodeReward = []
         k = 0
         Rewards = np.zeros(self.nAgent)
-        
+        self.env.step()
         obs = self.getObs(init=True)
         stateT = self.ppState(obs)
         action = self.getAction(stateT)
+        
         step = 0
         while 1:
             # action을 환경으로 보내준다.

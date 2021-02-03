@@ -50,6 +50,14 @@ def CNN1DLTMPState(self, obs) -> tuple:
     return state
 
 
+def CargoPPState(self, obs) -> tuple:
+    rState = torch.tensor(obs[:, :8]).to(self.device).double()
+    lidarPt = torch.tensor(obs[:, 8:-1]).to(self.device).double()
+    lidarPt = torch.unsqueeze(lidarPt, dim=1)
+    state = (rState, lidarPt)
+    return state
+
+
 def CNN1DLTMPBatch(self, step, epoch, f):
     # self: PPO.Trainer.PPOOnPolicyTrainer
     k1 = 160
@@ -181,5 +189,6 @@ def preprocessBatch(f):
 def preprocessState(f):
     def wrapper(self, obs):
         # return self, MLPState(self, obs)
-        return CNN1DLTMPState(self, obs)
+        # return CNN1DLTMPState(self, obs)
+        return CargoPPState(self, obs)
     return wrapper
