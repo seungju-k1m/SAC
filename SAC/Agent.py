@@ -164,7 +164,73 @@ class sacAgent(baseAgent):
         self.critic02.loadParameters()
 
 
+class Node(nn.Module):
+    """
+        node can diverge output.
+        also, collect input.
+
+        To do this, node must specify the previous nodes and future nodes.
+        the id of node is a kind of string name.
+        the list of previous and future nodes is stored when initialized.
+
+        Also, node have priority used for controlling the forwarding flow.
+
+        To skip the priority, node mush store the current output.
+
+        Store the Inputs for waiting the other inputs.
+        
+    """
+
+    def __init__(
+        self,
+        data: dict
+    ):
+        super(Node, self).__init__()
+
+        self.previousNodes: list
+        self.previousNodes = []
+        self.priority = data['prior']
+        self.storedInput = []
+        self.storedOutput = []
+        self.data = data
+    
+    def setPrevNodes(self, prevNodes):
+        prevNodes: list
+        self.previousNodes = prevNodes
+    
+    def buildModel(self) -> None:
+        self.model = constructNet(self.data)
+    
+    def clear_savedOutput(self) -> None:
+        del self.storedOutput
+        del self.storedInput
+        self.storedInput = []
+        self.storedOutput = []
+    
+    def addInput(self, _input) -> None:
+        self.storedInput.append(_input)
+    
+    def getStoreOutput(self):
+        return self.storedOutput
+
+    def step(self) -> torch.tensor:
+        if len(self.previousNodes) != 0:
+            for prevNode in self.previousNodes:
+                for prevInput in prevNode.storedOutput:
+                    self.storedInput.append(prevInput)
+        
+        self.storedInput = tuple(self.storedInput)
+        output = self.model.forward(self.storedInput)
+        self.storedOutput.append(output.clone())
+        self.storedOutput: torch.tensor
+        return output
+
+
 class AgentV2(nn.Module):
+    """
+        the priorityModel consists of priority and node.
+        
+    """
 
     def __init__(
         self,
@@ -187,28 +253,68 @@ class AgentV2(nn.Module):
         
         # sorting the module layer
         self.moduleNames.sort()
+
+        self.priorityModel, self.outputModelName, self.inputModelName = self.buildModel()
+        self.priority = list(self.priorityModel.keys())
+        self.priority.sort()
         
-        # according to the data, build the model
-        self.model, self.connect = self.buildModel()
-        self.model: dict
-        self.connect: dict
-        
-     
     def buildModel(self) -> tuple:
+        priorityModel = {}
         """
-            model
-                dictionary
-                key : name of module
-                element : nn.Modul
+            key : priority
+            element : dict,
+                    key name
+                    element node
+        """
+
+        outputModelName = []
+        """
+            element: list
+                    prior, module name
+        """
+
+        inputModelName = {}
+        """
+            key : num of input
+            element : list
+                    element: [priority, name]
+        """
+
+        for name in self.moduleNames:
+            data = self.mData[name]
+            data: dict
+            if data["prior"] in priorityModel.keys():
+                priorityModel[data["prior"]][name] = Node(data)
+                priorityModel[data["prior"]][name].buildModel()
+            else:
+                priorityModel[data["prior"]] = {name: Node(data)}
+                priorityModel[data["prior"]][name].buildModel()
             
-            connect
-                dictionary
-                key = index, each input
-                element = list, name of module connected.
-        """
-        model = {}
-        connect = {}
-        return model, connect
+            if "output" in data.keys():
+                if data["output"]:
+                    outputModelName.append([data["prior"], name])
+            
+            if "input" in data.keys():
+                for i in data["input"]:
+                    if i in inputModelName.keys():
+                        inputModelName[i].append([data["prior"], name])
+                    else:
+                        inputModelName[i] = [[data["prior"], name]]
+        
+        for prior in priorityModel.keys():
+            node_dict = priorityModel[prior]
+            for index in node_dict.keys():
+                node = node_dict[index]
+                if "prevNodeNames" in node.data.keys():
+                    prevNodeNames = node.data["prevNodeNames"]
+                    prevNodeNames: list
+                    prevNodes = []
+                    for name in prevNodeNames:
+                        data = self.mData[name]
+                        prevNodes.append(priorityModel[data["prior"]][name])
+                    node.setPrevNodes(prevNodes)
+                        
+        return priorityModel, outputModelName, inputModelName
 
     def loadParameters(self) -> None:
         pass
@@ -225,26 +331,39 @@ class AgentV2(nn.Module):
     def to(self, device) -> None:
         pass
 
+    def clear_savedOutput(self):
+
+        for i in self.priority:
+            nodeDict = self.priorityModel[i]
+            for name in nodeDict.keys():
+                node = nodeDict[name]
+                node.clear_savedOutput()
+
     def forward(self, inputs) -> tuple:
-        inputSize = len(inputs)
-        stopIdx = []
+        inputs: tuple
+        
+        for i, _input in enumerate(inputs):
+            priorityName_InputModel = self.inputModelName[i]
+            priorityName_InputModel: list
+            for inputinfo in priorityName_InputModel:
+                self.priorityModel[inputinfo[0]][inputinfo[1]].addInput(_input)
 
-        for i in range(inputSize):
-            idx = self.connect[i]
-            for j in idx:
-                stopIdx.append(self.moduleNames.index(j))
-            
-        flow = 0
-        forwards = []
+        for prior in range(self.priority[-1] + 1):
+            for nodeName in self.priorityModel[prior].keys():
+                node: str
+                self.priorityModel[prior][nodeName].step()
+        
         output = []
-        while 1:
-
-            name = self.moduleNames[flow]
-            layer = self.model[name]
-            if flow in stopIdx:
-                
-
-
+        for outinfo in self.outputModelName:
+            out = self.priorityModel[outinfo[0]][outinfo[1]].getStoreOutput()
+            for o in out:
+                output.append(o)
+        
+        output = tuple(output)
+        self.clear_savedOutput()
+        return output
+          
+            
 class AgentV1(nn.Module):
 
     def __init__(

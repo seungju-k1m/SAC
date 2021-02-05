@@ -103,6 +103,8 @@ class MLP(nn.Module):
             iSize = self.fSize[i]
     
     def forward(self, x, shortcut=None):
+        if type(x) == tuple:
+            x = x[0]
         for i, layer in enumerate(self.children()):
             x = layer.forward(x)
         return x
@@ -141,12 +143,14 @@ class CNET(nn.Module):
         self.nUnit = netData['nUnit']
         self.padding = netData['padding']
         self.stride = netData['stride']
+        self.linear = netData['linear']
         act = netData['act']
         if not isinstance(act, list):
             act = [act for i in range(self.nLayer)]
         self.act = act
+        
         if self.linear:
-            self.act[-1] = "linear"
+            self.act.append("linear")
 
         self.buildModel()
         
@@ -209,6 +213,8 @@ class CNET(nn.Module):
         return size
 
     def forward(self, x):
+        if type(x) == tuple:
+            x = x[0]
         for layer in self.children():
             x = layer(x)
         return x
@@ -291,6 +297,8 @@ class LSTMNET(nn.Module):
         self.CellState[1][0, idx] = c
 
     def forward(self, state):
+        if type(state) == tuple:
+            state = state[0]
         nDim = state.shape[0]
         if nDim == 1:
             output, (hn, cn) = self.rnn(state, self.CellState)
@@ -407,6 +415,8 @@ class CNN1D(nn.Module):
         return size
     
     def forward(self, x):
+        if type(x) == tuple:
+            x = x[0]
         for layer in self.children():
             x = layer(x)
         return x
@@ -505,6 +515,8 @@ class View(nn.Module):
         self.shape = data['shape']
 
     def forward(self, x):
+        if type(x) == tuple:
+            x = x[0]
         return x.view(self.shape)
 
 
