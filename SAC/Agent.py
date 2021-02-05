@@ -192,8 +192,20 @@ class AgentV2(nn.Module):
         self.model, self.connect = self.buildModel()
         self.model: dict
         self.connect: dict
-    
+        
+     
     def buildModel(self) -> tuple:
+        """
+            model
+                dictionary
+                key : name of module
+                element : nn.Modul
+            
+            connect
+                dictionary
+                key = index, each input
+                element = list, name of module connected.
+        """
         model = {}
         connect = {}
         return model, connect
@@ -214,7 +226,23 @@ class AgentV2(nn.Module):
         pass
 
     def forward(self, inputs) -> tuple:
-        pass
+        inputSize = len(inputs)
+        stopIdx = []
+
+        for i in range(inputSize):
+            idx = self.connect[i]
+            for j in idx:
+                stopIdx.append(self.moduleNames.index(j))
+            
+        flow = 0
+        forwards = []
+        output = []
+        while 1:
+
+            name = self.moduleNames[flow]
+            layer = self.model[name]
+            if flow in stopIdx:
+                
 
 
 class AgentV1(nn.Module):
@@ -241,8 +269,8 @@ class AgentV1(nn.Module):
             setattr(self, '_'+str(i), self.model[name])
             if 'input' in self.mData[name].keys():
                 inputs = self.mData[name]['input']
-                for i in inputs:
-                    self.connect[i].append(name)
+                for j in inputs:
+                    self.connect[j].append(name)
     
     def loadParameters(self):
         for i, name in enumerate(self.moduleNames):
