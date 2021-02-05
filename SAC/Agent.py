@@ -164,6 +164,59 @@ class sacAgent(baseAgent):
         self.critic02.loadParameters()
 
 
+class AgentV2(nn.Module):
+
+    def __init__(
+        self,
+        mData: dict
+    ):
+        super(AgentV2, self).__init__()
+        """
+            1. parsing the data
+            2. load the weight
+            3. return the list of weight for optimizer
+            4. calculate the norm of gradient
+            5. attach the device to layer
+            6. forwarding!!
+        """
+        # data
+        self.mData = mData
+
+        # name
+        self.moduleNames = list(self.mData.keys())
+        
+        # sorting the module layer
+        self.moduleNames.sort()
+        
+        # according to the data, build the model
+        self.model, self.connect = self.buildModel()
+        self.model: dict
+        self.connect: dict
+    
+    def buildModel(self) -> tuple:
+        model = {}
+        connect = {}
+        return model, connect
+
+    def loadParameters(self) -> None:
+        pass
+
+    def buildOptim(self) -> None:
+        pass
+
+    def updateParameter(self) -> None:
+        pass
+
+    def calculateNorm(self) -> None:
+        pass
+
+    def to(self, device) -> None:
+        pass
+
+    def forward(self, inputs) -> tuple:
+        pass
+
+
 class AgentV1(nn.Module):
 
     def __init__(
