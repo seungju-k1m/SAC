@@ -135,15 +135,12 @@ class PPOOnPolicyTrainer(ONPolicy):
         for optimKey in optimKeyList:
             if optimKey == 'actor':
                 self.aOptim = getOptim(self.optimData[optimKey], self.agent.actor.buildOptim())
-            if optimKey == 'critic':
-                self.cOptim = getOptim(self.optimData[optimKey], self.agent.critic.buildOptim())
                 
     def zeroGrad(self):
         """
         gradient를 zero로 반환
         """
         self.aOptim.zero_grad()
-        self.cOptim.zero_grad() 
 
     def getAction(self, state, dMode=False):
         """
@@ -188,9 +185,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         """
         gradient를 바탕으로 weight를 update.
         """
-        self.agent.critic.clippingNorm(1000)
-        self.cOptim.step()
-        self.agent.actor.clippingNorm(5)
+        self.agent.actor.clippingNorm(1000)
         self.aOptim.step()
 
         normA = self.agent.actor.calculateNorm().cpu().detach().numpy()
@@ -242,6 +237,8 @@ class PPOOnPolicyTrainer(ONPolicy):
             self.writer.add_scalar('Critic Loss', lossC, step+epoch)
             entropy = entropy.detach().cpu().numpy()
             self.writer.add_scalar("Entropy", entropy, step+epoch)
+            self.writer.add_scalar("gT", gT.mean(), step+epoch)
+            self.writer.add_scalar("gAE", gAE.mean(), step+epoch)
         del loss
         del minusObj
 
@@ -500,7 +497,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 # 환경 역시 초기화를 위해 한 스텝 이동한다.
             
             # 10000 step마다 결과를 print, save한다.
-            if step % 10000 == 0:
+            if step % 3200 == 0:
                 episodeReward = np.array(Rewards)
                 reward = episodeReward.mean()
                 if self.writeTMode:

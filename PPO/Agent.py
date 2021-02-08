@@ -63,16 +63,16 @@ class ppoAgent(baseAgent):
                 netData = self.aData[netName]
                 self.actor = AgentV2(netData, LSTMName=self.LSTMName)
 
-            if netName == "critic":
-                netData = self.aData[netName]
-                self.critic = AgentV2(netData, LSTMName=self.LSTMName)
+            # if netName == "critic":
+            #     netData = self.aData[netName]
+            #     self.critic = AgentV2(netData, LSTMName=self.LSTMName)
     
     def to(self, device):
         """
         actor와 critic에 장치(cpu, cuda:0)를 부착한다.
         """
         self.actor.to(device)
-        self.critic.to(device)
+        # self.critic.to(device)
 
     def forward(self, state):
         """
@@ -82,7 +82,8 @@ class ppoAgent(baseAgent):
             state:[tuple]
         """
         # 평균과 표준편차를 구한다.
-        mean = self.actor.forward(state)[0]
+        output = self.actor.forward(state)[0]
+        mean, critic = output[:, :-1], output[:, -1:]
         std = self.logStd.exp()
 
         # 이를 기반으로 gaussian sampling을 통해 action을 구한다.
@@ -95,14 +96,12 @@ class ppoAgent(baseAgent):
         logProb -= torch.log(1-action.pow(2)+1e-6).sum(1, keepdim=True)
         entropy = (torch.log(std * (2 * 3.14)**0.5)+0.5).sum(1, keepdim=True)
 
-        # criticForward를 통해 critic을 구한다.
-        critic = self.criticForward(state)
-
         return action, logProb, entropy, critic
 
     def actorForward(self, state, dMode=False):
 
-        mean = self.actor.forward(state)[0]
+        output = self.actor.forward(state)[0]
+        mean = output[:, :-1]
         std = self.logStd.exp()
         if dMode:
             action = torch.tanh(mean)
@@ -114,7 +113,8 @@ class ppoAgent(baseAgent):
         return action
 
     def criticForward(self, state):
-        critic = self.critic.forward(state)[0]
+        output = self.actor.forward(state)[0]
+        critic = output[:, -1:]
         return critic
 
     def calQLoss(self, state, target):
@@ -143,7 +143,8 @@ class ppoAgent(baseAgent):
         log pi(action|state)를 반환한다.
         """
 
-        mean = self.actor.forward(state)[0]
+        output = self.actor.forward(state)[0]
+        mean = output[:, :-1]
         # action = torch.clamp(action, -0.9999, 0.9999)
         std = self.logStd.exp()
         gaussianDist = torch.distributions.Normal(mean, std)
@@ -166,7 +167,6 @@ class ppoAgent(baseAgent):
         save file로 부터 load할 때 필요한 method이다.
         """
         self.actor.loadParameters()
-        self.critic.loadParameters()
     
     def decayingLogStd(self, step):
         """
@@ -177,7 +177,6 @@ class ppoAgent(baseAgent):
     
     def clear(self, index):
         self.actor.clear(index)
-        self.critic.clear(index)
 
 
 class Node(nn.Module):

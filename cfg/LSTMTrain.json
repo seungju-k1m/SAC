@@ -19,7 +19,7 @@
     "Velocity":1,
     "YawRate":1,
     "Penalty_OverAngularVelocity":0,
-    "Reward_ReachingDestination":0.2,
+    "Reward_ReachingDestination":20,
     "Penalty_Distance":0,
     "Reward_ArrivingDestination":20,
     "Reward_ArrivingStartPoint":20,
@@ -132,7 +132,7 @@
   "initLogStd":-0.6,
   "finLogStd":-1.3,
   "annealingStep":1e6,
-  "K1":160,
+  "K1":320,
   "K2":10,
 
   "optim": {

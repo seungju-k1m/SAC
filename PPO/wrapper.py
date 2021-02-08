@@ -72,39 +72,29 @@ def CNN1DLTMPBatch(self, step, epoch, f):
     action = torch.tensor(action).to(self.device)
 
     self.agent.actor.zeroCellState()
-    self.agent.critic.zeroCellState()
     self.copyAgent.actor.zeroCellState()
-    self.copyAgent.critic.zeroCellState()
 
     if zeroMode is False:
         with torch.no_grad():
             for tr in tState:
                 tr_cuda = tuple([x.to(self.device) for x in tr])
-                self.agent.critic.forward(tr_cuda)
-                self.copyAgent.critic.forward(tr_cuda)
                 self.agent.actor.forward(tr_cuda)
                 self.copyAgent.actor.forward(tr_cuda)
                 del tr_cuda
             self.agent.actor.detachCellState()
-            self.agent.critic.detachCellState()
             self.copyAgent.actor.detachCellState()
-            self.copyAgent.critic.detachCellState()
 
     # 1. calculate the target value for actor and critic
     self.agent.actor.detachCellState()
     InitActorCellState = self.agent.actor.getCellState()
     InitCopyActorCellState = self.copyAgent.actor.getCellState()
-
-    self.agent.critic.detachCellState()
-    InitCriticCellState = self.agent.critic.getCellState()
-    InitCopyCriticCellState = self.copyAgent.critic.getCellState()
     self.zeroGrad()
+
     # 2. implemented the training using the truncated BPTT
     for _ in range(epoch):
         self.agent.actor.setCellState(InitActorCellState)
-        self.agent.critic.setCellState(InitCriticCellState)
 
-        value = self.agent.critic.forward(nstate)[0]  # . step, nAgent, 1 -> -1, 1
+        value = self.agent.criticForward(nstate)[0]  # . step, nAgent, 1 -> -1, 1
         value = value.view(k1+1, self.nAgent, 1)
         nvalue = value[1:]
         value = value[:-1]
@@ -112,9 +102,7 @@ def CNN1DLTMPBatch(self, step, epoch, f):
         gT = gT.view(k1, self.nAgent)
         gAE = gAE.view(k1, self.nAgent)
 
-        self.agent.critic.setCellState(InitCriticCellState)
         self.copyAgent.actor.setCellState(InitCopyActorCellState)
-        self.copyAgent.critic.setCellState(InitCopyCriticCellState)
         
         for i in range(div):
             _rstate = rstate[i*k2:(i+1)*k2].view(-1, 8)
@@ -127,25 +115,20 @@ def CNN1DLTMPBatch(self, step, epoch, f):
             _value = value[i*k2:(i+1)*k2].view(-1, 1)
             f(self, _state, _action, _gT, _gAE, _value, step, epoch)
             self.agent.actor.detachCellState()
-            self.agent.critic.detachCellState()
         self.step(step+i, epoch)
         self.agent.actor.zeroCellState()
-        self.agent.critic.zeroCellState()
         self.zeroGrad()
         if zeroMode is False:
             with torch.no_grad():
                 for tr in tState:
                     tr_cuda = tuple([x.to(self.device) for x in tr])
-                    self.agent.critic.forward(tr_cuda)
                     self.agent.actor.forward(tr_cuda)
                     del tr_cuda
-                self.agent.critic.detachCellState()
                 self.agent.actor.detachCellState()
         InitActorCellState = self.agent.actor.getCellState()
-        InitCriticCellState = self.agent.critic.getCellState()
     
-    del tState,  InitActorCellState, InitCriticCellState, \
-        InitCopyActorCellState, InitCopyCriticCellState
+    del tState,  InitActorCellState,  \
+        InitCopyActorCellState
 
 
 def preprocessBatch(f):
