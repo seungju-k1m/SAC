@@ -9,8 +9,8 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "console": "integratedTerminal"
-            // "args":["-p./cfg/Cargo.json", "-t"]
+            "console": "integratedTerminal",
+            "args":["-p./cfg/RealTrain.json", "-t"]
         }
     ]
 }

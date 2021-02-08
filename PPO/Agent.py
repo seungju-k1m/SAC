@@ -39,7 +39,7 @@ class ppoAgent(baseAgent):
         initLogStd=0,
         finLogStd=-1,
         annealingStep=1e6,
-        LSTMNum=-1
+        LSTMName=-1
     ):
         super(ppoAgent, self).__init__()
         
@@ -49,7 +49,7 @@ class ppoAgent(baseAgent):
         self.deltaStd = (self.logStd - self.finLogTsd)/annealingStep
         self.annealingStep = annealingStep
         self.aData = aData
-        self.LSTMNum = LSTMNum
+        self.LSTMName = LSTMName
         self.keyList = list(self.aData.keys())
         self.device = torch.device(device)
         self.buildModel()
@@ -61,11 +61,11 @@ class ppoAgent(baseAgent):
         for netName in self.keyList:
             if netName == "actor":
                 netData = self.aData[netName]
-                self.actor = AgentV1(netData, LSTMNum=self.LSTMNum)
+                self.actor = AgentV2(netData, LSTMName=self.LSTMName)
 
             if netName == "critic":
                 netData = self.aData[netName]
-                self.critic = AgentV1(netData, LSTMNum=self.LSTMNum)
+                self.critic = AgentV2(netData, LSTMName=self.LSTMName)
     
     def to(self, device):
         """
@@ -180,199 +180,281 @@ class ppoAgent(baseAgent):
         self.critic.clear(index)
 
 
-class AgentV1(nn.Module):
-    
+class Node(nn.Module):
     """
-    AgentV1은 actor와 critic을 생성하기 위한 class이다.
+        node can diverge output.
+        also, collect input.
 
-    다음의 역할을 수행한다.
-        1. initialize network
-        2. support for forwarding
-        3. update/set weight
-        4. return weights for optimzer
-        5. control the cell state for LSTM
-        6. clipping the gradient for stable training
+        To do this, node must specify the previous nodes and future nodes.
+        the id of node is a kind of string name.
+        the list of previous and future nodes is stored when initialized.
+
+        Also, node have priority used for controlling the forwarding flow.
+
+        To skip the priority, node mush store the current output.
+
+        Store the Inputs for waiting the other inputs.
+        
     """
-    
+
     def __init__(
         self,
-        mData,
-        LSTMNum=-1
+        data: dict
     ):
-        super(AgentV1, self).__init__()
+        super(Node, self).__init__()
+
+        self.previousNodes: list
+        self.previousNodes = []
+        self.priority = data['prior']
+        self.storedInput = []
+        self.storedOutput = []
+        self.data = data
+    
+    def setPrevNodes(self, prevNodes):
+        prevNodes: list
+        self.previousNodes = prevNodes
+    
+    def buildModel(self) -> None:
+        self.model = constructNet(self.data)
+    
+    def clear_savedOutput(self) -> None:
+        del self.storedOutput
+        del self.storedInput
+        self.storedInput = []
+        self.storedOutput = []
+    
+    def addInput(self, _input) -> None:
+        self.storedInput.append(_input)
+    
+    def getStoreOutput(self):
+        return self.storedOutput
+
+    def step(self) -> torch.tensor:
+        if len(self.previousNodes) != 0:
+            for prevNode in self.previousNodes:
+                for prevInput in prevNode.storedOutput:
+                    self.storedInput.append(prevInput)
+        
+        self.storedInput = tuple(self.storedInput)
+        output = self.model.forward(self.storedInput)
+        self.storedOutput.append(output.clone())
+        self.storedOutput: torch.tensor
+        return output
+
+
+class AgentV2(nn.Module):
+    """
+        the priorityModel consists of priority and node.
+        
+    """
+
+    def __init__(
+        self,
+        mData: dict,
+        LSTMName=None
+    ):
+        super(AgentV2, self).__init__()
+        """
+            1. parsing the data
+            2. load the weight
+            3. return the list of weight for optimizer
+            4. calculate the norm of gradient
+            5. attach the device to layer
+            6. forwarding!!
+        """
+        # data
         self.mData = mData
+
+        # name
         self.moduleNames = list(self.mData.keys())
+        
+        # sorting the module layer
         self.moduleNames.sort()
-        self.buildModel()
-        self.LSTMNum = LSTMNum
-    
-    def buildModel(self):
-        self.model = {}
-        self.listModel = []
-        self.connect = {}
-        for _ in range(10):
-            self.connect[_] = []
+
+        self.priorityModel, self.outputModelName, self.inputModelName = self.buildModel()
+        self.priority = list(self.priorityModel.keys())
+        self.priority.sort()
+        self.LSTMname = LSTMName
         
-        for i, name in enumerate(self.moduleNames):
-            self.model[name] = constructNet(self.mData[name])
-            setattr(self, '_'+str(i), self.model[name])
-            if 'input' in self.mData[name].keys():
-                inputs = self.mData[name]['input']
-                for i in inputs:
-                    self.connect[i].append(name)
-    
-    def loadParameters(self):
-        for i, name in enumerate(self.moduleNames):
-            self.model[name] = getattr(self, '_'+str(i))
-    
-    def buildOptim(self):
+    def buildModel(self) -> tuple:
+        priorityModel = {}
         """
-        optimizer를 생성하기 위해서 해당 weight를 tuple 형태로 반환한다.
+            key : priority
+            element : dict,
+                    key name
+                    element node
         """
+
+        outputModelName = []
+        """
+            element: list
+                    prior, module name
+        """
+
+        inputModelName = {}
+        """
+            key : num of input
+            element : list
+                    element: [priority, name]
+        """
+
+        name2prior = {}
+        """
+            key : name of layer
+            element: prior
+        """
+
+        for name in self.moduleNames:
+            data = self.mData[name]
+            data: dict
+            name2prior[name] = data["prior"]
+            if data["prior"] in priorityModel.keys():
+                priorityModel[data["prior"]][name] = Node(data)
+                priorityModel[data["prior"]][name].buildModel()
+            else:
+                priorityModel[data["prior"]] = {name: Node(data)}
+                priorityModel[data["prior"]][name].buildModel()
+            setattr(self, name, priorityModel[data["prior"]][name])
+            
+            if "output" in data.keys():
+                if data["output"]:
+                    outputModelName.append([data["prior"], name])
+            
+            if "input" in data.keys():
+                for i in data["input"]:
+                    if i in inputModelName.keys():
+                        inputModelName[i].append([data["prior"], name])
+                    else:
+                        inputModelName[i] = [[data["prior"], name]]
+        
+        for prior in priorityModel.keys():
+            node_dict = priorityModel[prior]
+            for index in node_dict.keys():
+                node = node_dict[index]
+                if "prevNodeNames" in node.data.keys():
+                    prevNodeNames = node.data["prevNodeNames"]
+                    prevNodeNames: list
+                    prevNodes = []
+                    for name in prevNodeNames:
+                        data = self.mData[name]
+                        prevNodes.append(priorityModel[data["prior"]][name])
+                    node.setPrevNodes(prevNodes)
+        self.name2prior = name2prior
+                        
+        return priorityModel, outputModelName, inputModelName
+
+    def loadParameters(self) -> None:
+        pass
+
+    def buildOptim(self) -> tuple:
         listLayer = []
-        for i, name in enumerate(self.moduleNames):
-            layer = self.model[name]
-            if type(layer) is not None:
-                listLayer.append(layer)
+        for prior in self.priority:
+            layerDict = self.priorityModel[prior]
+            for name in layerDict.keys():
+                listLayer.append(layerDict[name])
+        
         return tuple(listLayer)
-    
-    def updateParameter(self, Agent, tau):
-        """
-        agent에 있는 weigth을 덮어씌운다.
 
-        이때 tau를 통해 얼마만큼 덮어씌울지 결정한다.
-
-        args:
-            Agent:[AgnetV1]
-            tau:[float], 0이면 weight 은 변하지 않는다.
+    def updateParameter(self, Agent, tau) -> None:
         """
+        tau = 0, no change
+        """
+        Agent: AgentV2
+        tau: float
+
         with torch.no_grad():
-            for name in self.moduleNames:
-                parameters = self.model[name].parameters()
-                tParameters = Agent.model[name].parameters()
-                for p, tp in zip(parameters, tParameters):
-                    p.copy_((1 - tau) * p + tau * tp)
-    
-    def calculateNorm(self):
+            for prior in self.priority:
+                layerDict = self.priorityModel[prior]
+                for name in layerDict.keys():
+                    parameters = layerDict[name].parameters()
+                    tParameters = Agent.priorityModel[prior][name].parameters()
+                    for p, tp in zip(parameters, tParameters):
+                        p.copy_((1 - tau) * p + tau * tp)
+
+    def calculateNorm(self) -> float:
         totalNorm = 0
-        for name in self.moduleNames:
-            parameters = self.model[name].parameters()
-            for p in parameters:
-                norm = p.grad.data.norm(2)
-                totalNorm += norm
-        
-        return totalNorm
-    
+        for prior in self.priority:
+            layerDict = self.priorityModel[prior]
+            for name in layerDict.keys():
+                parameters = layerDict[name].parameters()
+                for p in parameters:
+                    norm = p.grad.data.norm(2)
+                    totalNorm += norm
+
     def clippingNorm(self, maxNorm):
-        """
-        gradient가 튀는 것을 방지한다.
-
-        Norm을 gradient의 distance라고 생각할 수 있으며
-
-        masNorm은 norm의 최대 크기이다.
-
-        args:
-            maxNorm:[float]
-        
-        """
         inputD = []
-        for name in self.moduleNames:
-            inputD += list(self.model[name].parameters())
+        for prior in self.priority:
+            layerDict = self.priorityModel[prior]
+            for name in layerDict.keys():
+                inputD += list(layerDict[name].parameters())
+        
         torch.nn.utils.clip_grad_norm_(inputD, maxNorm)
     
     def getCellState(self):
-        """
-        lstm module의 cell state를 반환
-        """
-        if self.LSTMNum != -1:
-            lstmModuleName = self.moduleNames[self.LSTMNum]
-            return self.model[lstmModuleName].getCellState()
-
+        if self.LSTMname is not None:
+            prior = self.name2prior[self.LSTMname]
+            return self.priorityModel[prior][self.LSTMname].getCellState()
+    
     def setCellState(self, cellstate):
-        """
-        lstm module에 cellstate update
-
-        args:
-            cellstate:[tuple], torch.tensor(1. AgentNum, hiddenSize)
-            
-        """
-        if self.LSTMNum != -1:
-            lstmModuleName = self.moduleNames[self.LSTMNum]
-            self.model[lstmModuleName].setCellState(cellstate) 
+        if self.LSTMname is not None:
+            prior = self.name2prior[self.LSTMname]
+            self.priorityModel[prior][self.LSTMname].setCellState(cellstate)
 
     def zeroCellState(self):
-        """
-        초기화를 위해 lstm module을 zero로 반환
-        """
-        if self.LSTMNum != -1:
-            lstmModuleName = self.moduleNames[self.LSTMNum]
-            self.model[lstmModuleName].zeroCellState()
+        if self.LSTMname is not None:
+            prior = self.name2prior[self.LSTMname]
+            self.priorityModel[prior][self.LSTMname].zeroCellState()
     
     def zeroCellStateAgent(self, idx):
-        """
-        특정 agent에만 cell state를 zero로 반환
-
-        args:
-            idx:[float]
-        """
-        if self.LSTMNum != -1:
-            lstmModuleName = self.moduleNames[self.LSTMNum]
-            self.model[lstmModuleName].zeroCellStateAgent(idx)
+        if self.LSTMname is not None:
+            prior = self.name2prior[self.LSTMname]
+            self.priorityModel[prior][self.LSTMname].zeroCellStateAgent(idx)
     
     def detachCellState(self):
-        """
-        BTTT를 위해서 cell state를 detaching함
-        """
-        if self.LSTMNum != -1:
-            lstmModuleName = self.moduleNames[self.LSTMNum]
-            self.model[lstmModuleName].detachCellState()
+        if self.LSTMname is not None:
+            prior = self.name2prior[self.LSTMname]
+            self.priorityModel[prior][self.LSTMname].detachCellState()
 
-    def to(self, device):
-        for name in self.moduleNames:
-            self.model[name].to(device)
+    def to(self, device) -> None:
+        for prior in self.priority:
+            layerDict = self.priorityModel[prior]
+            for name in layerDict.keys():
+                node = layerDict[name]
+                node.to(device)
     
     def clear(self, index, step=0):
-        if self.LSTMNum != -1:
-            lstmModuleName = self.moduleNames[self.LSTMNum]
-            self.model[lstmModuleName].clear(index, step)
+        if self.LSTMname is not None:
+            prior = self.name2prior[self.LSTMname]
+            self.priorityModel[prior][self.LSTMname].clear(index, step)
 
-    def forward(self, inputs):
-        inputSize = len(inputs)
-        stopIdx = []
+    def clear_savedOutput(self):
 
-        for i in range(inputSize):
-            idx = self.connect[i]
-            for i in idx:
-                stopIdx.append(self.moduleNames.index(i))
+        for i in self.priority:
+            nodeDict = self.priorityModel[i]
+            for name in nodeDict.keys():
+                node = nodeDict[name]
+                node.clear_savedOutput()
+
+    def forward(self, inputs) -> tuple:
+        inputs: tuple
         
-        flow = 0
-        forward = None
-        output = []
-        while 1:
-            name = self.moduleNames[flow]
-            layer = self.model[name]
-            if flow in stopIdx:
-                nInputs = self.mData[name]['input']
-                for nInput in nInputs:
-                    if forward is None:
-                        forward = inputs[nInput]
-                    else:
-                        if type(forward) == tuple:
-                            forward = list(forward)
-                            forward.append(inputs[nInput])
-                            forward = tuple(forward)
-                        else:
-                            forward = (forward, inputs[nInput])
-            
-            if layer is None:
-                pass
-            else:
-                forward = layer.forward(forward)
+        for i, _input in enumerate(inputs):
+            priorityName_InputModel = self.inputModelName[i]
+            priorityName_InputModel: list
+            for inputinfo in priorityName_InputModel:
+                self.priorityModel[inputinfo[0]][inputinfo[1]].addInput(_input)
 
-            if "output" in self.mData[name].keys():
-                if self.mData[name]['output']:
-                    output.append(forward)
-            flow += 1
-            if flow == len(self.moduleNames):
-                break
-        return tuple(output)
+        for prior in range(self.priority[-1] + 1):
+            for nodeName in self.priorityModel[prior].keys():
+                node: str
+                self.priorityModel[prior][nodeName].step()
+        
+        output = []
+        for outinfo in self.outputModelName:
+            out = self.priorityModel[outinfo[0]][outinfo[1]].getStoreOutput()
+            for o in out:
+                output.append(o)
+        
+        output = tuple(output)
+        self.clear_savedOutput()
+        return output
