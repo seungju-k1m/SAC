@@ -1,14 +1,14 @@
 {
     "sSize": [1, 360],
     "aSize":2,
-    "envName":"./Env/Linux/Cargo_3",
+    "envName":"./Env/Linux/Cargo_8",
     "time_scale":1.5,
     "RecordScore":2000,
     "no_graphics":false,
   
     "env":{
-      "Number_Agent":32,
-      "MaxStep": 1280,
+      "Number_Agent":8,
+      "MaxStep": 4801,
       "Reward_ReachingDestination":0.2,
       "Reward_ArrivingDestination":20,
 
@@ -18,14 +18,14 @@
       "Number_MaxArrivingReward":1e6
     },
     
-    "LSTMName":"module04",
+    "LSTMName":"module05",
     "agent":{
       "actor":{
         "module00":{
           "netCat":"Cat",
           "input":[0],
-          "prior":1,
-          "prevNodeNames":["module01", "module02"]
+          "prior":2,
+          "prevNodeNames":["module01", "module03"]
         },
         "module01":{
           "netCat":"CNN1D",
@@ -43,34 +43,44 @@
         "module02":{
           "netCat":"CNET",
           "iSize":1,
-          "nLayer":3,
-          "nUnit":[16, 8, 4],
-          "fSize":[3, 3, 3, -1],
-          "padding":[0, 0, 0],
-          "stride":[2, 2, 2],
-          "act":["relu", "relu", "relu"],
+          "nLayer":4,
+          "nUnit":[8, 4, 16, 16],
+          "fSize":[3, 3, 3, 3, -1],
+          "padding":[0, 0, 0, 0],
+          "stride":[2, 2, 2, 2],
+          "act":["relu", "relu", "relu", "relu"],
           "linear":true,
           "input":[2],
           "prior":0
         },
         "module03":{
-          "netCat":"View",
-          "shape":[-1, 32, 668],
-          "prior":2,
-          "prevNodeNames":["module00"]
+          "netCat":"MLP",
+          "iSize":400,
+          "nLayer":2,
+          "fSize":[256, 64],
+          "act":["relu", "relu"],
+          "BN":false,
+          "prevNodeNames":["module02"],
+          "prior":1
         },
         "module04":{
-          "netCat":"LSTMNET",
-          "iSize":668,
-          "nLayer":1,
-          "hiddenSize":256,
-          "Number_Agent":32,
-          "FlattenMode":true,
-          "device":"cpu",
+          "netCat":"View",
+          "shape":[-1, 8, 248],
           "prior":3,
-          "prevNodeNames":["module03"]
+          "prevNodeNames":["module00"]
         },
         "module05":{
+          "netCat":"LSTMNET",
+          "iSize":248,
+          "nLayer":1,
+          "hiddenSize":256,
+          "Number_Agent":8,
+          "FlattenMode":true,
+          "device":"cuda:0",
+          "prior":4,
+          "prevNodeNames":["module04"]
+        },
+        "module06":{
           "netCat":"MLP",
           "iSize":256,
           "nLayer":3,
@@ -78,16 +88,16 @@
           "act":["relu", "relu", "linear"],
           "BN":false,
           "output":true,
-          "prevNodeNames":["module04"],
-          "prior":4
+          "prevNodeNames":["module05"],
+          "prior":5
         }
       },
       "critic":{
         "module00":{
           "netCat":"Cat",
           "input":[0],
-          "prior":1,
-          "prevNodeNames":["module01", "module02"]
+          "prior":2,
+          "prevNodeNames":["module01", "module03"]
         },
         "module01":{
           "netCat":"CNN1D",
@@ -105,34 +115,44 @@
         "module02":{
           "netCat":"CNET",
           "iSize":1,
-          "nLayer":3,
-          "nUnit":[16, 8, 4],
-          "fSize":[3, 3, 3, -1],
-          "padding":[0, 0, 0],
-          "stride":[2, 2, 2],
-          "act":["relu", "relu", "relu"],
+          "nLayer":4,
+          "nUnit":[8, 4, 16, 16],
+          "fSize":[3, 3, 3, 3, -1],
+          "padding":[0, 0, 0, 0],
+          "stride":[2, 2, 2, 2],
+          "act":["relu", "relu", "relu", "relu"],
           "linear":true,
           "input":[2],
           "prior":0
         },
         "module03":{
-          "netCat":"View",
-          "shape":[-1, 32, 668],
-          "prior":2,
-          "prevNodeNames":["module00"]
+          "netCat":"MLP",
+          "iSize":400,
+          "nLayer":2,
+          "fSize":[256, 64],
+          "act":["relu", "relu"],
+          "BN":false,
+          "prevNodeNames":["module02"],
+          "prior":1
         },
         "module04":{
-          "netCat":"LSTMNET",
-          "iSize":668,
-          "nLayer":1,
-          "hiddenSize":256,
-          "Number_Agent":32,
-          "FlattenMode":true,
-          "device":"cpu",
+          "netCat":"View",
+          "shape":[-1, 8, 248],
           "prior":3,
-          "prevNodeNames":["module03"]
+          "prevNodeNames":["module00"]
         },
         "module05":{
+          "netCat":"LSTMNET",
+          "iSize":248,
+          "nLayer":1,
+          "hiddenSize":256,
+          "Number_Agent":8,
+          "FlattenMode":true,
+          "device":"cuda:0",
+          "prior":4,
+          "prevNodeNames":["module04"]
+        },
+        "module06":{
           "netCat":"MLP",
           "iSize":256,
           "nLayer":3,
@@ -140,8 +160,8 @@
           "act":["relu", "relu", "linear"],
           "BN":false,
           "output":true,
-          "prevNodeNames":["module04"],
-          "prior":4
+          "prevNodeNames":["module05"],
+          "prior":5
         }
       }
     },
@@ -152,15 +172,14 @@
     "rScaling": 1,
     "entropyCoeff":0,
     "epsilon":0.2,
-    "updateStep":160,
     "div":1,
     "epoch":4,
-    "updateOldP":8,
+    "updateOldP":4,
     "initLogStd":-0.6,
     "finLogStd":-1.3,
     "annealingStep":1e6,
-    "K1":160,
-    "K2":10,
+    "K1":640,
+    "K2":40,
   
     "optim": {
       "actor": {

@@ -351,7 +351,7 @@ class AgentV2(nn.Module):
         for prior in self.priority:
             layerDict = self.priorityModel[prior]
             for name in layerDict.keys():
-                listLayer.append(layerDict[name])
+                listLayer.append(layerDict[name].model)
         
         return tuple(listLayer)
 
@@ -366,8 +366,8 @@ class AgentV2(nn.Module):
             for prior in self.priority:
                 layerDict = self.priorityModel[prior]
                 for name in layerDict.keys():
-                    parameters = layerDict[name].parameters()
-                    tParameters = Agent.priorityModel[prior][name].parameters()
+                    parameters = layerDict[name].model.parameters()
+                    tParameters = Agent.priorityModel[prior][name].model.parameters()
                     for p, tp in zip(parameters, tParameters):
                         p.copy_((1 - tau) * p + tau * tp)
 
@@ -376,44 +376,46 @@ class AgentV2(nn.Module):
         for prior in self.priority:
             layerDict = self.priorityModel[prior]
             for name in layerDict.keys():
-                parameters = layerDict[name].parameters()
+                parameters = layerDict[name].model.parameters()
                 for p in parameters:
                     norm = p.grad.data.norm(2)
                     totalNorm += norm
+        
+        return totalNorm
 
     def clippingNorm(self, maxNorm):
         inputD = []
         for prior in self.priority:
             layerDict = self.priorityModel[prior]
             for name in layerDict.keys():
-                inputD += list(layerDict[name].parameters())
+                inputD += list(layerDict[name].model.parameters())
         
         torch.nn.utils.clip_grad_norm_(inputD, maxNorm)
     
     def getCellState(self):
         if self.LSTMname is not None:
             prior = self.name2prior[self.LSTMname]
-            return self.priorityModel[prior][self.LSTMname].getCellState()
+            return self.priorityModel[prior][self.LSTMname].model.getCellState()
     
     def setCellState(self, cellstate):
         if self.LSTMname is not None:
             prior = self.name2prior[self.LSTMname]
-            self.priorityModel[prior][self.LSTMname].setCellState(cellstate)
+            self.priorityModel[prior][self.LSTMname].model.setCellState(cellstate)
 
     def zeroCellState(self):
         if self.LSTMname is not None:
             prior = self.name2prior[self.LSTMname]
-            self.priorityModel[prior][self.LSTMname].zeroCellState()
+            self.priorityModel[prior][self.LSTMname].model.zeroCellState()
     
     def zeroCellStateAgent(self, idx):
         if self.LSTMname is not None:
             prior = self.name2prior[self.LSTMname]
-            self.priorityModel[prior][self.LSTMname].zeroCellStateAgent(idx)
+            self.priorityModel[prior][self.LSTMname].model.zeroCellStateAgent(idx)
     
     def detachCellState(self):
         if self.LSTMname is not None:
             prior = self.name2prior[self.LSTMname]
-            self.priorityModel[prior][self.LSTMname].detachCellState()
+            self.priorityModel[prior][self.LSTMname].model.detachCellState()
 
     def to(self, device) -> None:
         for prior in self.priority:

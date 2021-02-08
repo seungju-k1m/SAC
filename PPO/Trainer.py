@@ -33,20 +33,13 @@ class PPOOnPolicyTrainer(ONPolicy):
         
         torch.set_default_dtype(torch.float64)
         torch.backends.cudnn.benchmark = True
-        if 'fixedTemp' in self.keyList:
-            self.fixedTemp = self.data['fixedTemp'] == "True"
-            if self.fixedTemp:
-                if 'tempValue' in self.keyList:
-                    self.tempValue = self.data['tempValue']
-            else:
-                self.fixedTemp = False
-                self.tempValue = self.agent.temperature
 
         if self.device != "cpu":
             self.device = torch.device(self.device)
             
         else:
             self.device = torch.device("cpu")
+
         self.entropyCoeff = self.data['entropyCoeff']
         self.epsilon = self.data['epsilon']
         self.labmda = self.data['lambda']
@@ -78,7 +71,6 @@ class PPOOnPolicyTrainer(ONPolicy):
             LSTMName=self.LSTMName)
         self.oldAgent.to(self.device)
         self.oldAgent.update(self.agent)
-
         self.copyAgent = ppoAgent(
             self.aData,
             coeff=self.entropyCoeff,
@@ -96,7 +88,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.sPath += name + '_' + str(time)+'.pth'
 
         self.sSize = self.aData['sSize']
-        self.updateStep = self.data['updateStep']
+        self.updateStep = self.data['K1']
         self.genOptim()
 
         self.div = self.data['div']
@@ -341,30 +333,22 @@ class PPOOnPolicyTrainer(ONPolicy):
         # obsState = np.zeros((self.nAgent, 1447), dtype=np.float64)
         # obsState = np.zeros((self.nAgent, 369), dtype=np.float64)
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
-        image = decisionStep.obs[1]
-        obs = decisionStep.obs[0]
-        rewards, treward = decisionStep.reward, terminalStep.reward
-        tAgentId = terminalStep.agent_id
+        image = decisionStep.obs[0]
+        obs = decisionStep.obs[1]
+        rewards = decisionStep.reward
         obs = obs.tolist()
 
         obs = list(map(lambda x: np.array(x), obs))
         obs = np.array(obs)
+
+        done = []
         
-        done = [False for i in range(self.nAgent)]
-        reward = [0 for i in range(self.nAgent)]
-        obsState = np.array(obs)
+        for done_idx in obs[:, -1]:
+            done.append(done_idx == 1)
         reward = rewards
         
-        k = 0
-        for i, state in zip(tAgentId, tobs):
-            state = np.array(state)
-            obsState[i] = state
-            done[i] = True
-            self.Number_Episode += 1
-            reward[i] = treward[k]
-            if (reward[i] > 1):
-                self.Number_Sucess += 1
-            k += 1
+        obsState = (obs, image)
+
         if init:
             return obsState
         else:
@@ -444,7 +428,6 @@ class PPOOnPolicyTrainer(ONPolicy):
         episodeReward = []
         k = 0
         Rewards = np.zeros(self.nAgent)
-        self.env.step()
         obs = self.getObs(init=True)
         stateT = self.ppState(obs)
         action = self.getAction(stateT)
@@ -508,8 +491,13 @@ class PPOOnPolicyTrainer(ONPolicy):
                 self.copyAgent.actor.zeroCellState()
                 self.copyAgent.critic.zeroCellState()
                 self.ReplayMemory_Trajectory.clear()
+
+                obs = self.getObs(init=True)
+                stateT = self.ppState(obs)
+                action = self.getAction(stateT)
+                self.checkStep(action)
+
                 # 환경 역시 초기화를 위해 한 스텝 이동한다.
-                self.env.step()
             
             # 10000 step마다 결과를 print, save한다.
             if step % 10000 == 0:

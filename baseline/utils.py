@@ -159,21 +159,21 @@ class jsonParser:
         with open(fileName) as jsonFile:
             self.jsonFile = json.load(jsonFile)
             self.jsonFile: dict
-        keys = [
-            'time_scale', 'RecordScore', 'no_graphics',
-            'LSTMNum', 'gamma', 'lambda', 'rScaling',
-            'entropyCoeff', 'epsilon', 'div', 'epoch',
-            'updateOldP', 'initLogStd', 'finLogStd',
-            'annealingStep', 'K1', 'K2', 'updateStep']
+        # keys = [
+        #     'time_scale', 'RecordScore', 'no_graphics',
+        #     'LSTMNum', 'gamma', 'lambda', 'rScaling',
+        #     'entropyCoeff', 'epsilon', 'div', 'epoch',
+        #     'updateOldP', 'initLogStd', 'finLogStd',
+        #     'annealingStep', 'K1', 'K2', 'updateStep']
         
-        values = [
-            1, 1e6, False,
-            -1, 0.99, 0.95, 1,
-            0, 0.2, 1, 1,
-            4, -1.1, -1.5,
-            1e6, 160, 10, 160
-        ]
-        self.jsonFile = setValue_dict(self.jsonFile, keys, values)
+        # values = [
+        #     1, 1e6, False,
+        #     -1, 0.99, 0.95, 1,
+        #     0, 0.2, 1, 1,
+        #     4, -1.1, -1.5,
+        #     1e6, 160, 10, 160
+        # ]
+        # self.jsonFile = setValue_dict(self.jsonFile, keys, values)
     
     def loadParser(self):
         return self.jsonFile
