@@ -8,8 +8,8 @@
   
     "env":{
       "Number_Agent":8,
-      "MaxStep": 4801,
-      "Reward_ReachingDestination":0.2,
+      "MaxStep": 3201,
+      "Reward_ReachingDestination":2,
       "Reward_ArrivingDestination":20,
 
       "Penalty_Collision_Wall":-0.4,
@@ -178,8 +178,8 @@
     "initLogStd":-0.6,
     "finLogStd":-1.3,
     "annealingStep":1e6,
-    "K1":640,
-    "K2":40,
+    "K1":160,
+    "K2":10,
   
     "optim": {
       "actor": {
