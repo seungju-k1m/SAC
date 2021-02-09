@@ -126,12 +126,16 @@ class sacTrainer(ONPolicy):
             state,
             alpha=self.tempValue)
         lossP.backward()
+        
         if self.fixedTemp:
             lossT.backward()
             self.tOptim.step()
+        self.agent.critic01.zeroGradModule('module01')
+        self.agent.critic02.zeroGradModule('module01')
+
         self.aOptim.step()
         self.zeroGrad()
-
+        
         lossC1, lossC2 = self.agent.calQLoss(
             state,
             gT.detach(),
@@ -168,6 +172,63 @@ class sacTrainer(ONPolicy):
                     self.writer.add_scalar(
                         'alpha',
                         self.tempValue.exp().detach().cpu().numpy()[0], step)
+    
+    def getReturn(self, reward, critic, nCritic, done, Step_Agent=False):
+        nAgent = int(self.nAgent/self.div)
+        gT, gAE = [], []
+        step = len(reward)
+        critic = critic.view((step, -1))
+        nCritic = nCritic.view((step, -1))
+        for i in range(nAgent):
+            rA = reward[:, i]  # [step] , 100
+            dA = done[:, i]  # [step] , 100
+            cA = critic[:, i]
+            ncA = nCritic[:, i] 
+            GT = []
+            GTDE = []
+            discounted_Td = 0
+            if dA[-1]:
+                discounted_r = cA[-1]
+            else:
+                discounted_r = ncA[-1]
+
+            for r, is_terminal, c, nc in zip(
+                    reversed(rA), 
+                    reversed(dA), 
+                    reversed(cA),
+                    reversed(ncA)):
+                
+                if is_terminal:
+                    td_error = r + self.gamma * c - c
+                else:
+                    td_error = r + self.gamma * nc - c
+
+                discounted_r = r + self.gamma * discounted_r
+                discounted_Td = td_error + self.gamma * self.labmda * discounted_Td
+
+                GT.append(discounted_r)
+                GTDE.append(discounted_Td)
+            GT = torch.tensor(GT[::-1]).view((-1, 1)).to(self.device)
+            GTDE = torch.tensor(GTDE[::-1]).view((-1, 1)).to(self.device)
+            gT.append(GT)
+            gAE.append(GTDE)
+
+        gT = torch.cat(gT, dim=0)
+        gAE = torch.cat(gAE, dim=0)
+
+        if Step_Agent:
+            gT.view(-1, 1)
+            gAE.view(-1, 1)
+        else:
+            gT = gT.view(nAgent, -1)
+            gT = gT.permute(1, 0).contiguous()
+            gT = gT.view((-1, 1))
+
+            gAE = gAE.view(nAgent, -1)
+            gAE = gAE.permute(1, 0).contiguous()
+            gAE = gAE.view((-1, 1))
+
+        return gT, gAE
 
     def getObs(self, init=False):
         """

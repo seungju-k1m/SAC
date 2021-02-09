@@ -8,7 +8,7 @@
   
     "env":{
       "Number_Agent":64,
-      "MaxStep": 1281,
+      "MaxStep": 961,
       "Interval_Decision":50,
       "Interval_Update_Position":2,
       "Reward_ReachingDestination":0.2,

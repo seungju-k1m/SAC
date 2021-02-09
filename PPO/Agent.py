@@ -76,10 +76,7 @@ class ppoAgent(baseAgent):
 
     def forward(self, state):
         """
-        state를 입력을 받아, action, logprob entropy, crtici을 output으로 반환한다.
-
-        args:
-            state:[tuple]
+            Jump the Length of State.
         """
         # 평균과 표준편차를 구한다.
         output = self.actor.forward(state)[0]
@@ -99,6 +96,9 @@ class ppoAgent(baseAgent):
         return action, logProb, entropy, critic
 
     def actorForward(self, state, dMode=False):
+        """
+            Jump Lenght of state
+        """
 
         output = self.actor.forward(state)[0]
         mean = output[:, :-1]
@@ -113,6 +113,9 @@ class ppoAgent(baseAgent):
         return action
     
     def criticForward(self, state):
+        """
+            Jump Length of state
+        """
         output = self.actor.forward(state)[0]
         critic = output[:, -1:]
 
@@ -137,6 +140,9 @@ class ppoAgent(baseAgent):
         return log_prob.exp(), entropy.mean()
 
     def calLoss(self, oldAgent, state, action, gT, value):
+        """
+            Jump Length of state
+        """
         oldAgent: ppoAgent
 
         output = self.actor.forward(state)[0]

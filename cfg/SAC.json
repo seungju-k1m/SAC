@@ -7,7 +7,7 @@
   
     "env":{
       "Number_Agent":64,
-      "MaxStep": 1281,
+      "MaxStep": 321,
       "Reward_ReachingDestination":0.2,
       "Reward_ArrivingDestination":20,
 
@@ -101,6 +101,8 @@
     "annealingStep":1e6,
     "K1":160,
     "K2":10,
+    "fixedTemp":true,
+    "tempValue":0.2,
   
     "optim": {
       "actor": {

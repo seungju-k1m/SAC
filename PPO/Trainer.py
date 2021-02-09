@@ -209,19 +209,6 @@ class PPOOnPolicyTrainer(ONPolicy):
         이 후, backpropagation이 이루어진다
         """
 
-        # lossC = self.agent.calQLoss(
-        #     state,
-        #     gT.detach(),
-        
-        # )
-
-        # minusObj, entropy = self.agent.calAObj(
-        #     self.copyAgent,
-        #     state,
-        #     action,
-        #     gT.detach() - critic.detach()
-        # )
-
         lossC, minusObj, entropy = self.agent.calLoss(
             self.copyAgent,
             state,
@@ -490,11 +477,11 @@ class PPOOnPolicyTrainer(ONPolicy):
                 self.oldAgent.actor.zeroCellState()
                 self.copyAgent.actor.zeroCellState()
                 self.ReplayMemory_Trajectory.clear()
+                self.env.step()
 
                 obs = self.getObs(init=True)
                 stateT = self.ppState(obs)
                 action = self.getAction(stateT)
-                self.checkStep(action)
 
                 # 환경 역시 초기화를 위해 한 스텝 이동한다.
             

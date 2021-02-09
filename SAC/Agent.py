@@ -322,6 +322,13 @@ class AgentV2(nn.Module):
                         
         return priorityModel, outputModelName, inputModelName
 
+    def zeroGradModule(self, moduleName):
+        moduleName: str
+
+        prior = self.name2prior[moduleName]
+        module = self.priorityModel[prior][moduleName]
+        module.model.zero_grad()
+
     def loadParameters(self) -> None:
         pass
 

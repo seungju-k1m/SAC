@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-# from PPO import Trainer
+# from PPO.Trainer import PPOOnPolicyTrainer
 
 
 def CargoPPState(self, obs) -> tuple:
@@ -23,10 +23,14 @@ def CargoWOIPPState(self, obs) -> tuple:
 
 
 def CargoWOIBatch(self, step, epoch, f):
-    # self: PPO.Trainer.PPOOnPolicyTrainer
+    # self: PPOOnPolicyTrainer
+
+    # Specify the info of Horizon
     k1 = self.data['K1']
     k2 = self.data['K2']
     div = int(k1/k2)
+
+    # Ready for the batch-preprocessing
     rstate, lidarPt, action, reward, done = \
         [], [], [], [], []
     num_list = int(len(self.ReplayMemory_Trajectory)/k1)
@@ -35,6 +39,7 @@ def CargoWOIBatch(self, step, epoch, f):
         [[] for __ in range(num_list)]
     tState = [[] for _ in range(num_list - 1)]
 
+    # get the samples from the replayMemory
     for data in self.replayMemory[0]:
         s, a, r, ns, d = data
         rstate.append(s[0])
@@ -42,6 +47,9 @@ def CargoWOIBatch(self, step, epoch, f):
         action.append(a)
         reward.append(r)
         done.append(d)
+    
+    # z can be thought as the number for slicing the trajectory value
+    # by slicing the trajectory samples, reduce the memory usage.
     z = 0
     for data in self.ReplayMemory_Trajectory:
         
@@ -50,6 +58,7 @@ def CargoWOIBatch(self, step, epoch, f):
         tlidarPt[int(z/k1)].append(ts[1])
         z += 1
     
+    # First K1 Horizon, there is no need to prepare the trajectory.
     if len(trstate) == k1:
         zeroMode = True
     else:
@@ -58,25 +67,34 @@ def CargoWOIBatch(self, step, epoch, f):
                 torch.cat(trstate[_], dim=0),
                 torch.cat(tlidarPt[_], dim=0))
         zeroMode = False
+    
+    # Second preprocess-batch
     rstate = torch.cat(rstate, dim=0)
     lidarPt = torch.cat(lidarPt, dim=0)
     nrstate, nlidarPt = ns
+
+    # nrstate, nlidarPt have K1+1 elements
     nrstate, nlidarPt =\
         torch.cat((rstate, nrstate), dim=0),\
         torch.cat((lidarPt, nlidarPt), dim=0)
+    nstate = (nrstate, nlidarPt)
 
+    # viewing the tensor, sequence, nAgent, data
+    # this form for BPTT.
     lidarPt = lidarPt.view((-1, self.nAgent, 1, self.sSize[-1]))
     rstate = rstate.view((-1, self.nAgent, 8))
    
-    nstate = (nrstate, nlidarPt)
+    # data casting.
     reward = np.array(reward)
     done = np.array(done)
     action = torch.tensor(action).to(self.device)
 
+    # initalize the cell state of agent at the 0 step.
     self.agent.actor.zeroCellState()
     self.copyAgent.actor.zeroCellState()
 
-    # 0. get the Initi Cell State
+    # 0. get the cell state before the K1 Step.
+    # To do this, we use trajectory samples by just forwarding them.
     if zeroMode is False:
         with torch.no_grad():
             for tr in tState:
@@ -84,10 +102,10 @@ def CargoWOIBatch(self, step, epoch, f):
                 self.agent.actor.forward(tr_cuda)
                 self.copyAgent.actor.forward(tr_cuda)
                 del tr_cuda
+            # detaching!!
             self.agent.actor.detachCellState()
             self.copyAgent.actor.detachCellState()
 
-    # 1. calculate the target value for actor and critic
     self.agent.actor.detachCellState()
     InitActorCellState = self.agent.actor.getCellState()
     InitCopyActorCellState = self.copyAgent.actor.getCellState()
@@ -95,20 +113,27 @@ def CargoWOIBatch(self, step, epoch, f):
 
     # 2. implemented the training using the truncated BPTT
     for _ in range(epoch):
+        # reset the agent at previous K1 step.
         self.agent.actor.setCellState(InitActorCellState)
-        value = self.agent.criticForward(nstate)  # . step, nAgent, 1 -> -1, 1
+
+        # by this command, cell state of agent reaches the current Step.
+        value = self.agent.criticForward(nstate)
+        
+        # calculate the target value for training
         value = value.view(k1+1, self.nAgent, 1)
         nvalue = value[1:]
         value = value[:-1]
         gT, gAE = self.getReturn(reward, value, nvalue, done)
-
         gT = gT.view(k1, self.nAgent)
         gAE = gAE.view(k1, self.nAgent)
 
+        # before training, reset the cell state of agent at Previous K1 step.
         self.copyAgent.actor.setCellState(InitCopyActorCellState)
         self.agent.actor.setCellState(InitActorCellState)
         
+        # div can be thought as slice size for BPTT.
         for i in range(div):
+            # ready for the batching.
             _rstate = rstate[i*k2:(i+1)*k2].view(-1, 8)
             _lidarpt = lidarPt[i*k2:(1+i)*k2].view(-1, 1, self.sSize[-1])
             _state = (_rstate, _lidarpt)
@@ -116,11 +141,20 @@ def CargoWOIBatch(self, step, epoch, f):
             _gT = gT[i*k2:(i+1)*k2].view(-1, 1)
             _gAE = gAE[i*k2:(i+1)*k2].view(-1, 1)
             _value = value[i*k2:(i+1)*k2].view(-1, 1)
+
+            # after calling f, cell state would jump K2 Step from the previous Step.
             f(self, _state, _action, _gT, _gAE, _value, step, epoch)
+
+            # detaching device for BPTT
             self.agent.actor.detachCellState()
+        
+        # step the gradient for updating
         self.step(step+i, epoch)
-        self.agent.actor.zeroCellState()
         self.zeroGrad()
+
+        # get the new cell state of new agent
+        # Initialize the agent at 0 step.
+        self.agent.actor.zeroCellState()
         if zeroMode is False:
             with torch.no_grad():
                 for tr in tState:
