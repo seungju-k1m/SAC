@@ -1,7 +1,7 @@
 {
     "sSize": [1, 360],
     "aSize":2,
-    "envName":"./Env/Linux/Cargo_8",
+    "envName":"./Env/Linux/Cargo_8_easy",
     "time_scale":1.5,
     "RecordScore":2000,
     "no_graphics":false,
@@ -12,10 +12,9 @@
       "Reward_ReachingDestination":2,
       "Reward_ArrivingDestination":20,
 
-      "Penalty_Collision_Wall":-0.4,
-      "Penalty_Collision_Agent":-1.2,
-      "Penalty_Collision_DynamicOBS":-0.2,
-      "Number_MaxArrivingReward":1e6
+      "Penalty_Collision_Wall":0,
+      "Penalty_Collision_Agent":0,
+      "Penalty_Collision_DynamicOBS":0
     },
     
     "LSTMName":"module05",
