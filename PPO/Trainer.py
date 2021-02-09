@@ -209,17 +209,25 @@ class PPOOnPolicyTrainer(ONPolicy):
         이 후, backpropagation이 이루어진다
         """
 
-        lossC = self.agent.calQLoss(
-            state,
-            gT.detach(),
+        # lossC = self.agent.calQLoss(
+        #     state,
+        #     gT.detach(),
         
-        )
+        # )
 
-        minusObj, entropy = self.agent.calAObj(
+        # minusObj, entropy = self.agent.calAObj(
+        #     self.copyAgent,
+        #     state,
+        #     action,
+        #     gT.detach() - critic.detach()
+        # )
+
+        lossC, minusObj, entropy = self.agent.calLoss(
             self.copyAgent,
             state,
-            action,
-            gT.detach() - critic.detach()
+            action.detach(),
+            gT.detach(),
+            critic.detach()
         )
 
         objectFunction = minusObj + lossC

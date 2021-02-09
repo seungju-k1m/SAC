@@ -111,32 +111,12 @@ class ppoAgent(baseAgent):
             action = torch.tanh(x_t)
         
         return action
-
+    
     def criticForward(self, state):
         output = self.actor.forward(state)[0]
         critic = output[:, -1:]
+
         return critic
-
-    def calQLoss(self, state, target):
-        """
-        critic을 위한 objective function을 구한다.
-        """
-        critic = self.criticForward(state)
-        lossCritic = torch.mean((critic-target).pow(2)/2)
-
-        return lossCritic
-    
-    def calAObj(self, old_agent, state, action, gae):
-        """
-        actor를 위한 objective function을 구한다.
-        """
-        prob, entropy = self.calLogProb(state, action)
-        oldProb, _ = old_agent.calLogProb(state, action)
-        oldProb = oldProb.detach()
-        ratio = prob / (oldProb + 1e-4)
-        obj = torch.min(ratio * gae, torch.clamp(ratio, 1-self.epsilon, 1+self.epsilon) * gae) + self.coeff * entropy
-
-        return (-obj).mean(), entropy
 
     def calLogProb(self, state, action):
         """
@@ -155,6 +135,38 @@ class ppoAgent(baseAgent):
         log_prob -= torch.log(1-action.pow(2)+1e-6).sum(1, keepdim=True)
         entropy = gaussianDist.entropy().sum(1, keepdim=True)
         return log_prob.exp(), entropy.mean()
+
+    def calLoss(self, oldAgent, state, action, gT, value):
+        oldAgent: ppoAgent
+
+        output = self.actor.forward(state)[0]
+        mean = output[:, :-1]
+        critic = output[:, -1:]
+        lossCritic = torch.mean((critic-gT).pow(2)/2)
+
+        std = self.logStd.exp()
+        gaussianDist = torch.distributions.Normal(mean, std)
+        x = torch.atanh(action)
+        x = torch.max(torch.min(x, mean + 10 * std), mean - 10 * std)
+        log_prob = gaussianDist.log_prob(x).sum(1, keepdim=True)
+        log_prob -= torch.log(1-action.pow(2)+1e-6).sum(1, keepdim=True)
+        entropy = gaussianDist.entropy().sum(1, keepdim=True)
+
+        prob = log_prob.exp()
+        entropy = entropy.mean()
+
+        oldProb, _ = oldAgent.calLogProb(state, action)
+        oldProb = oldProb.detach()
+
+        ratio = prob / (oldProb + 1e-4)
+
+        gae = gT - value
+
+        obj = torch.min(
+            ratio * gae, 
+            torch.clamp(ratio, 1-self.epsilon, 1+self.epsilon) * gae)
+
+        return lossCritic, (-obj).mean(), entropy
 
     def update(self, Agent):
         """

@@ -76,6 +76,7 @@ def CargoWOIBatch(self, step, epoch, f):
     self.agent.actor.zeroCellState()
     self.copyAgent.actor.zeroCellState()
 
+    # 0. get the Initi Cell State
     if zeroMode is False:
         with torch.no_grad():
             for tr in tState:
@@ -95,11 +96,12 @@ def CargoWOIBatch(self, step, epoch, f):
     # 2. implemented the training using the truncated BPTT
     for _ in range(epoch):
         self.agent.actor.setCellState(InitActorCellState)
-        value = self.agent.criticForward(nstate) # . step, nAgent, 1 -> -1, 1
+        value = self.agent.criticForward(nstate)  # . step, nAgent, 1 -> -1, 1
         value = value.view(k1+1, self.nAgent, 1)
         nvalue = value[1:]
         value = value[:-1]
         gT, gAE = self.getReturn(reward, value, nvalue, done)
+
         gT = gT.view(k1, self.nAgent)
         gAE = gAE.view(k1, self.nAgent)
 
