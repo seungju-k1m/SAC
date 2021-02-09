@@ -1,4 +1,3 @@
-import ray
 import torch
 import datetime
 import numpy as np
@@ -189,11 +188,9 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.aOptim.step()
 
         normA = self.agent.actor.calculateNorm().cpu().detach().numpy()
-        normC = self.agent.critic.calculateNorm().cpu().detach().numpy()
 
         if self.writeTMode:
             self.writer.add_scalar('Action Gradient Mag', normA, step+epoch)
-            self.writer.add_scalar('Critic Gradient Mag', normC, step+epoch)
         
     @preprocessBatch
     def train(
@@ -217,7 +214,6 @@ class PPOOnPolicyTrainer(ONPolicy):
             gT.detach(),
         
         )
-        lossC.backward()
 
         minusObj, entropy = self.agent.calAObj(
             self.copyAgent,
@@ -225,8 +221,9 @@ class PPOOnPolicyTrainer(ONPolicy):
             action,
             gT.detach() - critic.detach()
         )
-        minusObj.backward()
 
+        objectFunction = minusObj + lossC
+        objectFunction.backward()
         obj = minusObj.cpu().sum().detach().numpy()
         lossC = lossC.cpu().sum().detach().numpy()
         loss = lossC - obj
@@ -482,11 +479,8 @@ class PPOOnPolicyTrainer(ONPolicy):
             # episode가 끝나면 lstm의 cell state를 초기화 한다.
             if True in done:
                 self.agent.actor.zeroCellState()
-                self.agent.critic.zeroCellState()
                 self.oldAgent.actor.zeroCellState()
-                self.oldAgent.critic.zeroCellState()
                 self.copyAgent.actor.zeroCellState()
-                self.copyAgent.critic.zeroCellState()
                 self.ReplayMemory_Trajectory.clear()
 
                 obs = self.getObs(init=True)

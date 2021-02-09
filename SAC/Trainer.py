@@ -1,47 +1,30 @@
 import torch
-import random
 import datetime
 import numpy as np
 
-from baseline.baseTrainer import OFFPolicy
+from baseline.baseTrainer import ONPolicy
 from SAC.Agent import sacAgent
 from baseline.utils import getOptim
 from collections import deque
+from SAC.wrapper import preprocessBatch, preprocessState
+from mlagents_envs.base_env import ActionTuple
 
 
-def preprocessBatch(f):
-    def wrapper(self, step):
-        miniBatch = random.sample(self.replayMemory, self.bSize)
-
-        state, action, reward, nstate, done = \
-            [], [], [], [], []
-        
-        for i in range(self.bSize):
-            state.append(miniBatch[i][0][0])
-            action.append(miniBatch[i][1])
-            reward.append(miniBatch[i][2])
-            nstate.append(miniBatch[i][3][0])
-            done.append(miniBatch[i][4])
-        state = tuple([torch.cat(state, dim=0).to(self.device).float()])
-        action = torch.tensor(action).to(self.device).float()
-        reward = torch.tensor(reward).to(self.device).float()
-        nstate = tuple([torch.cat(nstate, dim=0).to(self.device).float()])
-        loss, entropy = f(self, state, action, reward, nstate, done, step)
-        return loss, entropy
-    return wrapper
-
-
-class sacTrainer(OFFPolicy):
+class sacTrainer(ONPolicy):
 
     def __init__(self, fName):
         super(sacTrainer, self).__init__(fName)
-        self.agent = sacAgent(self.aData, self.ICMMode)
-        self.tAgent = sacAgent(self.aData)
-        if self.lPath != "None":
-            self.agent.load_state_dict(
-                torch.load(self.lPath, map_location=self.device)
-            )
-            self.agent.loadParameters()
+
+        # Specify the device for training.
+
+        if self.device != "cpu":
+            self.device = torch.device(self.device)
+            
+        else:
+            self.device = torch.device("cpu")
+        
+        # Specify the Hyper-Parameter
+        
         if 'fixedTemp' in self.keyList:
             self.fixedTemp = self.data['fixedTemp']
             if self.fixedTemp:
@@ -51,49 +34,50 @@ class sacTrainer(OFFPolicy):
                 self.fixedTemp = False
                 self.tempValue = self.agent.temperature
 
-        if self.device != "cpu":
-            a = self.device
-            self.device = torch.device(self.device)
-            torch.cuda.set_device(int(a[-1]))
-        else:
-            self.devic = torch.device("cpu")
-        self.tAgent.load_state_dict(self.agent.state_dict())
-        self.tAgent.loadParameters()
-        self.gpuOverload = self.data['gpuOverload']
+        self.updateStep = self.data['K1']
+        self.K1 = self.data['K1']
+        self.K2 = self.data['K2']
+        self.epoch = self.data['epoch']
+        self.updateOldP = self.data['updateOldP']
+        self.replayMemory = deque(maxlen=self.updateStep)
+        self.ReplayMemory_Trajectory = deque(maxlen=100000)
+        self.LSTMName = self.data['LSTMName']
 
-        self.obsSets = []
-        for i in range(self.nAgent):
-            for j in range(self.sSize[0]):
-                self.obsSets.append(deque(maxlen=self.sSize[0]))
+        # load the agent
+
+        self.agent = sacAgent(self.aData, self.LSTMName)
+        self.oldAgent = sacAgent(self.aData, self.LSTMName)
+        self.copyAgent = sacAgent(self.aData, self.LSTMName)
+
+        if self.lPath != "None":
+            self.agent.load_state_dict(
+                torch.load(self.lPath, map_location=self.device)
+            )
+            self.agent.loadParameters()
+        self.agent.to(self.device)
+
+        self.oldAgent.to(self.device)
+        self.oldAgent.update(self.agent)
+
+        self.copyAgent.to(self.device)
+        self.copyAgent.update(self.agent)
     
-        self.initializePolicy()
-        self.replayMemory = deque(maxlen=self.nReplayMemory)
+        # specify the info of environment and save path.
+
         pureEnv = self.data['envName'].split('/')
         name = pureEnv[-1]
         time = datetime.datetime.now().strftime("%Y%m%d-%H-%M-%S")
         self.sPath += name + '_' + str(time)+'.pth'
 
-        self.Number_Episode = 0
-        self.Number_Sucess = 0
-
         if self.writeTMode:
             self.writeTrainInfo()
 
-    def reset(self):
-        for i in range(self.nAgent):
-            for j in range(self.sSize[0]):
-                self.obsSets[i].append(np.zeros(self.sSize[1:]))
+    def clear(self):
+        self.replayMemory.clear()
     
-    def resetInd(self, id=0):
-        for j in range(self.sSize[0]):
-            self.obsSets[0].append(np.zeros(self.sSize[1:]))
-    
+    @preprocessState
     def ppState(self, obs):
-        rState = torch.tensor(obs[:6]).float().to(self.device)
-        lidarPt = torch.tensor(obs[8:8+self.sSize[-1]]).float().to(self.device)
-        state = torch.cat((rState, lidarPt), dim=0)
-        state = torch.unsqueeze(state, dim=0)
-        return tuple([state])
+        return tuple([obs])
 
     def genOptim(self):
         """
@@ -110,39 +94,16 @@ class sacTrainer(OFFPolicy):
                 if self.fixedTemp is False:
                     self.tOptim = getOptim(
                         self.optimData[optimKey], [self.tempValue], floatV=True)
-    
-    def logSucessRate(self, step):
-        if self.writeTMode:
-            self.writer.add_scalar(
-                "Sucess Rate", self.Number_Sucess / (self.Number_Episode), step)
-            self.Number_Sucess = 0
-            self.Number_Episode = 0
                  
     def getAction(self, state, dMode=False):
-        """
-        sample the action from the actor network!
 
-        args:
-            state:[tuple]
-                consists of rState and lidarImg
-            dMode:[bool]
-                In the policy evalution, action is not sampled, then determined by actor.
-        
-        output:
-            action:[np.array]
-                action
-                shape:[2, ]
-        """
         with torch.no_grad():
             if dMode:
-                action = self.agent.actorForward(state, dMode=False)
+                pass
             else:
-                action, logProb, critics, _ = self.agent.forward(state)
+                action, logProb, critics, _ = self.oldAgent.forward(state)
 
         return action[0].cpu().detach().numpy()
-
-    def appendMemory(self, data):
-        return self.replayMemory.append(data)
     
     def zeroGrad(self):
         self.cOptim1.zero_grad()
@@ -156,74 +117,36 @@ class sacTrainer(OFFPolicy):
         self,
         state,
         action,
-        reward,
-        nState,
-        done, 
-        step
+        gT,
+        step,
+        epoch
     ):
-        with torch.no_grad():
-            nActionsT, logProb, __, entropy = \
-                self.agent.forward(nState)
-            target1, target2 = \
-                self.tAgent.criticForward(nState, nActionsT)
-            mintarget = torch.min(target1, target2)
-            if self.fixedTemp:
-                alpha = self.tempValue
-            else:
-                alpha = self.tempValue.exp()
-        for i in range(self.bSize):
-            if done[i]:
-                mintarget[i] = reward[i]
-            else:
-                mintarget[i] = \
-                    reward[i] + self.gamma * (mintarget[i] - alpha * logProb[i])
 
+        lossP, lossT = self.agent.calALoss(
+            state,
+            alpha=self.tempValue)
+        lossP.backward()
         if self.fixedTemp:
-            lossC1, lossC2 = self.agent.calQLoss(
-                state,
-                mintarget.detach(),
-                action
-            )
-            self.zeroGrad()
-            lossC1.backward()
-            lossC2.backward()
-            self.cOptim1.step()
-            self.cOptim2.step()
-
-            lossP, lossT = self.agent.calALoss(
-                state,
-                alpha=self.tempValue)
-            
-            lossP.backward()
-            self.aOptim.step()
-
-        else:
-            lossC1, lossC2 = self.agent.calQLoss(
-                state,
-                mintarget.detach(),
-                action
-            )
-            self.zeroGrad()
-            lossC1.backward()
-            lossC2.backward()
-            self.cOptim1.step()
-            self.cOptim2.step()
-
-            lossP, lossT = self.agent.calALoss(
-                state
-                )
-            
-            lossP.backward()
             lossT.backward()
-            self.aOptim.step()
             self.tOptim.step()
+        self.aOptim.step()
+        self.zeroGrad()
 
+        lossC1, lossC2 = self.agent.calQLoss(
+            state,
+            gT.detach(),
+            action
+        )
+        lossC1.backward()
+        lossC2.backward()
+        self.cOptim1.step()
+        self.cOptim2.step()
+            
         normA = self.agent.actor.calculateNorm().cpu().detach().numpy()
         normC1 = self.agent.critic01.calculateNorm().cpu().detach().numpy()
         normC2 = self.agent.critic02.calculateNorm().cpu().detach().numpy()
 
         norm = normA + normC1 + normC2
-        entropy = entropy.mean().cpu().detach().numpy()
         lossP = lossP.cpu().sum().detach().numpy()
         lossC1 = lossC1.cpu().sum().detach().numpy()
         lossC2 = lossC2.cpu().sum().detach().numpy()
@@ -231,53 +154,44 @@ class sacTrainer(OFFPolicy):
         loss = (lossC1 + lossC2)/2 + lossP + lossT
 
         if self.writeTMode:
-            self.writer.add_scalar('Action Gradient Mag', normA, step)
-            self.writer.add_scalar('Critic1 Gradient Mag', normC1, step)
-            self.writer.add_scalar('Critic2 Gradient Mag', normC2, step)
-            self.writer.add_scalar('Gradient Mag', norm, step)
-            self.writer.add_scalar('Entropy', entropy, step)
-            self.writer.add_scalar('Loss', loss, step)
-            self.writer.add_scalar('Policy Loss', lossP, step)
-            self.writer.add_scalar('Critic Loss', (lossC1+lossC2)/2, step)
-            if self.fixedTemp is False:
-                self.writer.add_scalar('Temp Loss', lossT, step)
-                self.writer.add_scalar('alpha', self.tempValue.exp().detach().cpu().numpy()[0], step)
-                
-        return loss, entropy
-    
+            with torch.no_grad():
+                self.writer.add_scalar('Action Gradient Mag', normA, step)
+                self.writer.add_scalar('Critic1 Gradient Mag', normC1, step)
+                self.writer.add_scalar('Critic2 Gradient Mag', normC2, step)
+                self.writer.add_scalar('Gradient Mag', norm, step)
+                self.writer.add_scalar('Loss', loss, step)
+                self.writer.add_scalar('Policy Loss', lossP, step)
+                self.writer.add_scalar('Critic Loss', (lossC1+lossC2)/2, step)
+                self.writer.add_scalar('gT', gT.mean().detach().cpu().numpy()[0], step)
+                if self.fixedTemp is False:
+                    self.writer.add_scalar('Temp Loss', lossT, step)
+                    self.writer.add_scalar(
+                        'alpha',
+                        self.tempValue.exp().detach().cpu().numpy()[0], step)
+
     def getObs(self, init=False):
         """
         Get the observation from the unity Environment.
         The environment provides the vector which has the 1447 length.
         As you know, two type of step is provided from the environment.
         """
-        obsState = np.zeros((self.nAgent, 1447))
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
-        obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
-        rewards, treward = decisionStep.reward, terminalStep.reward
-        tAgentId = terminalStep.agent_id
-        agentId = decisionStep.agent_id
+        image = decisionStep.obs[0]
+        obs = decisionStep.obs[1]
+        rewards = decisionStep.reward
+        obs = obs.tolist()
+
+        obs = list(map(lambda x: np.array(x), obs))
+        obs = np.array(obs)
+
+        done = []
         
-        done = [False for i in range(self.nAgent)]
-        reward = [0 for i in range(self.nAgent)]
-        k = 0
+        for done_idx in obs[:, -1]:
+            done.append(done_idx == 1)
+        reward = rewards
         
-        for i, state in zip(agentId, obs):
-            state = np.array(state)
-            obsState[i] = state
-            done[i] = False
-            reward[i] = rewards[k]
-            k += 1
-        k = 0
-        for i, state in zip(tAgentId, tobs):
-            state = np.array(state)
-            obsState[i] = state
-            done[i] = True
-            self.Number_Episode += 1
-            if state[7] == 1:
-                self.Number_Sucess += 1
-            reward[i] = treward[k]
-            k += 1
+        obsState = (obs, image)
+
         if init:
             return obsState
         else:
@@ -286,85 +200,90 @@ class sacTrainer(OFFPolicy):
     def checkStep(self, action):
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         agentId = decisionStep.agent_id
-        value = True
+        act = ActionTuple(
+            continuous=action
+        )
         if len(agentId) != 0:
-            self.env.set_actions(self.behaviorNames, action)
-        else:
-            value = False
+            self.env.set_actions(self.behaviorNames, act)
         self.env.step()
-        return value
-
-    def targetNetUpdate(self):
-        self.tAgent.critic01.updateParameter(self.agent.critic01, self.tau)
-        self.tAgent.critic02.updateParameter(self.agent.critic02, self.tau)
 
     def run(self):
-        step = 0
-        Loss = []
-        episodicReward = []
+        self.loadUnityEnv()
         episodeReward = []
-
-        for i in range(self.nAgent):
-            episodeReward.append(0)
-
-        self.reset()
+        k = 0
+        Rewards = np.zeros(self.nAgent)
         obs = self.getObs(init=True)
-        stateT = []
-        action = []
-        for b in range(self.nAgent):
-            ob = obs[b]
-            state = self.ppState(ob)
-            action.append(self.getAction(state))
-            stateT.append(state)
-        action = np.array(action)
+        stateT = self.ppState(obs)
+        action = self.getAction(stateT)
+        step = 0
+
         while 1:
-            nState = []
-            self.checkStep(np.array(action))
-            obs, rewards, donesN_ = self.getObs()
-            for b in range(self.nAgent):
-                ob = obs[b]
-                state = self.ppState(ob)
-                nState.append(state)
-                self.appendMemory((
-                    stateT[b], action[b].copy(), 
-                    rewards[b]*self.rScaling, nState[b], donesN_[b]))
-                episodeReward[b] += rewards[b]
-                if self.inferMode:
-                    action[b] = self.getAction(state, dMode=True)
-                else:
-                    action[b] = self.getAction(state)
+            self.checkStep(action)
 
-                if donesN_[b]:
-                    self.resetInd(id=b)
-                    episodicReward.append(episodeReward[b])
-                    episodeReward[b] = 0
+            obs, reward, done = self.getObs()
 
-            if step >= int(self.startStep/self.nAgent) and self.inferMode is False:
-                loss, entropy =\
-                    self.train(step)
-                Loss.append(loss)
-                self.targetNetUpdate()
+            Rewards += reward
+            
+            nStateT = self.ppState(obs)
+            nAction = self.getAction(nStateT)
 
-            stateT = nState
+            with torch.no_grad():
+                if self.inferMode is False:
+                    self.replayMemory.append(
+                        (stateT, 
+                         action.copy(),
+                         reward * self.rScaling,
+                         nStateT,
+                         done.copy())
+                    )
+                    stateT_cpu = tuple([x.cpu() for x in stateT])
+                    self.ReplayMemory_Trajectory.append(
+                        stateT_cpu
+                    )
+            
+            action = nAction
+            stateT = nStateT
             step += 1
-            if (step % 5000 == 0):
-                self.logSucessRate(step)
-            if (step % 1000 == 0) and step > int(self.startStep/self.nAgent):
-                reward = np.array(episodicReward).mean()
+
+            if (step) % (self.updateStep) == 0 and self.inferMode is False:
+                k += 1
+                self.train(step, self.epoch)
+                self.clear()
+                if k % self.updateOldP == 0:
+                    self.oldAgent.update(self.agent)
+                    self.copyAgent.update(self.agent)
+                    k = 0
+            
+            if True in done:
+                self.agent.actor.zeroCellState()
+                self.agent.critic01.zeroCellState()
+                self.agent.critic02.zeroCellState()
+
+                self.oldAgent.actor.zeroCellState()
+                self.oldAgent.critic01.zeroCellState()
+                self.oldAgent.critic02.zeroCellState()
+
+                self.copyAgent.actor.zeroCellState()
+                self.copyAgent.critic01.zeroCellState()
+                self.copyAgent.critic02.zeroCellState()
+
+                obs = self.getObs(init=True)
+                stateT = self.ppState(obs)
+                action = self.getAction(stateT)
+                self.checkStep(action)
+            
+            if step % 3200 == 0:
+                episodeReward = np.array(Rewards)
+                reward = episodeReward.mean()
                 if self.writeTMode:
                     self.writer.add_scalar('Reward', reward, step)
 
-                if self.fixedTemp:
-                    alpha = self.tempValue
-                else:
-                    alpha = self.tempValue.exp().cpu().detach().numpy()[0]
-                
-                Loss = np.array(Loss).mean()
-                    
                 print("""
-                Step : {:5d} // Loss : {:.3f}
-                Reward : {:.3f}  // alpha: {:.3f}
-                """.format(step, Loss, reward, alpha))
-                Loss = []
-                episodicReward = []
+                Step : {:5d} // Reward : {:.3f}  
+                """.format(step, reward))
+                Rewards = np.zeros(self.nAgent)
+                if (reward > self.RecordScore):
+                    self.RecordScore = reward
+                    sPath = './save/PPO/'+self.data['envName']+str(self.RecordScore)+'.pth'
+                    torch.save(self.agent.state_dict(), sPath)
                 torch.save(self.agent.state_dict(), self.sPath)

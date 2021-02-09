@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args":["-p./cfg/RealTrain.json", "-t"]
+            "args":["-p./cfg/WOImage.json", "-t"]
         }
     ]
 }

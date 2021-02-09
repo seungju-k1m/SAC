@@ -1,14 +1,15 @@
 import torch
 import torch.nn as nn
 from baseline.utils import constructNet
-from baseline.baseNetwork import baseAgent, LSTMNET
+from baseline.baseNetwork import baseAgent
 
 
 class sacAgent(baseAgent):
 
     def __init__(
-        self, 
-        aData
+        self,
+        aData,
+        LSTMName=-1
     ):
         super(sacAgent, self).__init__()
         self.aData = aData
@@ -17,44 +18,33 @@ class sacAgent(baseAgent):
         self.device = torch.device(device)
         self.buildModel()
         self.to(self.device)
+        self.feature = None
+    
+    def update(agent):
+        agent: sacAgent
+        pass
     
     def buildModel(self):
         for netName in self.keyList:
             if netName == "actor":
                 netData = self.aData[netName]
-                self.actor = AgentV1(netData)
+                self.actor = AgentV2(netData)
 
             if netName == "critic":
                 netData = self.aData[netName]
-                self.critic01 = AgentV1(netData)
-                self.critic02 = AgentV1(netData)
+                self.critic01 = AgentV2(netData)
+                self.critic02 = AgentV2(netData)
             
-            if self.ICMMode:
-                if netName == "Forward":
-                    netData = self.aData[netName]
-                    self.ForwardM = AgentV1(netData)
-                
-                if netName == "inverseModel":
-                    netData = self.aData[netName]
-                    self.inverseM = AgentV1(netData)
-                
-                if netName == "Feature":
-                    netData = self.aData[netName]
-                    self.FeatureM = AgentV1(netData)
-
         self.temperature = torch.zeros(1, requires_grad=True, device=self.aData['device'])
     
     def to(self, device):
         self.actor.to(device)
         self.critic01.to(device)
         self.critic02.to(device)
-        if self.ICMMode:
-            self.FeatureM.to(device)
-            self.inverseM.to(device)
-            self.ForwardM.to(device)
 
     def forward(self, state):
-        output = self.actor.forward(state)[0]
+        feature, output = self.actor.forward(state)
+        self.feature = feature
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
@@ -66,13 +56,15 @@ class sacAgent(baseAgent):
         logProb -= torch.log(1-action.pow(2)+1e-6).sum(1, keepdim=True)
         entropy = (torch.log(std * (2 * 3.14)**0.5)+0.5).sum(1, keepdim=True)
 
-        critic01, critic02 = self.criticForward(state, action)
+        criticInput = tuple([action, feature])
+        critic01, critic02 = self.critic01.forward(criticInput)[0],\
+            self.critic02.forward(criticInput)[0]
 
         return action, logProb, (critic01, critic02), entropy
 
     def actorForward(self, state, dMode=False):
 
-        output = self.actor.forward(state)[0]
+        feature, output = self.actor.forward(state)
         mean, log_std = output[:, :self.aData["aSize"]], output[:, self.aData["aSize"]:]
         log_std = torch.clamp(log_std, -20, 2)
         std = log_std.exp()
@@ -85,19 +77,21 @@ class sacAgent(baseAgent):
         
         return action
 
-    def criticForward(self, state, action):
-        state = list(state)
-        state.append(action)
-        state = tuple(state)
-        
-        critic01 = self.critic01.forward(state)[0]
-        critic02 = self.critic02.forward(state)[0]
-    
+    def criticForward(self, action):
+        """
+        after calling the forward,
+
+        you can put the action to get the critics
+        """
+
+        criticInput = tuple(self.feature, action)
+        critic01 = self.critic01.forward(criticInput)[0]
+        critic02 = self.critic02.forward(criticInput)[0]
         return critic01, critic02
 
-    def calQLoss(self, state, target, pastActions):
+    def calQLoss(self, target, pastActions):
 
-        critic1, critic2 = self.criticForward(state, pastActions)
+        critic1, critic2 = self.criticForward(pastActions)
         lossCritic1 = torch.mean((critic1-target).pow(2)/2)
         lossCritic2 = torch.mean((critic2-target).pow(2)/2)
 
@@ -106,6 +100,7 @@ class sacAgent(baseAgent):
     def calALoss(self, state, alpha=0):
 
         action, logProb, critics, entropy = self.forward(state)
+        # Feature가 저장됨.
         critic1, critic2 = critics
         critic = torch.min(critic1, critic2)
         
@@ -234,7 +229,8 @@ class AgentV2(nn.Module):
 
     def __init__(
         self,
-        mData: dict
+        mData: dict,
+        LSTMName=None
     ):
         super(AgentV2, self).__init__()
         """
@@ -257,6 +253,7 @@ class AgentV2(nn.Module):
         self.priorityModel, self.outputModelName, self.inputModelName = self.buildModel()
         self.priority = list(self.priorityModel.keys())
         self.priority.sort()
+        self.LSTMname = LSTMName
         
     def buildModel(self) -> tuple:
         priorityModel = {}
@@ -280,15 +277,23 @@ class AgentV2(nn.Module):
                     element: [priority, name]
         """
 
+        name2prior = {}
+        """
+            key : name of layer
+            element: prior
+        """
+
         for name in self.moduleNames:
             data = self.mData[name]
             data: dict
+            name2prior[name] = data["prior"]
             if data["prior"] in priorityModel.keys():
                 priorityModel[data["prior"]][name] = Node(data)
                 priorityModel[data["prior"]][name].buildModel()
             else:
                 priorityModel[data["prior"]] = {name: Node(data)}
                 priorityModel[data["prior"]][name].buildModel()
+            setattr(self, name, priorityModel[data["prior"]][name])
             
             if "output" in data.keys():
                 if data["output"]:
@@ -313,23 +318,95 @@ class AgentV2(nn.Module):
                         data = self.mData[name]
                         prevNodes.append(priorityModel[data["prior"]][name])
                     node.setPrevNodes(prevNodes)
+        self.name2prior = name2prior
                         
         return priorityModel, outputModelName, inputModelName
 
     def loadParameters(self) -> None:
         pass
 
-    def buildOptim(self) -> None:
-        pass
+    def buildOptim(self) -> tuple:
+        listLayer = []
+        for prior in self.priority:
+            layerDict = self.priorityModel[prior]
+            for name in layerDict.keys():
+                listLayer.append(layerDict[name].model)
+        
+        return tuple(listLayer)
 
-    def updateParameter(self) -> None:
-        pass
+    def updateParameter(self, Agent, tau) -> None:
+        """
+        tau = 0, no change
+        """
+        Agent: AgentV2
+        tau: float
 
-    def calculateNorm(self) -> None:
-        pass
+        with torch.no_grad():
+            for prior in self.priority:
+                layerDict = self.priorityModel[prior]
+                for name in layerDict.keys():
+                    parameters = layerDict[name].model.parameters()
+                    tParameters = Agent.priorityModel[prior][name].model.parameters()
+                    for p, tp in zip(parameters, tParameters):
+                        p.copy_((1 - tau) * p + tau * tp)
+
+    def calculateNorm(self) -> float:
+        totalNorm = 0
+        for prior in self.priority:
+            layerDict = self.priorityModel[prior]
+            for name in layerDict.keys():
+                parameters = layerDict[name].model.parameters()
+                for p in parameters:
+                    norm = p.grad.data.norm(2)
+                    totalNorm += norm
+        
+        return totalNorm
+
+    def clippingNorm(self, maxNorm):
+        inputD = []
+        for prior in self.priority:
+            layerDict = self.priorityModel[prior]
+            for name in layerDict.keys():
+                inputD += list(layerDict[name].model.parameters())
+        
+        torch.nn.utils.clip_grad_norm_(inputD, maxNorm)
+    
+    def getCellState(self):
+        if self.LSTMname is not None:
+            prior = self.name2prior[self.LSTMname]
+            return self.priorityModel[prior][self.LSTMname].model.getCellState()
+    
+    def setCellState(self, cellstate):
+        if self.LSTMname is not None:
+            prior = self.name2prior[self.LSTMname]
+            self.priorityModel[prior][self.LSTMname].model.setCellState(cellstate)
+
+    def zeroCellState(self):
+        if self.LSTMname is not None:
+            prior = self.name2prior[self.LSTMname]
+            self.priorityModel[prior][self.LSTMname].model.zeroCellState()
+    
+    def zeroCellStateAgent(self, idx):
+        if self.LSTMname is not None:
+            prior = self.name2prior[self.LSTMname]
+            self.priorityModel[prior][self.LSTMname].model.zeroCellStateAgent(idx)
+    
+    def detachCellState(self):
+        if self.LSTMname is not None:
+            prior = self.name2prior[self.LSTMname]
+            self.priorityModel[prior][self.LSTMname].model.detachCellState()
 
     def to(self, device) -> None:
-        pass
+        for prior in self.priority:
+            layerDict = self.priorityModel[prior]
+            for name in layerDict.keys():
+                node = layerDict[name]
+                node.to(device)
+    
+    def clear(self, index, step=0):
+        if self.LSTMname is not None:
+            prior = self.name2prior[self.LSTMname]
+            self.priorityModel[prior][self.LSTMname].clear(index, step)
 
     def clear_savedOutput(self):
 
@@ -362,111 +439,3 @@ class AgentV2(nn.Module):
         output = tuple(output)
         self.clear_savedOutput()
         return output
-          
-            
-class AgentV1(nn.Module):
-
-    def __init__(
-        self,
-        mData
-    ):
-        super(AgentV1, self).__init__()
-        self.mData = mData
-        self.moduleNames = list(self.mData.keys())
-        self.moduleNames.sort()
-        self.buildModel()
-    
-    def buildModel(self):
-        self.model = {}
-        self.listModel = []
-        self.connect = {}
-        for _ in range(10):
-            self.connect[_] = []
-        
-        for i, name in enumerate(self.moduleNames):
-            self.model[name] = constructNet(self.mData[name])
-            setattr(self, '_'+str(i), self.model[name])
-            if 'input' in self.mData[name].keys():
-                inputs = self.mData[name]['input']
-                for j in inputs:
-                    self.connect[j].append(name)
-    
-    def loadParameters(self):
-        for i, name in enumerate(self.moduleNames):
-            self.model[name] = getattr(self, '_'+str(i))
-    
-    def buildOptim(self):
-        listLayer = []
-        for name in self.moduleNames:
-            layer = self.model[name]
-            if type(layer) is not None:
-                listLayer.append(layer)
-        return tuple(listLayer)
-    
-    def updateParameter(self, Agent, tau):
-
-        with torch.no_grad():
-            for name in self.moduleNames:
-                parameters = self.model[name].parameters()
-                tParameters = Agent.model[name].parameters()
-                for p, tp in zip(parameters, tParameters):
-                    p.copy_((1 - tau) * p + tau * tp)
-    
-    def calculateNorm(self):
-        totalNorm = 0
-        for name in self.moduleNames:
-            parameters = self.model[name].parameters()
-            for p in parameters:
-                norm = p.grad.data.norm(2)
-                totalNorm += norm
-        
-        return totalNorm
-
-    def to(self, device):
-        for name in self.moduleNames:
-            self.model[name].to(device)
-
-    def forward(self, inputs):
-        inputSize = len(inputs)
-        stopIdx = []
-
-        for i in range(inputSize):
-            idx = self.connect[i]
-            for i in idx:
-                stopIdx.append(self.moduleNames.index(i))
-        
-        flow = 0
-        forward = None
-        output = []
-        while 1:
-            name = self.moduleNames[flow]
-            layer = self.model[name]
-            if flow in stopIdx:
-                nInputs = self.mData[name]['input']
-                for nInput in nInputs:
-                    if forward is None:
-                        forward = inputs[nInput]
-                    else:
-                        if type(forward) == tuple:
-                            forward = list(forward)
-                            forward.append(inputs[nInput])
-                            forward = tuple(forward)
-                        else:
-                            forward = (forward, inputs[nInput])
-            
-            if layer is None:
-                pass
-            else:
-                if type(layer) == LSTMNET:
-                    forward, lstmState = layer.forward(forward)
-                    output.append(lstmState)
-                else:
-                    forward = layer.forward(forward)
-
-            if "output" in self.mData[name].keys():
-                if self.mData[name]['output']:
-                    output.append(forward)
-            flow += 1
-            if flow == len(self.moduleNames):
-                break
-        return tuple(output)
