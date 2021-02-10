@@ -2,20 +2,20 @@
     "sSize": [1, 360],
     "aSize":2,
     "envName":"./Env/Linux/Cargo_64_easy",
-    "time_scale":6,
+    "time_scale":1,
     "RecordScore":2000,
     "no_graphics":false,
   
     "env":{
       "Number_Agent":64,
       "MaxStep": 961,
-      "Interval_Decision":50,
-      "Interval_Update_Position":2,
+      "Interval_Decision":5,
+      "Interval_Update_Position":10,
       "Reward_ReachingDestination":0.2,
       "Reward_ArrivingDestination":20,
 
-      "Penalty_Collision_Wall":0,
-      "Penalty_Collision_Agent":0,
+      "Penalty_Collision_Wall":-0.1,
+      "Penalty_Collision_Agent":-0.5,
       "Penalty_Collision_DynamicOBS":0
     },
     
@@ -32,10 +32,10 @@
           "netCat":"CNN1D",
           "iSize":1,
           "nLayer":3,
-          "nUnit":[16, 8, 4],
-          "fSize":[3, 3, 3, -1],
+          "nUnit":[4, 8, 16],
+          "fSize":[5, 3, 3, -1],
           "padding":[0, 0, 0],
-          "stride":[2, 2, 2],
+          "stride":[3, 2, 2],
           "act":["relu", "relu", "relu"],
           "linear":true,
           "input":[1],
@@ -43,13 +43,13 @@
         },
         "module04":{
           "netCat":"View",
-          "shape":[-1, 64, 184],
+          "shape":[-1, 64, 472],
           "prior":2,
           "prevNodeNames":["module00"]
         },
         "module05":{
           "netCat":"LSTMNET",
-          "iSize":184,
+          "iSize":472,
           "nLayer":1,
           "hiddenSize":256,
           "Number_Agent":64,
@@ -71,7 +71,6 @@
         }
       }
     },
-
   
     "gamma": 0.99,
     "lambda":0.95,
