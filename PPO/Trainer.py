@@ -6,7 +6,7 @@ from PPO.Agent import ppoAgent
 from baseline.utils import getOptim, PidPolicy
 from collections import deque
 from PPO.wrapper import preprocessBatch, preprocessState
-from mlagents_envs.base_env import ActionTuple
+# from mlagents_envs.base_env import ActionTuple
 
     
 class PPOOnPolicyTrainer(ONPolicy):
@@ -214,7 +214,8 @@ class PPOOnPolicyTrainer(ONPolicy):
             state,
             action.detach(),
             gT.detach(),
-            critic.detach()
+            critic.detach(),
+            gAE.detach()
         )
 
         objectFunction = minusObj + lossC
@@ -251,32 +252,23 @@ class PPOOnPolicyTrainer(ONPolicy):
         critic = critic.view((step, -1))
         nCritic = nCritic.view((step, -1))
         for i in range(nAgent):
-            rA = reward[:, i]  # [step] , 100
-            dA = done[:, i]  # [step] , 100
-            cA = critic[:, i]
+            rA = reward[:, i]  # 160
+            dA = done[:, i]  # 160
+            cA = critic[:, i] 
             ncA = nCritic[:, i] 
             GT = []
             GTDE = []
             discounted_Td = 0
-            if dA[-1]:
-                discounted_r = cA[-1]
-            else:
-                discounted_r = ncA[-1]
+            discounted_r = ncA[-1]
 
             for r, is_terminal, c, nc in zip(
                     reversed(rA), 
                     reversed(dA), 
                     reversed(cA),
                     reversed(ncA)):
-                
-                if is_terminal:
-                    td_error = r + self.gamma * c - c
-                else:
-                    td_error = r + self.gamma * nc - c
-
+                td_error = r + self.gamma * nc - c
                 discounted_r = r + self.gamma * discounted_r
                 discounted_Td = td_error + self.gamma * self.labmda * discounted_Td
-
                 GT.append(discounted_r)
                 GTDE.append(discounted_Td)
             GT = torch.tensor(GT[::-1]).view((-1, 1)).to(self.device)
@@ -354,11 +346,9 @@ class PPOOnPolicyTrainer(ONPolicy):
 
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         agentId = decisionStep.agent_id
-        act = ActionTuple(
-            continuous=action
-        )
+        
         if len(agentId) != 0:
-            self.env.set_actions(self.behaviorNames, act)
+            self.env.set_actions(self.behaviorNames, action)
         self.env.step()
 
     def evaluate(self):
@@ -414,6 +404,7 @@ class PPOOnPolicyTrainer(ONPolicy):
 
     def run(self):
         self.loadUnityEnv()
+        self.env.reset()
         episodeReward = []
         k = 0
         Rewards = np.zeros(self.nAgent)
@@ -444,7 +435,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                         uu = u + int(self.nAgent/self.div)
                         self.replayMemory[z].append(
                                 (stateT, action.copy(),
-                                 reward*self.rScaling, nStateT,
+                                 reward.copy()*self.rScaling, nStateT,
                                  done.copy()))
                         stateT_cpu = tuple([x.cpu() for x in stateT])
                         self.ReplayMemory_Trajectory.append(
@@ -462,7 +453,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             self.copyAgent.decayingLogStd(step)
 
             # training
-            if (step) % (self.updateStep) == 0 and self.inferMode == False:
+            if (step) % (self.updateStep) == 0 and self.inferMode is False:
                 k += 1
                 self.train(step, self.epoch)
                 self.clear()

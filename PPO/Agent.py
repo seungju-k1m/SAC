@@ -139,7 +139,7 @@ class ppoAgent(baseAgent):
         entropy = gaussianDist.entropy().sum(1, keepdim=True)
         return log_prob.exp(), entropy.mean()
 
-    def calLoss(self, oldAgent, state, action, gT, value):
+    def calLoss(self, oldAgent, state, action, gT, value, gAE):
         """
             Jump Length of state
         """
@@ -167,6 +167,7 @@ class ppoAgent(baseAgent):
         ratio = prob / (oldProb + 1e-4)
 
         gae = gT - value
+        # gae = gAE
 
         obj = torch.min(
             ratio * gae, 

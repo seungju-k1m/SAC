@@ -1,18 +1,19 @@
 {
     "sSize": [1, 360],
     "aSize":2,
-    "envName":"./Env/Linux/Cargo_64_easy",
+    "envName":"./Env/Linux/Cargo_8_easy",
+    "nEnv":4,
     "time_scale":1,
     "RecordScore":2000,
     "no_graphics":false,
   
     "env":{
-      "Number_Agent":64,
+      "Number_Agent":32,
       "MaxStep": 961,
       "Interval_Decision":5,
-      "Interval_Update_Position":10,
-      "Reward_ReachingDestination":0.2,
-      "Reward_ArrivingDestination":20,
+      "Interval_Update_Position":5,
+      "Reward_ReachingDestination":2.3,
+      "Reward_ArrivingDestination":50,
 
       "Penalty_Collision_Wall":-0.1,
       "Penalty_Collision_Agent":-0.5,
@@ -43,7 +44,7 @@
         },
         "module04":{
           "netCat":"View",
-          "shape":[-1, 64, 472],
+          "shape":[-1, 32, 472],
           "prior":2,
           "prevNodeNames":["module00"]
         },
@@ -52,7 +53,7 @@
           "iSize":472,
           "nLayer":1,
           "hiddenSize":256,
-          "Number_Agent":64,
+          "Number_Agent":32,
           "FlattenMode":true,
           "device":"cuda:0",
           "prior":3,
@@ -99,7 +100,7 @@
   
     "sPath": "./save/PPO/",
     "writeTMode":true,
-    "tPath": "./tensorboard/PPO/",
+    "tPath": "./tensorboard/PPO/Env/",
     "lPath":"None",
     "device": "cuda:0",
     "gpuOverload":false,

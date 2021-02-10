@@ -134,8 +134,8 @@ def CargoWOIBatch(self, step, epoch, f):
         # div can be thought as slice size for BPTT.
         for i in range(div):
             # ready for the batching.
-            _rstate = rstate[i*k2:(i+1)*k2].view(-1, 8)
-            _lidarpt = lidarPt[i*k2:(1+i)*k2].view(-1, 1, self.sSize[-1])
+            _rstate = rstate[i*k2:(i+1)*k2].view(-1, 8).detach()
+            _lidarpt = lidarPt[i*k2:(1+i)*k2].view(-1, 1, self.sSize[-1]).detach()
             _state = (_rstate, _lidarpt)
             _action = action[i*k2:(i+1)*k2].view((-1, 2))
             _gT = gT[i*k2:(i+1)*k2].view(-1, 1)

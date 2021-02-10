@@ -23,7 +23,7 @@ parser.add_argument(
 parser.add_argument(
     '--test',
     '-te',
-    action='store_true',
+    action='store_true',                                                                        
     default=False,
     help="set test mode"
 )

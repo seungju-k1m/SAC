@@ -224,7 +224,7 @@ class ONPolicy:
             side_channels=[setChannel, engineChannel],
             no_graphics=self.data['no_graphics'])
         self.env.reset()
-        self.behaviorNames = list(self.env.behavior_specs._dict.keys())[0]
+        self.behaviorNames = list(self.env._env_specs.keys())[0]
 
     def reset(self):
         pass

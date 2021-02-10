@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
 import ray
 import time as tt
 import datetime
@@ -12,11 +18,13 @@ from collections import deque
 from mlagents_envs.environment import UnityEnvironment
 from mlagents_envs.side_channel.engine_configuration_channel import EngineConfigurationChannel
 from mlagents_envs.side_channel.environment_parameters_channel import EnvironmentParametersChannel
-from mlagents_envs.base_env import ActionTuple
 from torch.utils.tensorboard import SummaryWriter
 
 
-path = './cfg/LSTMTrain.json'
+# In[2]:
+
+
+path = './cfg/WOImage.json'
 parser = jsonParser(path)
 data = parser.loadParser()
 aData = parser.loadAgentParser()
@@ -26,21 +34,29 @@ writeMode = data['writeTMode']
 tPath = data['tPath']
 lPath = data['lPath']
 sPath = data['sPath']
+k1 = data['K1']
+k2 = data['K2']
 
 
 # define Constant
 
+# In[3]:
+
+
 nEnv = data['nEnv']
-nAgent = 64
+nAgent = 8
 TotalAgent = nEnv * nAgent
 ReplayMemory = deque(maxlen=int(1e5))
 ReplayMemory_Trajectory = deque(maxlen=int(1e5))
 step = 0
-ClipingNormCritic = 10
-ClipingNormActor = 10
+ClipingNormCritic = 100000
+ClipingNormActor = 100000
 
 
 # Initialize Ray and Specify default data type of torch.tensor
+
+# In[4]:
+
 
 ray.init(num_cpus=8)
 torch.set_default_dtype(torch.float64)
@@ -48,14 +64,20 @@ torch.set_default_dtype(torch.float64)
 
 # Load hyper-Parameter for Agent
 
+# In[5]:
+
+
 entropyCoeff = data['entropyCoeff']
 epsilon = data['epsilon']
 lambda_ = data['lambda']
 initLogStd = torch.tensor(data['initLogStd']).to(device)
 finLogStd = torch.tensor(data['finLogStd']).to(device)
 annealingStep = data['annealingStep']
-LSTMNum = data['LSTMNum']
+LSTMName = data['LSTMName']
 sSize = data['sSize']
+
+
+# In[6]:
 
 
 gamma = data['gamma']
@@ -65,20 +87,24 @@ updateOldP = data['updateOldP']
 
 # Configure Writer
 
+# In[7]:
+
+
 pureEnv = data['envName'].split('/')
 name = pureEnv[-1]
 time = datetime.datetime.now().strftime("%Y%m%d-%H-%M-%S")
 if writeMode:
     tPath = tPath + name + time
     writer = SummaryWriter(tPath)
-sPath += name + '_' + str(time) + '.pth'
+sPath += name + '_' + str(time) +'.pth'
 
 
-info = """
+# In[8]:
+
+
+info =     """
     Configuration for this experiment
     """
-
-
 def writeDict(_data, key, n=0):
     global info
     tab = ""
@@ -88,19 +114,18 @@ def writeDict(_data, key, n=0):
         for k in _data.keys():
             dK = _data[k]
             if type(dK) == dict:
-                info += """
+                info +=            """
         {}{}:
             """.format(tab, k)
                 writeDict(dK, k, n=n+1)
             else:
-                info += """
+                info +=         """
         {}{}:{}
         """.format(tab, k, dK)
     else:
-        info += """
+        info +=        """
         {}:{}
         """.format(key, _data)
-
 
 def writeTrainInfo():
     global info
@@ -108,10 +133,10 @@ def writeTrainInfo():
     for k in key:
         _data = data[k]
         if type(_data) == dict:
-            info += """
+            info +=        """
         {}:
         """.format(k)
-            writeDict(_data, k, n=1)
+            writeDict(_data, k ,n=1)
         else:
             writeDict(_data, k)
     print(info)
@@ -119,7 +144,7 @@ def writeTrainInfo():
         writer.add_text('Information', info, 0)
 
 
-# In[10]:
+# In[9]:
 
 
 writeTrainInfo()
@@ -127,7 +152,7 @@ writeTrainInfo()
 
 # Instances for Agent
 
-# In[11]:
+# In[10]:
 
 
 Agent = ppoAgent(
@@ -138,7 +163,7 @@ Agent = ppoAgent(
     initLogStd=initLogStd,
     finLogStd=finLogStd,
     annealingStep=annealingStep,
-    LSTMNum=LSTMNum
+    LSTMName=LSTMName
 )
 
 if lPath != "None":
@@ -155,7 +180,7 @@ OldAgent = ppoAgent(
     initLogStd=initLogStd,
     finLogStd=finLogStd,
     annealingStep=annealingStep,
-    LSTMNum=LSTMNum
+    LSTMName=LSTMName
 )
 OldAgent.update(Agent)
 
@@ -167,17 +192,17 @@ CopyAgent = ppoAgent(
     initLogStd=initLogStd,
     finLogStd=finLogStd,
     annealingStep=annealingStep,
-    LSTMNum=LSTMNum
+    LSTMName=LSTMName
 )
 CopyAgent.update(Agent)
 
 
 # Configuration for Unity Environment
 
-# In[12]:
+# In[11]:
 
 
-_id = 32
+_id = 320
 time_scale = data['time_scale']
 envData = data['env']
 no_graphics = data['no_graphics']
@@ -197,12 +222,12 @@ for i in range(nEnv):
         worker_id=_id+i,
         side_channels=[setChannel, engineChannel],
         no_graphics=no_graphics,
-        seed=1 + i * _id
+        seed = 1 + i * _id
     )
     ENV.reset.remote()
     envs.append(ENV)
 
-behaviorNames = 'Robot?team=0'
+behaviorNames = 'Agent?team=0'
 for e in envs:
     ray.get(e._assert_behavior_exists.remote(behaviorNames))
 
@@ -213,60 +238,78 @@ Load the Unity Environment
 
 # Sampling and Training, AND Sampling,....
 
+# In[12]:
+
 
 @ray.remote
-def _getObs(env, behaviorNames, nAgent):
-    done = [False for i in range(nAgent)]
-    reward = [0 for i in range(nAgent)]
+def _getObs(env, behaviorNames, nAgent, init):
     decisionStep, terminalStep = ray.get(env.get_steps.remote(behaviorNames))
-    obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
+    image = decisionStep.obs[0]
+    obs = decisionStep.obs[1]
+    rewards = decisionStep.reward
+    obs = obs.tolist()
 
-    reward_, treward = decisionStep.reward, terminalStep.reward
-    treward = np.array(treward)
-    reward = reward_
-    tAgentId = terminalStep.agent_id
-    obsState = np.array(obs)
-    k = 0
-    for j, state in zip(tAgentId, tobs):
-        obsState[j] = np.array(state)
-        done[j] = True
-        # reward[j] = treward[k]
-        k += 1
-    return (obsState, reward, treward, done)
+    obs = list(map(lambda x: np.array(x), obs))
+    obs = np.array(obs)
 
+    done = []
+    
+    for done_idx in obs[:, -1]:
+        done.append(done_idx == 1)
+    reward = rewards
+    
+    obsState = (obs, image)
+
+    if init:
+        return obsState
+    else:
+        return(obsState, reward, done)
 
 def getObs(init=False) -> tuple:
-    obsState = np.zeros((TotalAgent, 1447), dtype=np.float64)
     done = [False for i in range(TotalAgent)]
     reward = [0 for i in range(TotalAgent)]
     proc = []
+    vectorObs, imageObs = np.zeros((TotalAgent, 369)), np.zeros((TotalAgent, 96, 96, 1))
     for i in range(nEnv):
         proc.append(_getObs.remote(
             envs[i],
             behaviorNames,
-            nAgent
+            nAgent,
+            init
         ))
     for i in range(nEnv):
         t = ray.get(proc[i])
-        s, r, r_, d = t
-        obsState[i*nAgent:(i+1)*nAgent, :] = s
-        done[i*nAgent:(i+1)*nAgent] = d
-        if True in d:
-            reward[i*nAgent:(i+1)*nAgent] = r_
+        if init:
+            s = t
+            vectorObs[i*nAgent:(i+1)*nAgent] = s[0]
+            imageObs[i*nAgent:(i+1)*nAgent] = s[1]
         else:
+            s, r, d = t
+            vectorObs[i*nAgent:(i+1)*nAgent] = s[0]
+            imageObs[i*nAgent:(i+1)*nAgent] = s[1]
+            done[i*nAgent:(i+1)*nAgent] = d
             reward[i*nAgent:(i+1)*nAgent] = r
+    
+    obsState = (vectorObs, imageObs)
     if init:
         return obsState
     else:
         return (obsState, reward, done)
 
 
+# In[13]:
+
+
 def ppState(obs) -> tuple:
-    rState = torch.tensor(obs[:, :6]).to(device).double()
-    lidarPt = torch.tensor(obs[:, 8:sSize[-1]+8]).to(device)
-    lidarPt = torch.unsqueeze(lidarPt, dim=1).double()
+    vectorObs, imageObs = obs
+    rState = torch.tensor(vectorObs[:, :8]).to(device).double()
+    lidarPt = torch.tensor(vectorObs[:, 8:-1]).to(device).double()
+    lidarPt = torch.unsqueeze(lidarPt, dim=1)
     state = (rState, lidarPt)
     return state
+
+
+# In[14]:
 
 
 def getAction(state) -> np.ndarray:
@@ -276,14 +319,12 @@ def getAction(state) -> np.ndarray:
     return action
 
 
-# In[16]:
+# In[15]:
 
 
 def checkStep(action) -> None:
     for i in range(nEnv):
-        act = ActionTuple(
-            continuous=action[i*nAgent:(i+1)*nAgent, :]
-        )
+        act = action[i*nAgent:(i+1)*nAgent]
         envs[i].set_actions.remote(
             behaviorNames,
             act
@@ -291,62 +332,18 @@ def checkStep(action) -> None:
         envs[i].step.remote()
 
 
-# In[17]:
+# In[16]:
 
 
 Rewards = np.zeros(TotalAgent)
 episodeReward = []
 
 
-# In[18]:
-
-
-def initSampling() -> tuple:
-    init_obs = getObs(init=True)
-    stateT = ppState(init_obs)
-    action = getAction(stateT)
-
-    return (stateT, action)
-
-
-def Sampling(stateT, action) -> list:
-    global Rewards
-    global episodeReward
-    global step
-    with torch.no_grad():
-        for i in range(160):
-            checkStep(action)
-            obs, reward, done = getObs()
-            nstateT = ppState(obs)
-            nAction = getAction(nstateT)
-            ReplayMemory.append(
-                (
-                    stateT,
-                    action.copy(),
-                    reward,
-                    nstateT,
-                    done.copy()
-                )
-            )
-            Rewards += reward
-
-            stateT_cpu = tuple([x.cpu() for x in stateT])
-            ReplayMemory_Trajectory.append(
-                stateT_cpu
-            )
-            action = nAction
-            stateT = nstateT
-            step += 1
-            Agent.decayingLogStd(step)
-            OldAgent.decayingLogStd(step)
-            CopyAgent.decayingLogStd(step)
-            # print("InferenceTime:{:.3f}".format(tt.time() -z))
-    
-    return done
-
-
 # Training
+
 # 1. Generate Optimizer
+
+# In[17]:
 
 
 def GenerateOptim() -> tuple:
@@ -356,29 +353,33 @@ def GenerateOptim() -> tuple:
             aOptim = getOptim(
                 optimData[key],
                 Agent.actor.buildOptim())
-        if key == "critic":
-            cOptim = getOptim(
-                optimData[key],
-                Agent.critic.buildOptim()
-            )
-    return (aOptim, cOptim)
+    return aOptim
 
 
-aOptim, cOptim = GenerateOptim()
+# In[18]:
+
+
+aOptim = GenerateOptim()
 
 
 # 2. Set Zero Gradient
 
+# In[19]:
+
 
 def zeroGrad() -> None:
     aOptim.zero_grad()
-    cOptim.zero_grad()
+
+
+# In[20]:
 
 
 zeroGrad()
 
 
 # 3. Train the Agent
+
+# In[21]:
 
 
 def train(
@@ -391,20 +392,18 @@ def train(
     _step,
     _epoch
 ):
-    PPOAGENT: ppoAgent
-    lossC = PPOAGENT.calQLoss(
-        state,
-        gT.detach()
-    )
-    lossC.backward()
-    
-    minusObj, entropy = PPOAGENT.calAObj(
-        CopyAgent,
-        state,
-        action,
-        gT.detach() - critic.detach()
-    )
-    minusObj.backward()
+    PPOAGENT:ppoAgent
+    lossC, minusObj, entropy = PPOAGENT.calLoss(
+            CopyAgent,
+            state,
+            action.detach(),
+            gT.detach(),
+            critic.detach(),
+            gAE.detach()
+        )
+
+    objectFunction = minusObj + lossC
+    objectFunction.backward()
     obj = minusObj.cpu().sum().detach().numpy()
     lossC = lossC.cpu().sum().detach().numpy()
 
@@ -423,8 +422,12 @@ def train(
         critic = torch.mean(critic).detach().cpu().numpy()
         writer.add_scalar("critic", critic, _step + _epoch)
 
+        gAE = gAE.view(-1)
+        gAE = torch.mean(gAE).detach().cpu().numpy()
+        writer.add_scalar("gAE", gAE, _step + _epoch)
 
-# In[24]:
+
+# In[22]:
 
 
 def getReturn(
@@ -432,38 +435,29 @@ def getReturn(
     critic,
     nCritic,
     done
-):
+)->tuple:
     gT, gAE = [], []
-    length = len(reward)
-    critic = critic.view(length, -1)
-    nCritic = nCritic.view(length, -1)
+    step = len(reward)
+    critic = critic.view((step, -1))
+    nCritic = nCritic.view((step, -1))
     for i in range(TotalAgent):
-        rA = reward[:, i]  # [step] , 100
-        dA = done[:, i]  # [step] , 100
-        cA = critic[:, i]
+        rA = reward[:, i]  # 160
+        dA = done[:, i]  # 160
+        cA = critic[:, i] 
         ncA = nCritic[:, i] 
         GT = []
         GTDE = []
         discounted_Td = 0
-        if dA[-1]:
-            discounted_r = cA[-1]
-        else:
-            discounted_r = ncA[-1]
+        discounted_r = ncA[-1]
 
         for r, is_terminal, c, nc in zip(
                 reversed(rA), 
                 reversed(dA), 
                 reversed(cA),
                 reversed(ncA)):
-            
-            if is_terminal:
-                td_error = r + gamma * c - c
-            else:
-                td_error = r + gamma * nc - c
-
+            td_error = r + gamma * nc - c
             discounted_r = r + gamma * discounted_r
             discounted_Td = td_error + gamma * lambda_ * discounted_Td
-
             GT.append(discounted_r)
             GTDE.append(discounted_Td)
         GT = torch.tensor(GT[::-1]).view((-1, 1)).to(device)
@@ -474,108 +468,121 @@ def getReturn(
     gT = torch.cat(gT, dim=0)
     gAE = torch.cat(gAE, dim=0)
 
-    gT = gT.view(TotalAgent, -1)
+    gT = gT.view(nAgent, -1)
     gT = gT.permute(1, 0).contiguous()
     gT = gT.view((-1, 1))
 
-    gAE = gAE.view(TotalAgent, -1)
+    gAE = gAE.view(nAgent, -1)
     gAE = gAE.permute(1, 0).contiguous()
-    gAE = gAE.view((-1, 1)) 
-    # seq, agent > seq * agent
+    gAE = gAE.view((-1, 1))
 
     return gT, gAE
 
 
-# In[25]:
+# In[23]:
 
 
 def stepGradient(_step, _epoch):
-    Agent.critic.clippingNorm(ClipingNormCritic)
-    cOptim.step()
     Agent.actor.clippingNorm(ClipingNormActor)
     aOptim.step()
 
     normA = Agent.actor.calculateNorm().cpu().detach().numpy()
-    normC = Agent.critic.calculateNorm().cpu().detach().numpy()
-    if writeMode:
-        
-        writer.add_scalar('Action Gradient Mag', normA, _step+_epoch)
-        writer.add_scalar('Critic Gradient Mag', normC, _step+_epoch)
 
+    if writeMode:
+        writer.add_scalar('Action Gradient Mag', normA, _step+_epoch)
+
+
+# In[24]:
 
 
 def preprocessBatch(_step, _epoch):
-
-    k1 = 160
-    k2 = 10
     div = int(k1/k2)
+
+    # Ready for the batch-preprocessing
     rstate, lidarPt, action, reward, done =         [], [], [], [], []
     num_list = int(len(ReplayMemory_Trajectory)/k1)
-    trstate, tlidarPt = [[] for __ in range(num_list)], [[] for _ in range(num_list)]
+    trstate, tlidarPt =        [[] for __ in range(num_list)],        [[] for __ in range(num_list)]
     tState = [[] for _ in range(num_list - 1)]
-    for ss in ReplayMemory:
-        s, a, r, ns, d = ss
+
+    # get the samples from the replayMemory
+    for data in ReplayMemory:
+        s, a, r, ns, d = data
         rstate.append(s[0])
         lidarPt.append(s[1])
         action.append(a)
         reward.append(r)
         done.append(d)
+    
+    # z can be thought as the number for slicing the trajectory value
+    # by slicing the trajectory samples, reduce the memory usage.
     z = 0
-    for ts in ReplayMemory_Trajectory:
+    for data in ReplayMemory_Trajectory:
+        
+        ts = data
         trstate[int(z/k1)].append(ts[0])
         tlidarPt[int(z/k1)].append(ts[1])
         z += 1
+    
+    # First K1 Horizon, there is no need to prepare the trajectory.
     if len(trstate) == k1:
         zeroMode = True
     else:
         for _ in range(num_list - 1):
-            # print(trstate[_])
-            tState[_] = (torch.cat(trstate[_], dim=0), torch.cat(tlidarPt[_], dim=0))
+            tState[_] = (
+                torch.cat(trstate[_], dim=0),
+                torch.cat(tlidarPt[_], dim=0))
         zeroMode = False
+    
+    # Second preprocess-batch
     rstate = torch.cat(rstate, dim=0)
     lidarPt = torch.cat(lidarPt, dim=0)
     nrstate, nlidarPt = ns
-    nrstate, nlidarPt = torch.cat((rstate, nrstate), dim=0), torch.cat((lidarPt, nlidarPt), dim=0)
-    lidarPt = lidarPt.view((-1, TotalAgent, 1, sSize[-1]))
-    rstate = rstate.view((-1, TotalAgent, 6))
 
+    # nrstate, nlidarPt have K1+1 elements
+    nrstate, nlidarPt =        torch.cat((rstate, nrstate), dim=0),        torch.cat((lidarPt, nlidarPt), dim=0)
     nstate = (nrstate, nlidarPt)
 
+    # viewing the tensor, sequence, nAgent, data
+    # this form for BPTT.
+    lidarPt = lidarPt.view((-1, TotalAgent, 1, 360))
+    rstate = rstate.view((-1, TotalAgent, 8))
+   
+    # data casting.
     reward = np.array(reward)
     done = np.array(done)
     action = torch.tensor(action).to(device)
 
+    # initalize the cell state of agent at the 0 step.
     Agent.actor.zeroCellState()
-    Agent.critic.zeroCellState()
     CopyAgent.actor.zeroCellState()
-    CopyAgent.critic.zeroCellState()
 
+    # 0. get the cell state before the K1 Step.
+    # To do this, we use trajectory samples by just forwarding them.
     if zeroMode is False:
         with torch.no_grad():
             for tr in tState:
                 tr_cuda = tuple([x.to(device) for x in tr])
-                Agent.critic.forward(tr_cuda)
                 Agent.actor.forward(tr_cuda)
-                CopyAgent.critic.forward(tr_cuda)
                 CopyAgent.actor.forward(tr_cuda)
                 del tr_cuda
+            # detaching!!
             Agent.actor.detachCellState()
-            Agent.critic.detachCellState()
             CopyAgent.actor.detachCellState()
-            CopyAgent.critic.detachCellState()
-    
+
+    Agent.actor.detachCellState()
     InitActorCellState = Agent.actor.getCellState()
     InitCopyActorCellState = CopyAgent.actor.getCellState()
-
-    InitCriticCellState = CopyAgent.actor.getCellState()
-    InitCopyCriticCellState = CopyAgent.critic.getCellState()
     zeroGrad()
 
+    # 2. implemented the training using the truncated BPTT
     for _ in range(epoch):
+        # reset the agent at previous K1 step.
         Agent.actor.setCellState(InitActorCellState)
-        Agent.critic.setCellState(InitCriticCellState)
 
-        value = Agent.critic.forward(nstate)[0]
+        # by this command, cell state of agent reaches the current Step.
+        value = Agent.criticForward(nstate)
+        
+        # calculate the target value for training
         value = value.view(k1+1, TotalAgent, 1)
         nvalue = value[1:]
         value = value[:-1]
@@ -583,75 +590,123 @@ def preprocessBatch(_step, _epoch):
         gT = gT.view(k1, TotalAgent)
         gAE = gAE.view(k1, TotalAgent)
 
-        Agent.critic.setCellState(InitCriticCellState)
+        # before training, reset the cell state of agent at Previous K1 step.
         CopyAgent.actor.setCellState(InitCopyActorCellState)
-        CopyAgent.critic.setCellState(InitCopyCriticCellState)
+        Agent.actor.setCellState(InitActorCellState)
+        
+        # div can be thought as slice size for BPTT.
         for i in range(div):
-            _rstate = rstate[i*k2:(i+1)*k2].view(-1, 6)
-            _lidarpt = lidarPt[i*k2:(1+i)*k2].view(-1, 1, sSize[-1])
+            # ready for the batching.
+            _rstate = rstate[i*k2:(i+1)*k2].view(-1, 8).detach()
+            _lidarpt = lidarPt[i*k2:(1+i)*k2].view(-1, 1, sSize[-1]).detach()
             _state = (_rstate, _lidarpt)
             _action = action[i*k2:(i+1)*k2].view((-1, 2))
             _gT = gT[i*k2:(i+1)*k2].view(-1, 1)
             _gAE = gAE[i*k2:(i+1)*k2].view(-1, 1)
             _value = value[i*k2:(i+1)*k2].view(-1, 1)
-            train(Agent, _state, _action, _gT, _gAE, _value, _step, _epoch)
+
+            # after calling f, cell state would jump K2 Step from the previous Step.
+            train(Agent, _state, _action, _gT, _gAE, _value, step, epoch)
+
+            # detaching device for BPTT
             Agent.actor.detachCellState()
-            Agent.critic.detachCellState()
-        stepGradient(_step+i, _epoch)
-        Agent.actor.zeroCellState()
-        Agent.critic.zeroCellState()
+        
+        # step the gradient for updating
+        stepGradient(step+i, epoch)
         zeroGrad()
+
+        # get the new cell state of new agent
+        # Initialize the agent at 0 step.
+        Agent.actor.zeroCellState()
         if zeroMode is False:
             with torch.no_grad():
                 for tr in tState:
                     tr_cuda = tuple([x.to(device) for x in tr])
-                    Agent.critic.forward(tr_cuda)
                     Agent.actor.forward(tr_cuda)
                     del tr_cuda
-                Agent.critic.detachCellState()
                 Agent.actor.detachCellState()
         InitActorCellState = Agent.actor.getCellState()
-        InitCriticCellState = Agent.critic.getCellState()
+    
+    del tState,  InitActorCellState,          InitCopyActorCellState
    
+
 
 # initialize Sampling
 
-# In[27]:
+# In[25]:
 
 
-kz = 0
-t = 0
+step = 0
+episodeReward = []
+k = 0
+Rewards = np.zeros(TotalAgent)
+obs = getObs(init=True)
+stateT = ppState(obs)
+action = getAction(stateT)
 while 1:
-    
-    stateT, action = initSampling()
-    deltaTime = tt.time()
-    done = Sampling(stateT, action)
-    t += (tt.time() - deltaTime)
-    preprocessBatch(step, epoch)
-    kz += 1
-    ReplayMemory.clear()
-    if True in done:
-        for e in envs:
-            Agent.actor.zeroCellState()
-            Agent.critic.zeroCellState()
-            OldAgent.actor.zeroCellState()
-            OldAgent.critic.zeroCellState()
-            CopyAgent.actor.zeroCellState()
-            CopyAgent.critic.zeroCellState()
-            ReplayMemory_Trajectory.clear()
-            e.step.remote()
-    if kz == updateOldP:
-        OldAgent.update(Agent)
-        CopyAgent.update(Agent)
-        kz = 0
+    checkStep(action)
 
-    if step % 4000 == 0:
-        _reward = Rewards.mean()
+    obs, reward, done = getObs()
+
+    Rewards += reward
+
+    nStateT = ppState(obs)
+    nAction = getAction(nStateT)
+
+    with torch.no_grad():
+        ReplayMemory.append(
+            (
+                stateT,
+                action.copy(),
+                reward.copy(),
+                nStateT,
+                done
+            )
+        )
+        stateT_cpu = tuple([x.cpu() for x in stateT])
+        ReplayMemory_Trajectory.append(
+            stateT_cpu
+        )
+    
+    action = nAction
+    stateT = nStateT
+    step += 1
+
+    Agent.decayingLogStd(step)
+    CopyAgent.decayingLogStd(step)
+    OldAgent.decayingLogStd(step)
+
+    if (step) % (data['K1']) == 0:
+        k += 1
+        preprocessBatch(step, epoch)
+        ReplayMemory.clear()
+
+        if k % updateOldP == 0:
+            OldAgent.update(Agent)
+            CopyAgent.update(Agent)
+            k = 0
+    
+    if True in done:
+        Agent.actor.zeroCellState()
+        OldAgent.actor.zeroCellState()
+        CopyAgent.actor.zeroCellState()
+        ReplayMemory_Trajectory.clear()
+        for env in envs:
+            env.step.remote()
+        
+        obs = getObs(init=True)
+        stateT = ppState(obs)
+        action = getAction(stateT)
+    
+    if step % 1000 == 0:
+        episodeReward = np.array(Rewards)
+        reward = episodeReward.mean()
+
         if writeMode:
-            writer.add_scalar('Performance', _reward, step)
+            writer.add_scalar("Reward", reward, step)
         print("""
-        Step : {:5d} // Performance : {:.3f} // Inference:{:.3f}
-        """.format(step, _reward, t/4000))
-        t = 0
+                Step : {:5d} // Reward : {:.3f}  
+                """.format(step, reward))
+        
         Rewards = np.zeros(TotalAgent)
         torch.save(Agent.state_dict(), sPath)
