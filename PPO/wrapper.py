@@ -20,9 +20,12 @@ def CargoPPState(self, obs) -> tuple:
 
 def CargoWOIPPState(self, obs) -> tuple:
     vectorObs, imageObs = obs
-    rState = torch.tensor(vectorObs[:, :8]).double().detach()
-    lidarPt = torch.tensor(vectorObs[:, 8:-1]).double().detach()
-    lidarPt = torch.unsqueeze(lidarPt, dim=1)
+    # rState = torch.tensor(vectorObs[:, :8]).double().detach()
+    # lidarPt = torch.tensor(vectorObs[:, 8:-1]).double().detach()
+    # lidarPt = torch.unsqueeze(lidarPt, dim=1)
+    rState = vectorObs[:, :8]
+    lidarPt = vectorObs[:, 8:-1]
+    lidarPt = np.expand_dims(lidarPt, axis=1)
     state = (rState, lidarPt)
     return state
 
@@ -31,8 +34,6 @@ def CargoWOIBatch(self, step, epoch, f):
     # self: PPOOnPolicyTrainer
 
     # Specify the info of Horizon
-    pid = os.getpid()
-    current_process = psutil.Process(pid)
     # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
     with torch.no_grad():
         k1 = 160
@@ -46,14 +47,15 @@ def CargoWOIBatch(self, step, epoch, f):
         trstate, tlidarPt =\
             [[] for __ in range(num_list)],\
             [[] for __ in range(num_list)]
+        tState = [[] for _ in range(num_list - 1)]
 
         # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
 
         # get the samples from the replayMemory
         for data in self.replayMemory[0]:
             s, a, r, ns, d = data
-            rstate.append(s[0])
-            lidarPt.append(s[1])
+            rstate.append(torch.from_numpy(s[0]).to(self.device).double())
+            lidarPt.append(torch.from_numpy(s[1]).to(self.device).double())
             action.append(a)
             reward.append(r)
             done.append(d)
@@ -64,23 +66,17 @@ def CargoWOIBatch(self, step, epoch, f):
         # by slicing the trajectory samples, reduce the memory usage.
         z = 0
         for data in self.ReplayMemory_Trajectory:
-            trstate[int(z/k1)].append(data[0])
-            tlidarPt[int(z/k1)].append(data[1])
+            trstate[int(z/k1)].append(torch.from_numpy(data[0]).to(self.device).double())
+            tlidarPt[int(z/k1)].append(torch.from_numpy(data[1]).to(self.device).double())
             z += 1
         # First K1 Horizon, there is no need to prepare the trajectory.
         if z == k1:
             zeroMode = True
         else:
             for _ in range(num_list - 1):
-                # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
-                m = 0
-                for _tr, _tl in zip(trstate[_], tlidarPt[_]):
-
-                    self._trstate[m*self.nAgent:(m+1)*self.nAgent, :] = _tr.to(self.device)
-                    self._tlidarpt[m*self.nAgent:(m+1)*self.nAgent, :, :] = _tl.to(self.device)
-                    m += 1
-                    
-                self.tState.append([self._trstate, self._tlidarpt])
+                tState[_] = (
+                    torch.cat(trstate[_], dim=0),
+                    torch.cat(tlidarPt[_], dim=0))
             zeroMode = False
         
         # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
@@ -90,16 +86,20 @@ def CargoWOIBatch(self, step, epoch, f):
         lidarPt = torch.cat(lidarPt, dim=0)
         _nrstate, _nlidarPt = ns
 
+        _nrstate, _nlidarPt = \
+            torch.from_numpy(_nrstate).to(self.device).double(),  \
+            torch.from_numpy(_nlidarPt).to(self.device).double()
+
         # nrstate, nlidarPt have K1+1 elements
         nrstate, nlidarPt =\
-            torch.cat((rstate, _nrstate), dim=0).to(self.device),\
-            torch.cat((lidarPt, _nlidarPt), dim=0).to(self.device)
+            torch.cat((rstate, _nrstate), dim=0),\
+            torch.cat((lidarPt, _nlidarPt), dim=0)
         nstate = (nrstate, nlidarPt)
 
         # viewing the tensor, sequence, nAgent, data
         # this form for BPTT.
-        lidarPt = lidarPt.view((-1, self.nAgent, 1, self.sSize[-1])).to(self.device)
-        rstate = rstate.view((-1, self.nAgent, 8)).to(self.device)
+        lidarPt = lidarPt.view((-1, self.nAgent, 1, self.sSize[-1]))
+        rstate = rstate.view((-1, self.nAgent, 8))
 
         # data casting.
         reward = np.array(reward)
@@ -189,10 +189,6 @@ def CargoWOIBatch(self, step, epoch, f):
         # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
     self.agent.actor.detachCellState()
     self.copyAgent.actor.detachCellState()
-    # print("ref count : ", sys.getrefcount(self.tState))
-    del self.tState[:]
-    del rstate, lidarPt, done, reward, action
-    # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
 
 
 def CNN1DLTMPBatch(self, step, epoch, f):

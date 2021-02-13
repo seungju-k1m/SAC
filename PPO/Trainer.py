@@ -148,6 +148,16 @@ class PPOOnPolicyTrainer(ONPolicy):
         gradient를 zero로 반환
         """
         self.aOptim.zero_grad()
+    
+    def np2tensor(self, listable):
+
+        listable = list(listable)
+
+        for i in range(len(listable)):
+            listable[i] = torch.from_numpy(listable[i]).to(self.device).double()
+        
+        listable = tuple(listable)
+        return listable
 
     def getAction(self, state, dMode=False):
         """
@@ -157,9 +167,8 @@ class PPOOnPolicyTrainer(ONPolicy):
             if dMode:
                 pass
             else:
-                _state = (state[0].to(self.device), state[1].to(self.device))
                 action = \
-                    self.oldAgent.actorForward(_state)
+                    self.oldAgent.actorForward(self.np2tensor(state))
             action = action.cpu().numpy()
         return action
     
@@ -417,6 +426,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         pid = os.getpid()
         current_process = psutil.Process(pid)
         while 1:
+            # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
             # action을 환경으로 보내준다.
             self.checkStep(action)
             t = time.time()
@@ -440,11 +450,9 @@ class PPOOnPolicyTrainer(ONPolicy):
                             (stateT, action.copy(),
                                 reward.copy()*self.rScaling, nStateT,
                                 done.copy()))
-                    stateT_cpu = tuple([x.cpu() for x in stateT])
                     self.ReplayMemory_Trajectory.append(
-                            stateT_cpu)
+                            stateT)
                     u = uu
-            print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
 
             # 초기화를 통해 sampling을 계속 진행시킨다.
             action = nAction
@@ -462,7 +470,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 t = time.time()
                 self.train(step, self.epoch)
                 TrainingTime += (time.time() - t)
-                print(time.time() - t)
+                # print(time.time() - t)
                 gc.collect()
                 self.clear()
                 torch.cuda.empty_cache()
@@ -487,7 +495,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 # 환경 역시 초기화를 위해 한 스텝 이동한다.
             
             # 10000 step마다 결과를 print, save한다.
-            if step % 320 == 0:
+            if step % 1280 == 0:
                 episodeReward = np.array(Rewards)
                 reward = episodeReward.mean()
                 if self.writeTMode:
