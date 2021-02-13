@@ -247,8 +247,8 @@ class LSTMNET(nn.Module):
         deprecated by zeroCellStateAgent
         """
         hn, cn = self.CellState
-        hn[step, index, :] = torch.zeros(self.hiddenSize).to(self.device)
-        cn[step, index, :] = torch.zeros(self.hiddenSize).to(self.device)
+        hn[step, index, :] = 0
+        cn[step, index, :] = 0
         self.CellState = (hn, cn)
     
     def getCellState(self):
@@ -271,15 +271,17 @@ class LSTMNET(nn.Module):
     
     def detachCellState(self):
         "LSTM의 BTTT를 지원하기 위해서는 detaching이 필요하다."
-        self.CellState = (self.CellState[0].detach(), self.CellState[1].detach())
+        # self.CellState = (self.CellState[0].detach(), self.CellState[1].detach())
+        self.CellState[0].detach_()
+        self.CellState[1].detach_()
 
     def zeroCellState(self):
         """
         cellState를 zero로 변환하는 과정이다.
         환경이 초기화 되면, lstm역시 초기화 되어야한다.
         """
-        self.CellState = (torch.zeros(1, self.nAgent, self.hiddenSize).to(self.device), 
-                          torch.zeros(1, self.nAgent, self.hiddenSize).to(self.device))
+        self.CellState[0][:, :, :] = 0
+        self.CellState[1][:, :, :] = 0
     
     def zeroCellStateAgent(self, idx):
         """
@@ -293,16 +295,14 @@ class LSTMNET(nn.Module):
     def forward(self, state):
         nDim = state.shape[0]
         if nDim == 1:
-            output, (hn, cn) = self.rnn(state, self.CellState)
+            output, self.CellState = self.rnn(state, self.CellState)
             if self.FlattenMode:
                 output = torch.squeeze(output, dim=0)
-            self.CellState = (hn, cn)
         else:
-            output, (hn, cn) = self.rnn(state, self.CellState)
+            output, self.CellState = self.rnn(state, self.CellState)
             if self.FlattenMode:
                 output = output.view(-1, self.hiddenSize)
                 output = output.view(-1, self.hiddenSize)
-            self.CellState = (hn, cn)
         
         # output consists of output, hidden, cell state
         return output

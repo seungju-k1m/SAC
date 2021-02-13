@@ -1,4 +1,5 @@
-import ray
+import os
+import psutil
 import torch
 import datetime
 import numpy as np
@@ -153,6 +154,15 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.aOptim.zero_grad()
         self.cOptim.zero_grad() 
 
+    def np2tensor(self, listable):
+        listable = list(listable)
+        with torch.no_grad():
+            for i in range(len(listable)):
+                listable[i] = torch.tensor(listable[i]).to(self.device).double()
+            
+            listable = tuple(listable)
+            return listable
+
     def getAction(self, state, dMode=False):
         """
         action을 구한다. 이때 action을 생성하는 것은, oldAgent이다.
@@ -162,8 +172,8 @@ class PPOOnPolicyTrainer(ONPolicy):
                 pass
             else:
                 action = \
-                    self.oldAgent.actorForward(state)
-            action = action.cpu().numpy()
+                    self.oldAgent.actorForward(self.np2tensor(state))
+            action = action.cpu().detach().numpy()
         return action
     
     def getActionHybridPolicy(self, state):
@@ -228,7 +238,6 @@ class PPOOnPolicyTrainer(ONPolicy):
         lossC = self.agent.calQLoss(
             state,
             gT.detach(),
-        
         )
         lossC.backward()
 
@@ -339,26 +348,22 @@ class PPOOnPolicyTrainer(ONPolicy):
                 shape[:nAgent, 1]
         """
         # obsState = np.zeros((self.nAgent, 1447), dtype=np.float64)
+        # obsState = np.zeros((self.nAgent, 369), dtype=np.float64)
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
-        obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
-        rewards, treward = decisionStep.reward, terminalStep.reward
-        tAgentId = terminalStep.agent_id
+        # image = decisionStep.obs[0]
+        obs = decisionStep.obs[0]
+        rewards = decisionStep.reward
+        obs = np.array(obs)
+
+        done = []
         
-        done = [False for i in range(self.nAgent)]
-        reward = [0 for i in range(self.nAgent)]
-        obsState = np.array(obs)
+        for done_idx in obs[:, -1]:
+            done.append(done_idx == 1)
         reward = rewards
         
-        k = 0
-        for i, state in zip(tAgentId, tobs):
-            state = np.array(state)
-            obsState[i] = state
-            done[i] = True
-            self.Number_Episode += 1
-            reward[i] = treward[k]
-            if (reward[i] > 1):
-                self.Number_Sucess += 1
-            k += 1
+        # obsState = (obs, image)
+        obsState = obs
+
         if init:
             return obsState
         else:
@@ -434,11 +439,13 @@ class PPOOnPolicyTrainer(ONPolicy):
                 episodeReward = []
 
     def run(self):
+        pid = os.getpid()
+        current_process = psutil.Process(pid)
+        print("Current Ram Memory: {:.3f}".format(current_process.memory_info()[0]/2.**20))
         self.loadUnityEnv()
         episodeReward = []
         k = 0
         Rewards = np.zeros(self.nAgent)
-        
         obs = self.getObs(init=True)
         stateT = self.ppState(obs)
         action = self.getAction(stateT)
@@ -446,6 +453,7 @@ class PPOOnPolicyTrainer(ONPolicy):
         while 1:
             # action을 환경으로 보내준다.
             self.checkStep(action)
+            print("Current Ram Memory: {:.3f}".format(current_process.memory_info()[0]/2.**20))
 
             # 이를 바탕으로 환경으로부터 observation을 구한다.
             obs, reward, done = self.getObs()
@@ -467,9 +475,9 @@ class PPOOnPolicyTrainer(ONPolicy):
                                 (stateT, action.copy(),
                                  reward*self.rScaling, nStateT,
                                  done.copy()))
-                        stateT_cpu = tuple([x.cpu() for x in stateT])
+                        # stateT_cpu = tuple([x.cpu() for x in stateT])
                         self.ReplayMemory_Trajectory.append(
-                                stateT_cpu)
+                                stateT)
                         u = uu
 
             # 초기화를 통해 sampling을 계속 진행시킨다.
@@ -487,6 +495,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 k += 1
                 self.train(step, self.epoch)
                 self.clear()
+                torch.cuda.empty_cache()
                 if k % self.updateOldP == 0:
                     self.oldAgent.update(self.agent)
                     self.copyAgent.update(self.agent)
@@ -501,11 +510,15 @@ class PPOOnPolicyTrainer(ONPolicy):
                 self.copyAgent.actor.zeroCellState()
                 self.copyAgent.critic.zeroCellState()
                 self.ReplayMemory_Trajectory.clear()
+                torch.cuda.empty_cache()
                 # 환경 역시 초기화를 위해 한 스텝 이동한다.
                 self.env.step()
+                obs = self.getObs(init=True)
+                stateT = self.ppState(obs)
+                action = self.getAction(stateT)
             
             # 10000 step마다 결과를 print, save한다.
-            if step % 10000 == 0:
+            if step % 1280 == 0:
                 episodeReward = np.array(Rewards)
                 reward = episodeReward.mean()
                 if self.writeTMode:

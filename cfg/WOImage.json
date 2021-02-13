@@ -9,7 +9,7 @@
   
     "env":{
       "Number_Agent":56,
-      "MaxStep": 321,
+      "MaxStep": 1281,
       "Interval_Decision":5,
       "Interval_Update_Position":5,
       "Reward_ReachingDestination":2.3,
@@ -20,7 +20,7 @@
       "Penalty_Collision_DynamicOBS":0
     },
     
-    "LSTMName":"module05",
+    "LSTMNum":3,
     "agent":{
       "actor":{
         "module01":{

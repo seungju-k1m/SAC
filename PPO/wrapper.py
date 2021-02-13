@@ -43,9 +43,12 @@ def MLPState(self, obs) -> list:
 
 
 def CNN1DLTMPState(self, obs) -> tuple:
-    rState = torch.tensor(obs[:, :6]).to(self.device).double()
-    lidarPt = torch.tensor(obs[:, 8:self.sSize[-1]+8]).to(self.device).double()
-    lidarPt = torch.unsqueeze(lidarPt, dim=1)
+    # rState = torch.tensor(obs[:, :8]).to(self.device).double()
+    rState = obs[:, :8]
+    # lidarPt = torch.tensor(obs[:, 8:self.sSize[-1]+8]).to(self.device).double()
+    # lidarPt = torch.unsqueeze(lidarPt, dim=1)
+    lidarPt = obs[:, 8:368]
+    lidarPt = np.expand_dims(lidarPt, axis=1)
     state = (rState, lidarPt)
     return state
 
@@ -63,8 +66,8 @@ def CNN1DLTMPBatch(self, step, epoch, f):
 
     for data in self.replayMemory[0]:
         s, a, r, ns, d = data
-        rstate.append(s[0])
-        lidarPt.append(s[1])
+        rstate.append(torch.from_numpy(s[0]).to(self.device).double())
+        lidarPt.append(torch.from_numpy(s[1]).to(self.device).double())
         action.append(a)
         reward.append(r)
         done.append(d)
@@ -72,23 +75,25 @@ def CNN1DLTMPBatch(self, step, epoch, f):
     for data in self.ReplayMemory_Trajectory:
         
         ts = data
-        trstate[int(z/k1)].append(ts[0])
-        tlidarPt[int(z/k1)].append(ts[1])
+        trstate[int(z/k1)].append(torch.from_numpy(ts[0]).to(self.device).double())
+        tlidarPt[int(z/k1)].append(torch.from_numpy(ts[1]).to(self.device).double())
         z += 1
-    
-    if len(trstate) == k1:
+    if z == k1:
         zeroMode = True
     else:
         for _ in range(num_list - 1):
             tState[_] = (torch.cat(trstate[_], dim=0), torch.cat(tlidarPt[_], dim=0))
         zeroMode = False
+    
     rstate = torch.cat(rstate, dim=0)
     lidarPt = torch.cat(lidarPt, dim=0)
     nrstate, nlidarPt = ns
-    nrstate, nlidarPt = torch.cat((rstate, nrstate), dim=0), torch.cat((lidarPt, nlidarPt), dim=0)
+    nrstate, nlidarPt = \
+        torch.cat((rstate, torch.from_numpy(nrstate).to(self.device).double()), dim=0),\
+        torch.cat((lidarPt, torch.from_numpy(nlidarPt).to(self.device).double()), dim=0)
     lidarPt = lidarPt.view((-1, self.nAgent, 1, self.sSize[-1]))
-    rstate = rstate.view((-1, self.nAgent, 6))
-   
+    rstate = rstate.view((-1, self.nAgent, 8))
+
     nstate = (nrstate, nlidarPt)
 
     reward = np.array(reward)
@@ -141,10 +146,10 @@ def CNN1DLTMPBatch(self, step, epoch, f):
         self.copyAgent.critic.setCellState(InitCopyCriticCellState)
         
         for i in range(div):
-            _rstate = rstate[i*k2:(i+1)*k2].view(-1, 6)
+            _rstate = rstate[i*k2:(i+1)*k2].view(-1, 8)
             _lidarpt = lidarPt[i*k2:(1+i)*k2].view(-1, 1, self.sSize[-1])
-            _state = (_rstate, _lidarpt)
-            _action = action[i*k2:(i+1)*k2].view((-1, 2))
+            _state = (_rstate.detach(), _lidarpt.detach())
+            _action = action[i*k2:(i+1)*k2].view((-1, 2)).detach()
             _gT = gT[i*k2:(i+1)*k2].view(-1, 1)
             _gAE = gAE[i*k2:(i+1)*k2].view(-1, 1)
             _value = value[i*k2:(i+1)*k2].view(-1, 1)
