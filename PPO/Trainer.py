@@ -504,7 +504,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 print("""
                 Step : {:5d} // Reward : {:.3f}
                 SamplingTime : {:.3f} // TrainingTime : {:.3f}
-                """.format(step, reward, SamplingTime/320, TrainingTime/2))
+                """.format(step, reward, SamplingTime/1280, TrainingTime/8))
                 Rewards = np.zeros(self.nAgent)
                 SamplingTime = 0
                 TrainingTime = 0
