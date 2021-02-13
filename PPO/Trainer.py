@@ -338,7 +338,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             done:[np.array]
                 shape[:nAgent, 1]
         """
-        obsState = np.zeros((self.nAgent, 1447), dtype=np.float64)
+        # obsState = np.zeros((self.nAgent, 1447), dtype=np.float64)
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
         obs, tobs = decisionStep.obs[0], terminalStep.obs[0]
         rewards, treward = decisionStep.reward, terminalStep.reward
