@@ -9,14 +9,14 @@
   
     "env":{
       "Number_Agent":56,
-      "MaxStep": 961,
+      "MaxStep": 321,
       "Interval_Decision":5,
       "Interval_Update_Position":5,
       "Reward_ReachingDestination":2.3,
       "Reward_ArrivingDestination":50,
 
-      "Penalty_Collision_Wall":-0.1,
-      "Penalty_Collision_Agent":-0.5,
+      "Penalty_Collision_Wall":0,
+      "Penalty_Collision_Agent":0,
       "Penalty_Collision_DynamicOBS":0
     },
     

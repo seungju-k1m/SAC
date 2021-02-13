@@ -10,13 +10,13 @@ parser.add_argument(
     '--path',
     '-p',
     type=str,
-    default='./cfg/MLPTrain.json',
+    default='./cfg/WOImage.json',
     help="The relative file path of cfg.json")
 parser.add_argument(
     '--train',
     '-t',
     action='store_true',
-    default=False,
+    default=True,
     help="set train mode"
 )
 

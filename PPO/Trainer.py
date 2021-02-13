@@ -1,3 +1,7 @@
+import os
+import gc
+import psutil
+import time
 import torch
 import datetime
 import numpy as np
@@ -8,7 +12,7 @@ from collections import deque
 from PPO.wrapper import preprocessBatch, preprocessState
 # from mlagents_envs.base_env import ActionTuple
 
-    
+
 class PPOOnPolicyTrainer(ONPolicy):
     """
     PPOOnPolicyTrainer는 알고리즘 전체 과정을 제어하는 역할을 수행한다.
@@ -29,13 +33,13 @@ class PPOOnPolicyTrainer(ONPolicy):
         configuration에 따라 actor, critic, optimizer등을 반환한다.
         """
         super(PPOOnPolicyTrainer, self).__init__(cfg)
-        
+
         torch.set_default_dtype(torch.float64)
         torch.backends.cudnn.benchmark = True
 
         if self.device != "cpu":
             self.device = torch.device(self.device)
-            
+
         else:
             self.device = torch.device("cpu")
 
@@ -80,7 +84,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             LSTMName=self.LSTMName)
         self.copyAgent.to(self.device)
         self.copyAgent.update(self.agent)
-        
+
         pureEnv = self.data['envName'].split('/')
         name = pureEnv[-1]
         time = datetime.datetime.now().strftime("%Y%m%d-%H-%M-%S")
@@ -111,6 +115,10 @@ class PPOOnPolicyTrainer(ONPolicy):
         self.yaw = []
         self.uv = []
         self.uw = []
+
+        self.tState = []
+        self._trstate = torch.zeros((self.K1 * self.nAgent, 8)).to(self.device).double()
+        self._tlidarpt = torch.zeros((self.K1 * self.nAgent, 1, 360)).to(self.device).double()
 
         if self.writeTMode:
             self.writeTrainInfo()
@@ -149,8 +157,9 @@ class PPOOnPolicyTrainer(ONPolicy):
             if dMode:
                 pass
             else:
+                _state = (state[0].to(self.device), state[1].to(self.device))
                 action = \
-                    self.oldAgent.actorForward(state)
+                    self.oldAgent.actorForward(_state)
             action = action.cpu().numpy()
         return action
     
@@ -311,15 +320,10 @@ class PPOOnPolicyTrainer(ONPolicy):
             done:[np.array]
                 shape[:nAgent, 1]
         """
-        # obsState = np.zeros((self.nAgent, 1447), dtype=np.float64)
-        # obsState = np.zeros((self.nAgent, 369), dtype=np.float64)
         decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
-        image = decisionStep.obs[0]
-        obs = decisionStep.obs[1]
+        # image = decisionStep.obs[0]
+        obs = decisionStep.obs[0]
         rewards = decisionStep.reward
-        obs = obs.tolist()
-
-        obs = list(map(lambda x: np.array(x), obs))
         obs = np.array(obs)
 
         done = []
@@ -328,7 +332,7 @@ class PPOOnPolicyTrainer(ONPolicy):
             done.append(done_idx == 1)
         reward = rewards
         
-        obsState = (obs, image)
+        obsState = (obs, 0)
 
         if init:
             return obsState
@@ -343,12 +347,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 dtype:np.array
                 shape:[nAgent, 2]
         """
-
-        decisionStep, terminalStep = self.env.get_steps(self.behaviorNames)
-        agentId = decisionStep.agent_id
-        
-        if len(agentId) != 0:
-            self.env.set_actions(self.behaviorNames, action)
+        self.env.set_actions(self.behaviorNames, action)
         self.env.step()
 
     def evaluate(self):
@@ -413,12 +412,17 @@ class PPOOnPolicyTrainer(ONPolicy):
         action = self.getAction(stateT)
         
         step = 0
+        SamplingTime = 0
+        TrainingTime = 0
+        pid = os.getpid()
+        current_process = psutil.Process(pid)
         while 1:
             # action을 환경으로 보내준다.
             self.checkStep(action)
-
+            t = time.time()
             # 이를 바탕으로 환경으로부터 observation을 구한다.
             obs, reward, done = self.getObs()
+            SamplingTime += (time.time() - t)
 
             # reward logging
             Rewards += reward
@@ -429,18 +433,18 @@ class PPOOnPolicyTrainer(ONPolicy):
             u = 0
 
             # inferencemode가 아니라면, replaymemory에  s, a, r ,s_, d를 추가한다.
-            with torch.no_grad():
-                if self.inferMode is False:
-                    for z in range(self.div):
-                        uu = u + int(self.nAgent/self.div)
-                        self.replayMemory[z].append(
-                                (stateT, action.copy(),
-                                 reward.copy()*self.rScaling, nStateT,
-                                 done.copy()))
-                        stateT_cpu = tuple([x.cpu() for x in stateT])
-                        self.ReplayMemory_Trajectory.append(
-                                stateT_cpu)
-                        u = uu
+            if self.inferMode is False:
+                for z in range(self.div):
+                    uu = u + int(self.nAgent/self.div)
+                    self.replayMemory[z].append(
+                            (stateT, action.copy(),
+                                reward.copy()*self.rScaling, nStateT,
+                                done.copy()))
+                    stateT_cpu = tuple([x.cpu() for x in stateT])
+                    self.ReplayMemory_Trajectory.append(
+                            stateT_cpu)
+                    u = uu
+            print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
 
             # 초기화를 통해 sampling을 계속 진행시킨다.
             action = nAction
@@ -455,8 +459,13 @@ class PPOOnPolicyTrainer(ONPolicy):
             # training
             if (step) % (self.updateStep) == 0 and self.inferMode is False:
                 k += 1
+                t = time.time()
                 self.train(step, self.epoch)
+                TrainingTime += (time.time() - t)
+                print(time.time() - t)
+                gc.collect()
                 self.clear()
+                torch.cuda.empty_cache()
                 if k % self.updateOldP == 0:
                     self.oldAgent.update(self.agent)
                     self.copyAgent.update(self.agent)
@@ -468,6 +477,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                 self.oldAgent.actor.zeroCellState()
                 self.copyAgent.actor.zeroCellState()
                 self.ReplayMemory_Trajectory.clear()
+                torch.cuda.empty_cache()
                 self.env.step()
 
                 obs = self.getObs(init=True)
@@ -477,16 +487,19 @@ class PPOOnPolicyTrainer(ONPolicy):
                 # 환경 역시 초기화를 위해 한 스텝 이동한다.
             
             # 10000 step마다 결과를 print, save한다.
-            if step % 3200 == 0:
+            if step % 320 == 0:
                 episodeReward = np.array(Rewards)
                 reward = episodeReward.mean()
                 if self.writeTMode:
                     self.writer.add_scalar('Reward', reward, step)
 
                 print("""
-                Step : {:5d} // Reward : {:.3f}  
-                """.format(step, reward))
+                Step : {:5d} // Reward : {:.3f}
+                SamplingTime : {:.3f} // TrainingTime : {:.3f}
+                """.format(step, reward, SamplingTime/320, TrainingTime/2))
                 Rewards = np.zeros(self.nAgent)
+                SamplingTime = 0
+                TrainingTime = 0
                 if (reward > self.RecordScore):
                     self.RecordScore = reward
                     sPath = './save/PPO/'+self.data['envName']+str(self.RecordScore)+'.pth'

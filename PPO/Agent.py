@@ -1,3 +1,4 @@
+import time
 import torch
 import torch.nn as nn
 from baseline.utils import constructNet
@@ -198,7 +199,7 @@ class ppoAgent(baseAgent):
         self.actor.clear(index)
 
 
-class Node(nn.Module):
+class Node:
     """
         node can diverge output.
         also, collect input.
@@ -236,28 +237,25 @@ class Node(nn.Module):
         self.model = constructNet(self.data)
     
     def clear_savedOutput(self) -> None:
-        del self.storedOutput
-        del self.storedInput
-        self.storedInput = []
-        self.storedOutput = []
+
+        self.storedInput.clear()
+        self.storedOutput.clear()
     
     def addInput(self, _input) -> None:
-        self.storedInput.append(_input)
+        self.storedInput.append(_input.clone())
     
     def getStoreOutput(self):
         return self.storedOutput
 
-    def step(self) -> torch.tensor:
+    def step(self) -> None:
         if len(self.previousNodes) != 0:
             for prevNode in self.previousNodes:
                 for prevInput in prevNode.storedOutput:
                     self.storedInput.append(prevInput)
-        
-        self.storedInput = tuple(self.storedInput)
-        output = self.model.forward(self.storedInput)
-        self.storedOutput.append(output.clone())
-        self.storedOutput: torch.tensor
-        return output
+
+        storedInput = tuple(self.storedInput)
+        output = self.model.forward(storedInput)
+        self.storedOutput.append(output)
 
 
 class AgentV2(nn.Module):
@@ -265,7 +263,6 @@ class AgentV2(nn.Module):
         the priorityModel consists of priority and node.
         
     """
-
     def __init__(
         self,
         mData: dict,
@@ -332,19 +329,18 @@ class AgentV2(nn.Module):
             else:
                 priorityModel[data["prior"]] = {name: Node(data)}
                 priorityModel[data["prior"]][name].buildModel()
-            setattr(self, name, priorityModel[data["prior"]][name])
-            
+
             if "output" in data.keys():
                 if data["output"]:
                     outputModelName.append([data["prior"], name])
-            
+
             if "input" in data.keys():
                 for i in data["input"]:
                     if i in inputModelName.keys():
                         inputModelName[i].append([data["prior"], name])
                     else:
                         inputModelName[i] = [[data["prior"], name]]
-        
+
         for prior in priorityModel.keys():
             node_dict = priorityModel[prior]
             for index in node_dict.keys():
@@ -358,7 +354,7 @@ class AgentV2(nn.Module):
                         prevNodes.append(priorityModel[data["prior"]][name])
                     node.setPrevNodes(prevNodes)
         self.name2prior = name2prior
-                        
+
         return priorityModel, outputModelName, inputModelName
 
     def loadParameters(self) -> None:
@@ -440,15 +436,14 @@ class AgentV2(nn.Module):
             layerDict = self.priorityModel[prior]
             for name in layerDict.keys():
                 node = layerDict[name]
-                node.to(device)
-    
+                node.model.to(device)
+
     def clear(self, index, step=0):
         if self.LSTMname is not None:
             prior = self.name2prior[self.LSTMname]
             self.priorityModel[prior][self.LSTMname].clear(index, step)
 
     def clear_savedOutput(self):
-
         for i in self.priority:
             nodeDict = self.priorityModel[i]
             for name in nodeDict.keys():
@@ -457,7 +452,7 @@ class AgentV2(nn.Module):
 
     def forward(self, inputs) -> tuple:
         inputs: tuple
-        
+
         for i, _input in enumerate(inputs):
             priorityName_InputModel = self.inputModelName[i]
             priorityName_InputModel: list
@@ -468,13 +463,13 @@ class AgentV2(nn.Module):
             for nodeName in self.priorityModel[prior].keys():
                 node: str
                 self.priorityModel[prior][nodeName].step()
-        
+
         output = []
         for outinfo in self.outputModelName:
             out = self.priorityModel[outinfo[0]][outinfo[1]].getStoreOutput()
             for o in out:
                 output.append(o)
-        
+
         output = tuple(output)
         self.clear_savedOutput()
         return output

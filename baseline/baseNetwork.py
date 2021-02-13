@@ -264,7 +264,7 @@ class LSTMNET(nn.Module):
             dtype:tuple, (hstate, cstate)
             state:torch.tensor, shape:[1, Agent의 숫자, hiddenSize]
         """
-        return self.CellState
+        return (self.CellState[0].clone(), self.CellState[1].clone())
 
     def setCellState(self, cellState):
         """
@@ -277,7 +277,9 @@ class LSTMNET(nn.Module):
     
     def detachCellState(self):
         "LSTM의 BTTT를 지원하기 위해서는 detaching이 필요하다."
-        self.CellState = (self.CellState[0].detach(), self.CellState[1].detach())
+        self.CellState = (
+            self.CellState[0].clone().detach(),
+            self.CellState[1].clone().detach())
 
     def zeroCellState(self):
         """
