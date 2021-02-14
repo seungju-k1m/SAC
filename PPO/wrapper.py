@@ -1,6 +1,7 @@
 import os
 import gc
 import sys
+import copy
 import psutil
 import torch
 import numpy as np
@@ -35,97 +36,94 @@ def CargoWOIBatch(self, step, epoch, f):
 
     # Specify the info of Horizon
     # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
-    with torch.no_grad():
-        k1 = 160
-        k2 = 10
-        div = int(k1/k2)
+    k1 = 160
+    k2 = 10
+    div = int(k1/k2)
 
-        # Ready for the batch-preprocessing
-        rstate, lidarPt, action, reward, done = \
-            [], [], [], [], []
-        num_list = int(len(self.ReplayMemory_Trajectory)/k1)
-        trstate, tlidarPt =\
-            [[] for __ in range(num_list)],\
-            [[] for __ in range(num_list)]
-        tState = [[] for _ in range(num_list - 1)]
+    # Ready for the batch-preprocessing
+    rstate, lidarPt, action, reward, done = \
+        [], [], [], [], []
+    num_list = int(len(self.ReplayMemory_Trajectory)/k1)
+    trstate, tlidarPt =\
+        [[] for __ in range(num_list)],\
+        [[] for __ in range(num_list)]
+    tState = [[] for _ in range(num_list - 1)]
 
-        # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
+    # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
 
-        # get the samples from the replayMemory
-        for data in self.replayMemory[0]:
-            s, a, r, ns, d = data
-            rstate.append(torch.from_numpy(s[0]).to(self.device).double())
-            lidarPt.append(torch.from_numpy(s[1]).to(self.device).double())
-            action.append(a)
-            reward.append(r)
-            done.append(d)
+    # get the samples from the replayMemory
+    for data in self.replayMemory[0]:
+        s, a, r, ns, d = data
+        rstate.append(torch.from_numpy(copy.deepcopy(s[0])).to(self.device).double())
+        lidarPt.append(torch.from_numpy(copy.deepcopy(s[1])).to(self.device).double())
+        action.append(copy.deepcopy(a))
+        reward.append(copy.deepcopy(r))
+        done.append(copy.deepcopy(d))
         
-        # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
-        
-        # z can be thought as the number for slicing the trajectory value
-        # by slicing the trajectory samples, reduce the memory usage.
-        z = 0
-        for data in self.ReplayMemory_Trajectory:
-            trstate[int(z/k1)].append(torch.from_numpy(data[0]).double())
-            tlidarPt[int(z/k1)].append(torch.from_numpy(data[1]).double())
-            z += 1
-        # First K1 Horizon, there is no need to prepare the trajectory.
-        if z == k1:
-            zeroMode = True
-        else:
-            for _ in range(num_list - 1):
-                tState[_] = (
-                    torch.cat(trstate[_], dim=0),
-                    torch.cat(tlidarPt[_], dim=0))
-            zeroMode = False
-        
-        # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
-        
-        # Second preprocess-batch
-        rstate = torch.cat(rstate, dim=0)
-        lidarPt = torch.cat(lidarPt, dim=0)
-        _nrstate, _nlidarPt = ns
+    # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
+    
+    # z can be thought as the number for slicing the trajectory value
+    # by slicing the trajectory samples, reduce the memory usage.
+    z = 0
+    for data in self.ReplayMemory_Trajectory:
+        trstate[int(z/k1)].append(torch.from_numpy(copy.deepcopy(data[0])).double())
+        tlidarPt[int(z/k1)].append(torch.from_numpy(copy.deepcopy(data[1])).double())
+        z += 1
+    # First K1 Horizon, there is no need to prepare the trajectory.
+    if z == k1:
+        zeroMode = True
+    else:
+        for _ in range(num_list - 1):
+            tState[_] = (
+                torch.cat(trstate[_], dim=0),
+                torch.cat(tlidarPt[_], dim=0))
+        zeroMode = False
+    
+    # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
+    
+    # Second preprocess-batch
+    rstate = torch.cat(rstate, dim=0)
+    lidarPt = torch.cat(lidarPt, dim=0)
+    _nrstate, _nlidarPt = ns
 
-        _nrstate, _nlidarPt = \
-            torch.from_numpy(_nrstate).to(self.device).double(),  \
-            torch.from_numpy(_nlidarPt).to(self.device).double()
+    _nrstate, _nlidarPt = \
+        torch.from_numpy(_nrstate).to(self.device).double(),  \
+        torch.from_numpy(_nlidarPt).to(self.device).double()
 
-        # nrstate, nlidarPt have K1+1 elements
-        nrstate, nlidarPt =\
-            torch.cat((rstate, _nrstate), dim=0),\
-            torch.cat((lidarPt, _nlidarPt), dim=0)
-        nstate = (nrstate, nlidarPt)
+    # nrstate, nlidarPt have K1+1 elements
+    nrstate, nlidarPt =\
+        torch.cat((rstate, _nrstate), dim=0),\
+        torch.cat((lidarPt, _nlidarPt), dim=0)
+    nstate = (nrstate, nlidarPt)
 
-        # viewing the tensor, sequence, nAgent, data
-        # this form for BPTT.
-        lidarPt = lidarPt.view((-1, self.nAgent, 1, self.sSize[-1]))
-        rstate = rstate.view((-1, self.nAgent, 8))
+    # viewing the tensor, sequence, nAgent, data
+    # this form for BPTT.
+    lidarPt = lidarPt.view((-1, self.nAgent, 1, self.sSize[-1]))
+    rstate = rstate.view((-1, self.nAgent, 8))
 
-        # data casting.
-        reward = np.array(reward)
-        done = np.array(done)
-        action = torch.tensor(action).to(self.device)
+    # data casting.
+    reward = np.array(reward)
+    done = np.array(done)
+    action = torch.tensor(action).to(self.device)
 
-        # initalize the cell state of agent at the 0 step.
-        self.agent.actor.zeroCellState()
-        self.copyAgent.actor.zeroCellState()
+    # initalize the cell state of agent at the 0 step.
+    self.agent.actor.zeroCellState()
+    self.copyAgent.actor.zeroCellState()
 
     # 0. get the cell state before the K1 Step.
     # To do this, we use trajectory samples by just forwarding them.
-        if zeroMode is False:
-            for tr in self.tState:
-                tr_cuda = tuple([x.to(self.device) for x in tr])
-                self.agent.actor.forward(tr_cuda)
-                self.copyAgent.actor.forward(tr_cuda)
-                del tr
-                del tr_cuda
-            # detaching!!
-            self.agent.actor.detachCellState()
-            self.copyAgent.actor.detachCellState()
-
+    if zeroMode is False:
+        for tr in self.tState:
+            # tr_cuda = tuple([x.to(self.device) for x in tr])
+            self.agent.actor.forward(tuple([x.to(self.device) for x in tr]))
+            self.copyAgent.actor.forward(tuple([x.to(self.device) for x in tr]))
+        # detaching!!
         self.agent.actor.detachCellState()
-        InitActorCellState = self.agent.actor.getCellState()
-        InitCopyActorCellState = self.copyAgent.actor.getCellState()
+        self.copyAgent.actor.detachCellState()
+
+    self.agent.actor.detachCellState()
+    InitActorCellState = self.agent.actor.getCellState()
+    InitCopyActorCellState = self.copyAgent.actor.getCellState()
     self.zeroGrad()
 
     # 2. implemented the training using the truncated BPTT
@@ -171,24 +169,22 @@ def CargoWOIBatch(self, step, epoch, f):
         self.step(step+i, epoch)
         self.zeroGrad()
         # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
-
-        with torch.no_grad():
-            # get the new cell state of new agent
-            # Initialize the agent at 0 step.
-            self.agent.actor.zeroCellState()
-            if zeroMode is False:
-                with torch.no_grad():
-                    for tr in self.tState:
-                        tr_cuda = tuple([x.to(self.device) for x in tr])
-                        self.agent.actor.forward(tr_cuda)
-                        del tr
-                        del tr_cuda
-                    self.agent.actor.detachCellState()
-            InitActorCellState = self.agent.actor.getCellState()
+        # get the new cell state of new agent
+        # Initialize the agent at 0 step.
+        self.agent.actor.zeroCellState()
+        if zeroMode is False:
+            with torch.no_grad():
+                for tr in self.tState:
+                    # tr_cuda = tuple([x.to(self.device) for x in tr])
+                    self.agent.actor.forward(tuple([x.to(self.device) for x in tr]))
+                self.agent.actor.detachCellState()
+        InitActorCellState = self.agent.actor.getCellState()
         
         # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
     self.agent.actor.detachCellState()
     self.copyAgent.actor.detachCellState()
+
+    self.replayMemory[0].clear()
 
 
 def CNN1DLTMPBatch(self, step, epoch, f):
