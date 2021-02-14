@@ -66,8 +66,8 @@ def CargoWOIBatch(self, step, epoch, f):
         # by slicing the trajectory samples, reduce the memory usage.
         z = 0
         for data in self.ReplayMemory_Trajectory:
-            trstate[int(z/k1)].append(torch.from_numpy(data[0]).to(self.device).double())
-            tlidarPt[int(z/k1)].append(torch.from_numpy(data[1]).to(self.device).double())
+            trstate[int(z/k1)].append(torch.from_numpy(data[0]).double())
+            tlidarPt[int(z/k1)].append(torch.from_numpy(data[1]).double())
             z += 1
         # First K1 Horizon, there is no need to prepare the trajectory.
         if z == k1:
