@@ -64,16 +64,16 @@ class ppoAgent(baseAgent):
                 netData = self.aData[netName]
                 self.actor = AgentV2(netData, LSTMName=self.LSTMName)
 
-            # if netName == "critic":
-            #     netData = self.aData[netName]
-            #     self.critic = AgentV2(netData, LSTMName=self.LSTMName)
+            if netName == "critic":
+                netData = self.aData[netName]
+                self.critic = AgentV2(netData, LSTMName=self.LSTMName)
     
     def to(self, device):
         """
         actor와 critic에 장치(cpu, cuda:0)를 부착한다.
         """
         self.actor.to(device)
-        # self.critic.to(device)
+        self.critic.to(device)
 
     def forward(self, state):
         """
@@ -101,8 +101,9 @@ class ppoAgent(baseAgent):
             Jump Lenght of state
         """
 
-        output = self.actor.forward(state)[0]
-        mean = output[:, :-1]
+        # output = self.actor.forward(state)[0]
+        # mean = output[:, :-1]
+        mean = self.actor.forward(state)[0]
         std = self.logStd.exp()
         if dMode:
             action = torch.tanh(mean)
@@ -117,8 +118,9 @@ class ppoAgent(baseAgent):
         """
             Jump Length of state
         """
-        output = self.actor.forward(state)[0]
-        critic = output[:, -1:]
+        # output = self.actor.forward(state)[0]
+        # critic = output[:, -1:]
+        critic = self.critic.forward(state)[0]
 
         return critic
 
@@ -127,8 +129,11 @@ class ppoAgent(baseAgent):
         log pi(action|state)를 반환한다.
         """
 
-        output = self.actor.forward(state)[0]
-        mean = output[:, :-1]
+        # output = self.actor.forward(state)[0]
+        # mean = output[:, :-1]
+
+        mean = self.actor.forward(state)[0]
+
         # action = torch.clamp(action, -0.9999, 0.9999)
         std = self.logStd.exp()
         gaussianDist = torch.distributions.Normal(mean, std)
@@ -146,9 +151,13 @@ class ppoAgent(baseAgent):
         """
         oldAgent: ppoAgent
 
-        output = self.actor.forward(state)[0]
-        mean = output[:, :-1]
-        critic = output[:, -1:]
+        # output = self.actor.forward(state)[0]
+        # mean = output[:, :-1]
+        # critic = output[:, -1:]
+
+        mean = self.actor.forward(state)[0]
+        critic = self.critic.forward(state)[0]
+
         lossCritic = torch.mean((critic-gT).pow(2)/2)
 
         std = self.logStd.exp()
@@ -181,12 +190,14 @@ class ppoAgent(baseAgent):
         parameter들을 update한다.
         """
         self.actor.updateParameter(Agent.actor, tau=1.0)
+        self.critic.updateParameter(Agent.critic, tau=1.0)
     
     def loadParameters(self):
         """
         save file로 부터 load할 때 필요한 method이다.
         """
         self.actor.loadParameters()
+        self.critic.loadParameters()
     
     def decayingLogStd(self, step):
         """
@@ -197,6 +208,7 @@ class ppoAgent(baseAgent):
     
     def clear(self, index):
         self.actor.clear(index)
+        self.critic.clear(index)
 
 
 class Node:

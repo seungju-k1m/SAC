@@ -143,12 +143,16 @@ class PPOOnPolicyTrainer(ONPolicy):
         for optimKey in optimKeyList:
             if optimKey == 'actor':
                 self.aOptim = getOptim(self.optimData[optimKey], self.agent.actor.buildOptim())
+            
+            if optimKey == 'critic':
+                self.cOptim = getOptim(self.optimData[optimKey], self.agent.critic.buildOptim())
                 
     def zeroGrad(self):
         """
         gradient를 zero로 반환
         """
         self.aOptim.zero_grad()
+        self.cOptim.zero_grad()
     
     def np2tensor(self, listable):
 
@@ -205,11 +209,15 @@ class PPOOnPolicyTrainer(ONPolicy):
         """
         self.agent.actor.clippingNorm(1000)
         self.aOptim.step()
+        self.agent.critic.clippingNorm(1000)
+        self.cOptim.step()
 
         normA = self.agent.actor.calculateNorm().cpu().detach().numpy()
+        normC = self.agent.critic.calculateNorm().cpu().detach().numpy()
 
         if self.writeTMode:
-            self.writer.add_scalar('Action Gradient Mag', normA, step+epoch)
+            self.writer.add_scalar('Actor Gradient Mag', normA, step+epoch)
+            self.writer.add_scalar('Critic Gradient Mag', normC, step+epoch)
         
     @preprocessBatch
     def train(

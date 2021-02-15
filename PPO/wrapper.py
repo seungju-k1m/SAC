@@ -116,14 +116,22 @@ def CargoWOIBatch(self, step, epoch, f):
         for tr in self.tState:
             # tr_cuda = tuple([x.to(self.device) for x in tr])
             self.agent.actor.forward(tuple([x.to(self.device) for x in tr]))
+            self.agent.critic.forward(tuple([x.to(self.device) for x in tr]))
             self.copyAgent.actor.forward(tuple([x.to(self.device) for x in tr]))
+            self.copyAgent.critic.forward(tuple([x.to(self.device) for x in tr]))
         # detaching!!
+
         self.agent.actor.detachCellState()
+        self.agent.critic.detachCellState()
         self.copyAgent.actor.detachCellState()
+        self.copyAgent.critic.detachCellState()
 
     self.agent.actor.detachCellState()
     InitActorCellState = self.agent.actor.getCellState()
+    InitCriticCellState = self.agent.critic.getCellState()
     InitCopyActorCellState = self.copyAgent.actor.getCellState()
+    InitCopyCriticCellState = self.copyAgent.critic.getCellState()
+
     self.zeroGrad()
 
     # 2. implemented the training using the truncated BPTT
@@ -132,8 +140,9 @@ def CargoWOIBatch(self, step, epoch, f):
         # by this command, cell state of agent reaches the current Step.
         with torch.no_grad():
             self.agent.actor.setCellState(InitActorCellState)
+            self.agent.critic.setCellState(InitCopyCriticCellState)
+
             value = self.agent.criticForward(nstate)
-            
             # calculate the target value for training
             value = value.view(k1+1, self.nAgent, 1)
             nvalue = value[1:]
@@ -143,8 +152,10 @@ def CargoWOIBatch(self, step, epoch, f):
             gAE = gAE.view(k1, self.nAgent)
 
             # before training, reset the cell state of agent at Previous K1 step.
-            self.copyAgent.actor.setCellState(InitCopyActorCellState)
+            self.copyAgent.critic.setCellState(InitCopyCriticCellState)
+            self.agent.critic.setCellState(InitCriticCellState)
             self.agent.actor.setCellState(InitActorCellState)
+            self.copyAgent.actor.setCellState(InitCopyCriticCellState)
         # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
         
         # div can be thought as slice size for BPTT.
@@ -163,6 +174,7 @@ def CargoWOIBatch(self, step, epoch, f):
 
             # detaching device for BPTT
             self.agent.actor.detachCellState()
+            self.agent.critic.detachCellState()
             # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
         
         # step the gradient for updating
@@ -172,17 +184,23 @@ def CargoWOIBatch(self, step, epoch, f):
         # get the new cell state of new agent
         # Initialize the agent at 0 step.
         self.agent.actor.zeroCellState()
+        self.agent.critic.zeroCellState()
         if zeroMode is False:
             with torch.no_grad():
                 for tr in self.tState:
                     # tr_cuda = tuple([x.to(self.device) for x in tr])
                     self.agent.actor.forward(tuple([x.to(self.device) for x in tr]))
+                    self.agent.critic.forward(tuple([x.to(self.device) for x in tr]))
                 self.agent.actor.detachCellState()
+                self.agent.critic.detachCellState()
         InitActorCellState = self.agent.actor.getCellState()
+        InitCriticCellState = self.agent.critic.getCellState()
         
         # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
     self.agent.actor.detachCellState()
     self.copyAgent.actor.detachCellState()
+    self.agent.critic.detachCellState()
+    self.copyAgent.critic.detachCellState()
 
     self.replayMemory[0].clear()
 
