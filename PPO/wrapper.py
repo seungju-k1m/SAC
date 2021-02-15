@@ -142,7 +142,9 @@ def CargoWOIBatch(self, step, epoch, f):
             self.agent.actor.setCellState(InitActorCellState)
             self.agent.critic.setCellState(InitCopyCriticCellState)
 
-            value = self.agent.criticForward(nstate)
+            # value = self.agent.criticForward(nstate)
+            value = self.copyAgent.criticForward(nstate)
+
             # calculate the target value for training
             value = value.view(k1+1, self.nAgent, 1)
             nvalue = value[1:]
