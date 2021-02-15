@@ -1,5 +1,5 @@
 {
     "python.dataScience.jupyterServerURI": "local",
     "C_Cpp.errorSquiggles": "Enabled",
-    "python.pythonPath": "/home/seungju/anaconda3/envs/ML/bin/python"
+    "python.pythonPath": "/home/seungju/anaconda3/envs/obj_detect/bin/python"
 }

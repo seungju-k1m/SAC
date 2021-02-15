@@ -176,8 +176,8 @@ class ppoAgent(baseAgent):
 
         ratio = prob / (oldProb + 1e-4)
 
-        gae = gT - value
-        # gae = gAE
+        # gae = gT - value
+        gae = gAE
 
         obj = torch.min(
             ratio * gae, 

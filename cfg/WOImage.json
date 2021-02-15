@@ -3,7 +3,7 @@
     "aSize":2,
     "envName":"./Env/Linux/Cargo_56_easy",
     "nEnv":4,
-    "time_scale":2,
+    "time_scale":4,
     "RecordScore":2000,
     "no_graphics":false,
   
@@ -12,11 +12,11 @@
       "MaxStep": 1281,
       "Interval_Decision":5,
       "Interval_Update_Position":5,
-      "Reward_ReachingDestination":0.2,
+      "Reward_ReachingDestination":0.5,
       "Reward_ArrivingDestination":15,
 
       "Penalty_Collision_Wall":-0.1,
-      "Penalty_Collision_Agent":-0.4,
+      "Penalty_Collision_Agent":-0.3,
       "Penalty_Collision_DynamicOBS":0
     },
     
@@ -128,12 +128,12 @@
     "entropyCoeff":0,
     "epsilon":0.2,
     "div":1,
-    "epoch":8,
-    "updateOldP":8,
+    "epoch":10,
+    "updateOldP":1,
     "initLogStd":-0.6,
     "finLogStd":-1.3,
     "annealingStep":1e6,
-    "K1":160,
+    "K1":640,
     "K2":10,
   
     "optim": {

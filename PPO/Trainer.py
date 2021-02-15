@@ -486,7 +486,7 @@ class PPOOnPolicyTrainer(ONPolicy):
                     k = 0
 
             # episode가 끝나면 lstm의 cell state를 초기화 한다.
-            if step % (self.data['env']['MaxStep']-1) == 0:
+            if True in done:
                 self.agent.actor.zeroCellState()
                 self.oldAgent.actor.zeroCellState()
                 self.copyAgent.actor.zeroCellState()

@@ -36,8 +36,8 @@ def CargoWOIBatch(self, step, epoch, f):
 
     # Specify the info of Horizon
     # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
-    k1 = 160
-    k2 = 10
+    k1 = self.data['K1']
+    k2 = self.data['K2']
     div = int(k1/k2)
 
     # Ready for the batch-preprocessing
@@ -134,32 +134,35 @@ def CargoWOIBatch(self, step, epoch, f):
 
     self.zeroGrad()
 
+    with torch.no_grad():
+        self.copyAgent.critic.setCellState(InitCopyCriticCellState)
+        self.agent.critic.setCellState(InitCriticCellState)
+        self.agent.actor.setCellState(InitActorCellState)
+        self.copyAgent.actor.setCellState(InitCopyActorCellState)
+
+        # value = self.agent.criticForward(nstate)
+        value = self.agent.criticForward(nstate)
+
+        # calculate the target value for training
+        value = value.view(k1+1, self.nAgent, 1)
+        nvalue = value[1:]
+        value = value[:-1]
+        gT, gAE = self.getReturn(reward, value, nvalue, done)
+        gT = gT.view(k1, self.nAgent)
+        gAE = gAE.view(k1, self.nAgent)
+
+        # before training, reset the cell state of agent at Previous K1 step.
+        
     # 2. implemented the training using the truncated BPTT
     for _ in range(epoch):
         # reset the agent at previous K1 step.
         # by this command, cell state of agent reaches the current Step.
-        with torch.no_grad():
-            self.agent.actor.setCellState(InitActorCellState)
-            self.agent.critic.setCellState(InitCopyCriticCellState)
-
-            # value = self.agent.criticForward(nstate)
-            value = self.copyAgent.criticForward(nstate)
-
-            # calculate the target value for training
-            value = value.view(k1+1, self.nAgent, 1)
-            nvalue = value[1:]
-            value = value[:-1]
-            gT, gAE = self.getReturn(reward, value, nvalue, done)
-            gT = gT.view(k1, self.nAgent)
-            gAE = gAE.view(k1, self.nAgent)
-
-            # before training, reset the cell state of agent at Previous K1 step.
-            self.copyAgent.critic.setCellState(InitCopyCriticCellState)
-            self.agent.critic.setCellState(InitCriticCellState)
-            self.agent.actor.setCellState(InitActorCellState)
-            self.copyAgent.actor.setCellState(InitCopyCriticCellState)
-        # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
         
+        # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
+        self.copyAgent.critic.setCellState(InitCopyCriticCellState)
+        self.agent.critic.setCellState(InitCriticCellState)
+        self.agent.actor.setCellState(InitActorCellState)
+        self.copyAgent.actor.setCellState(InitCopyActorCellState)
         # div can be thought as slice size for BPTT.
         for i in range(div):
             # ready for the batching.
