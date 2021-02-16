@@ -1,9 +1,9 @@
 {
     "sSize": [1, 360],
     "aSize":2,
-    "envName":"./Env/Linux/Cargo_56_easy",
+    "envName":"./Env/Linux/Cargo_56_2easy",
     "nEnv":4,
-    "time_scale":4,
+    "time_scale":1,
     "RecordScore":2000,
     "no_graphics":false,
   
@@ -12,8 +12,8 @@
       "MaxStep": 1281,
       "Interval_Decision":5,
       "Interval_Update_Position":5,
-      "Reward_ReachingDestination":0.5,
-      "Reward_ArrivingDestination":15,
+      "Reward_ReachingDestination":1.2,
+      "Reward_ArrivingDestination":25,
 
       "Penalty_Collision_Wall":-0.1,
       "Penalty_Collision_Agent":-0.3,
@@ -128,26 +128,26 @@
     "entropyCoeff":0,
     "epsilon":0.2,
     "div":1,
-    "epoch":10,
+    "epoch":8,
     "updateOldP":1,
     "initLogStd":-0.6,
     "finLogStd":-1.3,
     "annealingStep":1e6,
-    "K1":640,
-    "K2":10,
+    "K1":1280,
+    "K2":40,
   
     "optim": {
       "actor": {
         "name": "adam",
         "lr": 3e-4,
-        "decay": 1e-5,
+        "decay": 3e-5,
         "eps": 1e-7,
         "clipping": false
       },
       "critic": {
         "name": "adam",
         "lr": 3e-4,
-        "decay": 1e-5,
+        "decay": 3e-5,
         "eps": 1e-7,
         "clipping": false
       }

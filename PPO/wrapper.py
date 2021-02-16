@@ -153,16 +153,16 @@ def CargoWOIBatch(self, step, epoch, f):
 
         # before training, reset the cell state of agent at Previous K1 step.
         
+
     # 2. implemented the training using the truncated BPTT
     for _ in range(epoch):
         # reset the agent at previous K1 step.
         # by this command, cell state of agent reaches the current Step.
-        
-        # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
         self.copyAgent.critic.setCellState(InitCopyCriticCellState)
         self.agent.critic.setCellState(InitCriticCellState)
         self.agent.actor.setCellState(InitActorCellState)
         self.copyAgent.actor.setCellState(InitCopyActorCellState)
+        # print("Current Memory : {:.3f}".format(current_process.memory_info()[0]/2.**20))
         # div can be thought as slice size for BPTT.
         for i in range(div):
             # ready for the batching.

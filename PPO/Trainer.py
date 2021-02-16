@@ -207,9 +207,9 @@ class PPOOnPolicyTrainer(ONPolicy):
         """
         gradient를 바탕으로 weight를 update.
         """
-        self.agent.actor.clippingNorm(1000)
+        self.agent.actor.clippingNorm(5000)
         self.aOptim.step()
-        self.agent.critic.clippingNorm(1000)
+        self.agent.critic.clippingNorm(5000)
         self.cOptim.step()
 
         normA = self.agent.actor.calculateNorm().cpu().detach().numpy()
